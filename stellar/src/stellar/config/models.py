@@ -57,10 +57,12 @@ class FeatureGate(StrEnum):
 
 
 IMPLEMENTED_FEATURES: frozenset[FeatureGate] = frozenset(
-    {FeatureGate.MARKET_DATA, FeatureGate.RISK_ENGINE, FeatureGate.PAPER_BROKER}
+    {FeatureGate.MARKET_DATA, FeatureGate.RISK_ENGINE, FeatureGate.PAPER_BROKER,
+     FeatureGate.TECHNICAL_ANALYSIS}
 )
 """Gates whose subsystem exists. Phase 2 adds market data, Phase 3 the risk engine,
-Phase 4 the paper broker;
+Phase 4 the paper broker,
+Phase 5 technical analysis;
 each later phase adds its gate. Enabling a gate never permits trading by itself."""
 
 

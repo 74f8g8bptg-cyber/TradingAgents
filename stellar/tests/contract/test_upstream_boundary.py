@@ -245,9 +245,51 @@ def test_no_live_or_demo_execution_path_exists():
         assert "LIVE" not in _string_constants(path), path
 
 
+TECHNICAL = STELLAR_SRC / "technical"
+
+
+def test_technical_has_no_network_llm_broker_or_random_dependency():
+    """Phase 5: deterministic, offline, Stellar-native. No upstream indicator code either."""
+    forbidden = {"langchain", "langgraph", "openai", "anthropic", "requests", "urllib", "socket",
+                 "http", "httpx", "aiohttp", "websockets", "MetaTrader5", "mt5", "tradingagents",
+                 "cli", "random", "secrets", "stockstats", "pandas", "numpy", "yfinance", "time"}
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in TECHNICAL.rglob("*.py")
+        if {m.split(".")[0] for m in _imported_modules(p)} & forbidden
+    )
+    assert offenders == []
+
+
+def test_technical_cannot_reach_risk_execution_or_proposals():
+    """Technical evidence only: no proposal, decision, order, broker, risk policy or owner path."""
+    for path in TECHNICAL.rglob("*.py"):
+        modules = _imported_modules(path)
+        assert not any(m.startswith(("stellar.risk", "stellar.execution", "stellar.owner",
+                                     "stellar.schemas.proposal", "stellar.schemas.order",
+                                     "stellar.schemas.risk", "stellar.schemas.execution"))
+                       for m in modules), path
+        assert not {"TradeProposal", "OrderIntent", "RiskDecision", "PaperBroker",
+                    "RiskService", "RiskPolicy", "ExecutionResult"} & _calls(path), path
+
+
+def test_technical_calculations_never_use_float():
+    for path in TECHNICAL.rglob("*.py"):
+        assert "float" not in _calls(path), path
+
+
+def test_nothing_imports_technical_except_its_own_package():
+    """Risk, execution and owner do not depend on technical evidence in Phase 5."""
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if p.relative_to(STELLAR_SRC).parts[0] != "technical"
+        and any(m.startswith("stellar.technical") for m in _imported_modules(p))
+    )
+    assert offenders == []
+
+
 @pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
                                    "stellar.owner", "stellar.marketdata", "stellar.config",
-                                   "stellar.execution"])
+                                   "stellar.execution", "stellar.technical"])
 def test_every_package_imports_on_its_own(first):
     """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
     subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,
