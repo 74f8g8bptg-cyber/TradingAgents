@@ -284,7 +284,7 @@ def test_nothing_imports_technical_except_its_own_package():
     offenders = sorted(
         str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
         if p.relative_to(STELLAR_SRC).parts[0] not in {"technical", "pipeline", "setups",
-                                                      "proposals", "trader"}
+                                                      "proposals", "trader", "runtime"}
         and any(m.startswith("stellar.technical") for m in _imported_modules(p))
     )
     assert offenders == []
@@ -438,11 +438,73 @@ def test_trader_output_schema_has_no_numeric_field():
         assert not numeric(field.annotation), name
 
 
+RUNTIME = STELLAR_SRC / "runtime"
+
+
+def test_runtime_builds_no_privileged_record_and_never_touches_the_breaker():
+    """The orchestrator coordinates: proposals come from P1, decisions and intents from the
+    Risk Engine, orders and fills from the Paper Broker. No reset, no private risk path."""
+    assert list(RUNTIME.rglob("*.py"))
+    for path in RUNTIME.rglob("*.py"):
+        calls = _calls(path)
+        for name in ("TradeProposal", "RiskDecision", "RiskPolicy", "FillAuthorisation",
+                     "ExecutionResult", "PaperOrder", "PaperFill", "TradeRecord", "Position"):
+            assert not _builds(path, name), (path, name)
+        # an OrderIntent is only re-validated from the runtime's own journaled checkpoint,
+        # never constructed, copied or edited here
+        text = path.read_text(encoding="utf-8")
+        assert "OrderIntent(" not in text and "model_construct" not in text, path
+        assert "intent.model_copy" not in text, path
+        assert not {"_build_order_intent", "_require_current", "owner_reset_breaker",
+                    "reset", "trip", "BreakerLedger", "PaperBrokerConfig", "RiskEngine",
+                    "RiskService.evaluate"} & calls, path
+        modules = _imported_modules(path)
+        assert not any(m.startswith(("stellar.owner", "stellar.config"))
+                       for m in modules), path
+        assert not any(m in ("stellar.risk.intents._build_order_intent",) for m in modules)
+
+
+def test_runtime_is_paper_only_with_no_network_broker_llm_vendor_or_process_access():
+    forbidden = {"openai", "anthropic", "google", "langchain", "langchain_core", "langgraph",
+                 "requests", "urllib", "socket", "http", "httpx", "aiohttp", "websockets",
+                 "MetaTrader5", "mt5", "vantage", "tradingagents", "cli", "random", "secrets",
+                 "subprocess", "os", "shutil", "sqlite3"}
+    for path in RUNTIME.rglob("*.py"):
+        assert not {m.split(".")[0] for m in _imported_modules(path)} & forbidden, path
+        assert not {"LIVE", "DEMO"} & _string_constants(path), path
+        assert "float" not in _calls(path), path
+        attrs = {n.attr for n in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+                 if isinstance(n, ast.Attribute)}
+        assert "_db" not in attrs, path  # no direct journal (SQL) access: events only
+
+
+def test_nothing_imports_the_runtime():
+    """The runtime sits on top: no engine depends on it (no cycle, no back door)."""
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if p.relative_to(STELLAR_SRC).parts[0] != "runtime"
+        and any(m.startswith("stellar.runtime") for m in _imported_modules(p)))
+    assert offenders == []
+
+
+def test_runtime_emits_only_catalogued_events():
+    from stellar.telemetry.catalogue import EVENT_TYPES  # noqa: PLC0415
+
+    for path in RUNTIME.rglob("*.py"):
+        emitted = {c for c in _string_constants(path)
+                   if "." in c and c.split(".")[0] in {"run", "snapshot", "decision", "trade",
+                                                       "risk", "order", "circuit_breaker"}
+                   and " " not in c and c.count(".") in (1, 2) and c.islower()}
+        assert emitted <= EVENT_TYPES | {"stellar.runtime", "stellar.risk.intents"}, \
+            (path, emitted - EVENT_TYPES)
+        assert "circuit_breaker.reset" not in emitted
+
+
 @pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
                                    "stellar.owner", "stellar.marketdata", "stellar.config",
                                    "stellar.execution", "stellar.technical", "stellar.research",
                                    "stellar.reasoning", "stellar.pipeline", "stellar.setups",
-                                   "stellar.proposals", "stellar.trader"])
+                                   "stellar.proposals", "stellar.trader", "stellar.runtime"])
 def test_every_package_imports_on_its_own(first):
     """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
     subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,

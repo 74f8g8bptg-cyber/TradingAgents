@@ -39,7 +39,8 @@ calling. Usage (tokens, cost, latency) is recorded when the provider reports it.
 - ``debate.started``, ``debate.turn.completed``, ``debate.completed``;
 - ``decision.research_plan.created`` for the synthesis.
 
-All carry the run id as correlation.
+All carry the run id as correlation. Re-running the same run (same inputs, after a crash
+for example) emits no descriptive event that is already journaled for it (Phase 7).
 """
 
 from __future__ import annotations
@@ -97,6 +98,10 @@ from stellar.technical import MultiTimeframeAnalysis, TechnicalAnalysis
 from stellar.telemetry import EventBus, new_event
 
 SOURCE = "stellar.pipeline"
+DESCRIPTIVE_EVENTS = frozenset({"analysis.created", "debate.started", "debate.turn.completed",
+                                "debate.completed", "decision.research_plan.created"})
+"""Events that only describe a run's outputs. Re-running the same run (same run id, after a
+crash for example) reuses every journaled step, and these are not emitted twice."""
 
 
 @dataclass(frozen=True)
@@ -163,10 +168,15 @@ class _Run:
     # ------------------------------------------------------------------- events --
 
     def emit(self, event_type: str, payload: dict[str, Any], *, agent: str | None = None) -> None:
+        body = {"run_id": self.run_id, "as_of": self.as_of.isoformat(), **payload}
+        if event_type in DESCRIPTIVE_EVENTS and any(
+                e.source == SOURCE and e.correlation_id == self.run_id and e.payload == body
+                for e in self.p._journal.read(types=[event_type])):
+            return  # Phase 7: a re-run of the same run re-describes nothing already journaled
         self.p._bus.publish(new_event(
             event_type, station_id=self.p._station, source=SOURCE, agent_id=agent,
             instrument=self.inputs.instrument, correlation_id=self.run_id, ts=self.p._clock(),
-            payload={"run_id": self.run_id, "as_of": self.as_of.isoformat(), **payload}))
+            payload=body))
 
     def checkpoint(self, role: str, fp: str) -> dict | None:
         for event in reversed(self.p._journal.read(types=["agent.task.completed"])):

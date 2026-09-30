@@ -52,6 +52,7 @@ EVENT_TYPES: frozenset[str] = MINIMUM_V1_EVENT_TYPES | frozenset({
     "run.resumed",
     "run.completed",
     "run.failed",
+    "run.stage.completed",  # Phase 7 addition: the V1 PAPER run's per-stage checkpoint
     # Agent state and activity
     "agent.task.failed",
     "agent.moved",
@@ -102,6 +103,7 @@ CRITICAL_DOMAINS: frozenset[str] = frozenset({"trade", "risk", "order", "circuit
 
 REQUIRED_PAYLOAD_KEYS: dict[str, frozenset[str]] = {
     "trade.proposed": frozenset({"proposal_id", "setup_id", "instrument", "direction"}),
+    "run.stage.completed": frozenset({"run_id", "stage", "fingerprint", "state"}),
     "risk.approved": frozenset({"proposal_id", "decision_id"}),
     "risk.rejected": frozenset({"proposal_id", "decision_id", "reasons"}),
     "risk.review.requested": frozenset({"proposal_id", "decision_id", "reasons"}),
