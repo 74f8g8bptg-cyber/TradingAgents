@@ -167,7 +167,7 @@ audit (Phase 7).
 | 3 | **Checker verifies** | P4 at the pre-flight console; `DSP-EXB-04` shows the pre-flight result for the order | `order.preflight.failed` (a **failure** is explicit). There is **no "pre-flight passed" event**: a pass is only implied when the order proceeds | **Partial:** failures shown (BLOCKED, amber + icon + text); a pass is **not** shown as a separate state (§10, E4) |
 | 4 | **Execution occurs** (sent / acknowledged) | The tube dispatch moment | `order.sent`, `order.acknowledged` | **No producer.** Drawn as **NOT AVAILABLE** on the lifecycle; the tube does **not** animate a "send" (§10, E5) |
 | 5 | **Result recorded** | The result "docks" on the docking board; the lifecycle step lights; the position appears | `order.filled` / `order.rejected` / `order.cancelled` / `order.expired`; `position.opened` / `updated`. `order.partially_filled` has **no producer** (NOT AVAILABLE) | **Yes** (except partial fills) |
-| 6 | **Task leaves the bay** | On close, a review crystal leaves toward the Memory Archive (L6) | `trade.closed` | **Yes** |
+| 6 | **Task leaves the bay** | On close, E1 carries a Record Crystal (`PRP-006`) to the Memory Archive (L6 `archive.shelf`), where the Post-Trade Reviewer files it (L6 sheet DM-1–DM-3) | `trade.closed` | **Yes** |
 
 **Reconciliation** is shown in the Data Core (`DSP-DCR-05`, L4), not in L9. **Agent task events**
 (`agent.task.*`) are **not** emitted by the execution roles today. Their working poses therefore
@@ -228,7 +228,7 @@ simulation**.
 | Checking | `order.created` (a check in progress) / `order.preflight.failed` (a failure) | P4 at the pre-flight console; a failure marks BLOCKED | `stand_work`, `checklist_sweep` |
 | Executing | *(no producer for `order.sent`)* | **Not animated as a send**. The next visible step is the result | — |
 | Recording a real result | `order.filled` / `rejected` / `cancelled` / `expired` | E1 turns to the docking board; the lifecycle step lights | `look_screen` |
-| Hand-off out | `trade.closed` | A review crystal leaves toward L6 (the Post-Trade Reviewer receives it there) | `carry` (`PRP-006`) |
+| Hand-off out | `trade.closed` | E1 carries a Record Crystal to L6 `archive.shelf` (the Post-Trade Reviewer files it; no review) and returns | `carry` (`PRP-006`) |
 | Returning to the station | Any real `order.*` while away | E1 / P4 re-path to their stations (work over idle) | `walk` |
 | Idle | No real event | At their stations; optional seeded ambient to the Habitat (`MP-EXEC` allows public spaces) | `stand_idle` |
 

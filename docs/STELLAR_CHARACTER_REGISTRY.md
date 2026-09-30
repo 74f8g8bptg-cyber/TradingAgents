@@ -53,7 +53,7 @@ lifts or airlocks.
 | `MP-FREE` | Corridors, the public zones of all hubs, every **active public** room when a real event gives a reason, and its home room | L9, L10, reserved rooms, restricted anchors of other roles |
 | `MP-COURIER` | `MP-FREE` + **L10 `risk.intake` zone** (to drop a proposal after `trade.proposed`) | `risk.core`, `risk.outbox`, L9 |
 | `MP-RISK` | L10 (all zones), plus public spaces for real cooldowns and ambient when idle | L9; other roles' anchors |
-| `MP-EXEC` | L9 (all zones), plus public spaces. The Paper Execution Agent also enters **L10 `risk.outbox`** to collect an order capsule (only after `risk.approved` + `order.created`) | `risk.intake`, `risk.core` |
+| `MP-EXEC` | L9 (all zones), plus public spaces. The Paper Execution Agent also enters **L10 `risk.outbox`** to collect an order capsule (only after `risk.approved` + `order.created`), and **L6 `archive.shelf`** to deliver a Record Crystal (`PRP-006`, only after `trade.closed`; L6 sheet DM-3) | `risk.intake`, `risk.core` |
 | `MP-SUPERVISOR` | `MP-FREE` + the entry zones of L9 and L10 (event-driven visits) | restricted anchors; the inner zones of L9 and L10 |
 | `MP-MEDIC` | `MP-FREE` + the entry zone of any active room, including L9 and L10, to attend an agent in `error` / `overloaded` (from a real event) | restricted anchors |
 | `MP-HOST` | `H-HAB` only | everything else |
@@ -114,13 +114,13 @@ additional working states.
 | `CHR-030` | Lt. Tess Harrow | Pullback / Setup (T6 · `pullback_setup`) | SCI | `L2` · `technical.station_t6` | ambient | analysing | MP-FREE | ACTIVE | room |
 | `CHR-031` | Ensign Kit Sparrow | Entry Timing (T7 · `entry_timing`) | SCI | `L2` · `technical.station_t7` | ambient | analysing, monitoring | MP-FREE | ACTIVE (engine role not built: shown `idle`) | room |
 | `CHR-032` | Lt. Cmdr. Rune Halloway | Technical Analyst (T8 · `technical_analyst`) | SCI | `L2` · `technical.station_t8` | ambient | analysing | MP-FREE | ACTIVE (**no producer**: no stage calls the LLM role; shown `idle`) | room |
-| `CHR-033` | Archivist Quinn Morrow | Post-Trade Reviewer (L1 · `post_trade_reviewer`) | SCI | `L6` · `archive.terminal` | L7; ambient | post_trade_review | MP-FREE | ACTIVE | room |
-| `CHR-034` | Dr. Pax Lindqvist | Performance / Attribution (L2 · `attribution`) | SCI | `L7` · `perflab.terminal` | L6; ambient | post_trade_review | MP-FREE | ACTIVE | room |
+| `CHR-033` | Archivist Quinn Morrow | Post-Trade Reviewer (L1 · `post_trade_reviewer`) | SCI | `L6` · `archive.terminal` | L7; ambient | post_trade_review | MP-FREE | ACTIVE (**no producer**: no `TradeReview`, `memory.review.created` not emitted; files real Record Crystals after `trade.closed` only, never shown reviewing) | room |
+| `CHR-034` | Dr. Pax Lindqvist | Performance / Attribution (L2 · `attribution`) | SCI | `L7` · `perflab.terminal` | L6; ambient | post_trade_review | MP-FREE | ACTIVE (**no producer**: `memory.outcome.settled` not emitted; no L6 visit in V1) | room |
 | `CHR-035` | Chief Engineer Oren Kade | Data Validator (T1 · `data_validator`) | OPS | `L4` · `datacore.reactor_console` | ambient | validating, monitoring | MP-FREE | ACTIVE | room |
 | `CHR-036` | Lt. Nyx Aldren | Contradiction Checker (P2 · `contradiction_checker`) | OPS | `L10` · `risk.intake_desk` | public spaces (rest, ambient) | risk_review | MP-RISK | ACTIVE | room, class |
 | `CHR-037` | Lt. Cmdr. Sera Quill | Risk Engine / Risk Auditor (P3 · `risk_engine`) | OPS | `L10` · `risk.rule_console` | public spaces (rest, ambient) | risk_review, approved, rejected | MP-RISK | ACTIVE | room, class |
 | `CHR-038` | Chief Dane Corso | Execution Checker (P4 · `execution_checker`) | OPS | `L9` · `execbay.preflight` | public spaces | executing, monitoring | MP-EXEC | ACTIVE | room, class |
-| `CHR-039` | Lt. Kiri Sato | Paper Execution Agent (E1 · `paper_execution`) | OPS | `L9` · `execbay.launch` | L10 `risk.outbox_pickup`; public spaces | executing, monitoring | MP-EXEC | ACTIVE | room, class, route |
+| `CHR-039` | Lt. Kiri Sato | Paper Execution Agent (E1 · `paper_execution`) | OPS | `L9` · `execbay.launch` | L10 `risk.outbox_pickup`; L6 `archive.shelf` (Record Crystal after `trade.closed`); public spaces | executing, monitoring | MP-EXEC | ACTIVE | room, class, route |
 | `CHR-040` | Lt. Bram Oduya | MT5 Execution Agent (E2 · `mt5_execution`) | OPS | — | — | — | MP-NONE | **DEFERRED**: not rendered | — |
 | `CHR-041` | Dr. Noa Ferris (Medic persona) | Operational Wellbeing Monitor (O2 · `wellbeing_monitor`) | OPS | `H-HAB` · `habitat.vitals` | entry zone of any active room (attends `error` / `overloaded`) | monitoring | MP-MEDIC | ACTIVE (producers mostly not emitted: mostly `idle`) | room, class |
 | `CHR-042` | QM Bex Talon (Quartermaster persona) | Operational Wellbeing Monitor (O2 · `wellbeing_monitor`) | OPS | `H-CMD` · `command.console_budget` | ambient | monitoring | MP-FREE | ACTIVE | room |
@@ -275,7 +275,7 @@ Each step lights up only when its real event exists (Visual plan §10.1).
 | `reviewing` | CHR-001, 002 (046 future) | judge seat or command chair |
 | `risk_review`, `approved`, `rejected` | CHR-036, 037 | checks light one by one; stamp |
 | `executing` | CHR-038, 039 | pre-flight, launch |
-| `post_trade_review` | CHR-033, 034 | shelve crystals, update walls |
+| `post_trade_review` | CHR-033, 034 | shelve crystals, update walls (**no producer today**: only filing of real Record Crystals is shown) |
 
 Rules from the Visual plan:
 - a character shows work **only** while telemetry says so;

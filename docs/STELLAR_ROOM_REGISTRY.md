@@ -202,12 +202,12 @@ changes this file only.
 
 | Field | Value |
 |---|---|
-| Purpose | Closed trades, the run replay index (read-only), post-trade reviews, comparable setups |
+| Purpose | Closed trades, the run replay index (read-only), post-trade reviews, comparable setups. **No producer today** for post-trade reviews (`memory.review.created`), settlement (`memory.outcome.settled`), comparable setups (`memory.decision.stored`) or reflections (`memory.reflection.written`): those panels read NOT AVAILABLE (L6 sheet DM-5) |
 | Size / shape | S, short; door in the south wall (`COR-S`) |
 | Mandatory furniture | `CON-019` archive terminal, `STO-004` crystal archive shelf, `TBL-005` work table |
 | Mandatory screens | `DSP-MEM-01`…`DSP-MEM-04` |
 | Anchors | `archive.terminal` (Post-Trade Reviewer) · `archive.shelf` · `archive.table_1` |
-| Usual agents | `CHR-033` |
+| Usual agents | `CHR-033` (no producer: files real Record Crystals only) |
 
 ### 3.9 `L7` — Performance Lab · ACTIVE
 

@@ -202,7 +202,7 @@ Footer on every specialist desk: **"Family desk · interim view of N runtime age
 
 | ID | Name | HW | Content | Src · events | Av | I/O | Missing / stale |
 |---|---|---|---|---|---|---|---|
-| `DSP-MEM-01` | Trade history | `SCR-002` | Closed paper trades: instrument, direction, outcome, R | EV · `trade.closed` | A | NAV | **NO CLOSED TRADES** |
+| `DSP-MEM-01` | Trade history | `SCR-002` | Closed paper trades: instrument, direction, close reason, price change, money P&L only when `KNOWN` (else the engine's reason); R multiple **NOT AVAILABLE** (not computed; L6 sheet DM-4) | EV · `trade.closed` | A | NAV | **NO CLOSED TRADES** |
 | `DSP-MEM-02` | Run replay index | `SCR-003` | Recorded runs with state and stages; a click opens a **read-only** replay | RL | A | NAV | **AWAITING DATA** |
 | `DSP-MEM-03` | Reviews & lessons | `SCR-003` | Post-trade reviews and reflections | EV · `memory.review.created`, `memory.reflection.written` (no producers) | N | RO | **NOT AVAILABLE · reviews** |
 | `DSP-MEM-04` | Comparable setups | `SCR-012` | Stored comparable decisions | EV · `memory.decision.stored` (no producer) | N | RO | **NOT AVAILABLE · memory store** |
