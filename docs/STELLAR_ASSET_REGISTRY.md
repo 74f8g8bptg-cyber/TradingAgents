@@ -175,7 +175,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 
 | ID | Name | Likely room | Interaction | Nav | V1 | Reusable | v2 |
 |---|---|---|---|---|---|---|---|
-| `TBL-001` | Oval command table | `H-CMD` centre | 4 seat anchors + head | seat | Y | no | kept |
+| `TBL-001` | **Circular** command table | `H-CMD` centre | 4 seat anchors + head | seat | Y | no | shape set to circular (H-CMD design sheet HC-1) |
 | `TBL-002` | Holographic chart table | L2 | 2 anchors | blocks | Y | no | kept |
 | `TBL-003` | Round café table | `H-HAB` | seats | seat | Y | yes | kept |
 | `TBL-004` | Lounge coffee table | `H-HAB` | — | blocks | Y | yes | kept |
@@ -216,13 +216,13 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 
 | ID | Name | Where | V1 | v2 |
 |---|---|---|---|---|
-| `DEC-001` | Planet view (behind window walls) | hub outer rims | Y | kept |
+| `DEC-001` | Planet view (behind window walls) | outer rims of `H-LAB` and `H-HAB` (**not `H-CMD`**: no windows, HC-5) | Y | kept |
 | `DEC-002` | Star field | window walls, backdrop | Y | kept |
 | `DEC-003` | Abstract wall art panel (original) | any | opt | kept |
 | `DEC-004` | Vessel scale model (**carries no data**) | `H-CMD` or `H-HAB` | opt | renamed (was the station model) |
 | `DEC-005` | Hull rib trim | L9, L10, corridors | Y | reused |
 | `DEC-006` | Department emblem plaque (shape icons only) | room doors | Y | kept |
-| `DEC-007` | Holo globe (**decorative; carries no market data**) | `H-CMD`, `H-LAB` centres | opt | **new** |
+| `DEC-007` | Holo globe (**decorative only**: no real data, no fake system status, no charts or metrics) | `H-CMD`, `H-LAB` centres | opt | **new** |
 
 ### `SRV` — Servers and conduits
 
@@ -239,7 +239,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 |---|---|---|---|---|---|
 | `WAL-001` | Straight wall panel | L rooms, R rooms, corridors | solid | Y | kept |
 | `WAL-002` | Curved wall panel | hub rims | solid | Y | kept (main use now) |
-| `WAL-003` | Window wall | hub outer rims | solid | Y | kept |
+| `WAL-003` | Window wall | outer rims of `H-LAB` and `H-HAB` (**not `H-CMD`**: its rim carries screens and information surfaces, HC-5) | solid | Y | kept |
 | `WAL-004` | Armoured bulkhead | — | — | — | **RETIRED** (no armoured vault) |
 | `WAL-005` | Glass partition | L1 desk bays | solid | Y | room changed |
 | `WAL-006` | Hull wall | outer hull | solid | Y | kept |

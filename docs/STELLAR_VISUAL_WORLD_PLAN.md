@@ -302,7 +302,7 @@ elsewhere. Every room's connections are its approved doors (Topology v2 §3).
   decision; global portfolio and system status.
 - **Agents:** Portfolio Manager (U8), Research Manager (U3), Central Trader (U4), Trade Proposal
   Builder (P1), Supervisor (O1); the Quartermaster persona of O2.
-- **Visual style:** the vessel's largest hub: a raised command chair and oval command table on a
+- **Visual style:** the vessel's largest hub: a raised command chair and a circular command table on a
   dais, a curved main viewscreen on the north rim, and a clear walkway linking its three doors.
 - **Screens / objects:** Market Overview, Technical Analysis, Research / News, Agent Pipeline,
   Portfolio, Global System Status; alert band; mode plaque `PAPER` from telemetry (Screen Registry
