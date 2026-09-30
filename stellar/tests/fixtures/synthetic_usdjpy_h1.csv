@@ -1,0 +1,6 @@
+# SYNTHETIC TEST DATA - NOT MARKET HISTORY. Hand-written values for Stellar tests only.
+# Instrument: USDJPY (declared by the test's CsvFileSpec). Timeframe: H1. Times: UTC.
+timestamp,open,high,low,close,volume
+2030-01-07T08:00:00Z,149.812,149.905,149.788,149.872,2210
+2030-01-07T09:00:00Z,149.872,149.960,149.851,149.943,2084
+2030-01-07T10:00:00Z,149.943,149.990,149.880,149.901,1976

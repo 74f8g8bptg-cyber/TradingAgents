@@ -60,7 +60,8 @@ def test_phase1_stellar_code_does_not_import_upstream():
 def test_importing_stellar_loads_no_upstream_module():
     code = (
         "import sys, stellar, stellar.schemas, stellar.telemetry, stellar.journal, "
-        "stellar.config, stellar.agents, stellar.validation, stellar.risk\n"
+        "stellar.config, stellar.agents, stellar.validation, stellar.risk, stellar.marketdata, "
+        "stellar.marketdata.providers\n"
         "print(sorted(m for m in sys.modules if m.split('.')[0] in {'tradingagents', 'cli'}))"
     )
     out = subprocess.run(
@@ -101,3 +102,35 @@ def test_rating_vocabulary_matches_upstream():
         if isinstance(target, ast.Name) and target.id in {"RATINGS_5_TIER", "RATING_REVIEW"}:
             values[target.id] = ast.literal_eval(node.value)
     assert [r.value for r in Rating] == [*values["RATINGS_5_TIER"], values["RATING_REVIEW"]]
+
+
+def _upstream_symbol_tables():
+    tree = ast.parse((REPO_ROOT / "tradingagents" / "dataflows" / "symbols.py")
+                     .read_text(encoding="utf-8"))
+    tables = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            target = node.targets[0] if isinstance(node, ast.Assign) else node.target
+            if isinstance(target, ast.Name) and target.id in {"_ALIASES", "_FOREX_CURRENCIES"}:
+                value = node.value
+                if isinstance(value, ast.Call):  # frozenset({...})
+                    value = value.args[0]
+                tables[target.id] = ast.literal_eval(value)
+    return tables
+
+
+def test_stellar_classifies_upstream_symbol_substitutions_as_proxies():
+    """Upstream silently maps XAUUSD to the gold future and NAS100 to the cash index
+    (knowledge audit K5). Stellar's reference map must keep classifying those as
+    PROXY; if upstream changes its aliases, this test forces a re-classification."""
+    from stellar.marketdata import TRADINGAGENTS_YAHOO_REFERENCE as ref
+
+    tables = _upstream_symbol_tables()
+    aliases = tables["_ALIASES"]
+    assert aliases["XAUUSD"] == ref.get("XAUUSD").provider_symbol == "GC=F"
+    assert aliases["NAS100"] == ref.get("NAS100").provider_symbol == "^NDX"
+    assert ref.get("XAUUSD").kind == ref.get("NAS100").kind == "PROXY"
+    # Six-letter pairs of two ISO currencies become "<PAIR>=X" upstream.
+    for pair in ("EURUSD", "USDJPY"):
+        assert {pair[:3], pair[3:]} <= tables["_FOREX_CURRENCIES"]
+        assert ref.get(pair).provider_symbol == f"{pair}=X"

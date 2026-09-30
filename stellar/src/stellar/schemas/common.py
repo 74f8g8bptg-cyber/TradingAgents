@@ -161,6 +161,12 @@ INSTRUMENT_DISPLAY_NAMES: dict[InstrumentId, str] = {
 }
 
 
+class AssetClass(StrEnum):
+    METAL = "metal"
+    FX = "fx"
+    INDEX_CFD = "index_cfd"
+
+
 class Direction(StrEnum):
     """Direction of a Setup or TradeProposal (Foundation §4.12)."""
 

@@ -1,0 +1,6 @@
+# SYNTHETIC TEST DATA - NOT MARKET HISTORY. Hand-written values for Stellar tests only.
+# Instrument: NAS100 CFD (declared by the test's CsvFileSpec). Timeframe: H1. Times: UTC. No volume column.
+timestamp,open,high,low,close
+2030-01-07T14:00:00Z,18456.25,18489.75,18441.50,18477.00
+2030-01-07T15:00:00Z,18477.00,18502.25,18460.10,18490.35
+2030-01-07T16:00:00Z,18490.35,18495.80,18430.60,18448.95

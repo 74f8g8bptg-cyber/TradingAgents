@@ -1,0 +1,6 @@
+# SYNTHETIC TEST DATA - NOT MARKET HISTORY. Hand-written values for Stellar tests only.
+# Instrument: XAUUSD spot (declared by the test's CsvFileSpec). Timeframe: H1. Times: UTC.
+timestamp,open,high,low,close,volume
+2030-01-07T08:00:00Z,2385.12,2388.47,2383.90,2386.35,5120
+2030-01-07T09:00:00Z,2386.35,2390.08,2385.71,2389.64,4987
+2030-01-07T10:00:00Z,2389.64,2391.20,2386.02,2387.19,5302

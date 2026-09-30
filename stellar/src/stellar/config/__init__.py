@@ -12,6 +12,7 @@ from stellar.config.models import (
     FeatureGates,
     InstrumentConfig,
     JournalConfig,
+    MarketDataConfig,
     StellarConfig,
 )
 
@@ -27,6 +28,7 @@ __all__ = [
     "FeatureGates",
     "InstrumentConfig",
     "JournalConfig",
+    "MarketDataConfig",
     "StellarConfig",
     "load_config",
     "parse_config",

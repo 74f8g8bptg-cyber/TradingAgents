@@ -2,7 +2,12 @@
 
 Fields follow Foundation §4.7 (timeframes), §4.8 (candles), §4.2 (provider
 symbol and proxy flag) and §9.1 stage 0 (snapshot). Phase 1 defines the shapes
-and their structural checks only; building snapshots from a provider is Phase 2.
+and their structural checks; Phase 2 (``stellar.marketdata``) builds validated
+series and snapshots from providers.
+
+Phase 2 additive changes: ``Candle.volume`` is optional (absent volume is
+``None`` with ``volume_kind`` NONE, never a fake zero), plus ``tick_volume`` and
+typed ``quality_flags``.
 """
 
 from __future__ import annotations
@@ -45,6 +50,21 @@ class VolumeKind(StrEnum):
     NONE = "none"
 
 
+class DataQualityFlag(StrEnum):
+    """Typed data-quality codes (Phase 2). Flags describe data; they never repair it."""
+
+    MISSING_VOLUME = "MISSING_VOLUME"
+    DUPLICATE_BAR = "DUPLICATE_BAR"
+    GAP_DETECTED = "GAP_DETECTED"
+    STALE = "STALE"
+    PROXY_SOURCE = "PROXY_SOURCE"
+    DERIVED_SOURCE = "DERIVED_SOURCE"
+    OUT_OF_ORDER = "OUT_OF_ORDER"
+    INVALID_PRICE_RELATION = "INVALID_PRICE_RELATION"
+    SOURCE_PRECISION_LOSS = "SOURCE_PRECISION_LOSS"
+    PARTIAL_SERIES = "PARTIAL_SERIES"
+
+
 class PriceSide(StrEnum):
     BID = "bid"
     ASK = "ask"
@@ -53,7 +73,12 @@ class PriceSide(StrEnum):
 
 
 class Candle(StellarModel):
-    """One OHLC bar (Foundation §4.8)."""
+    """One OHLC bar (Foundation §4.8). ``open_time`` is the bar's timestamp.
+
+    ``volume`` is what ``volume_kind`` says it is (tick or real), or ``None`` with
+    kind NONE when the source has no volume. ``tick_volume`` is an optional
+    second figure for sources that report both (for example MT5).
+    """
 
     instrument: InstrumentId
     timeframe: Timeframe
@@ -63,16 +88,20 @@ class Candle(StellarModel):
     high: Price
     low: Price
     close: Price
-    volume: NonNegativeDecimal
+    volume: NonNegativeDecimal | None = None
     volume_kind: VolumeKind
+    tick_volume: NonNegativeDecimal | None = None
     price_side: PriceSide
     source: ShortText
     provider_symbol: ShortText
     proxy: bool = False
     is_closed: bool
+    quality_flags: tuple[DataQualityFlag, ...] = ()
 
     @model_validator(mode="after")
     def _ohlc_consistent(self) -> Candle:
+        if (self.volume is None) != (self.volume_kind is VolumeKind.NONE):
+            raise ValueError("volume is absent exactly when volume_kind is none")
         if self.close_time <= self.open_time:
             raise ValueError("close_time must be after open_time")
         if self.high < max(self.open, self.close):

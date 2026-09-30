@@ -21,6 +21,7 @@ from pydantic import Field, field_validator, model_validator
 
 from stellar.schemas.common import (
     INSTRUMENT_DISPLAY_NAMES,
+    AssetClass,
     CurrencyCode,
     InstrumentId,
     StellarModel,
@@ -41,12 +42,6 @@ class ExecutionMode(StrEnum):
     """Reserved. Always refused by validation; see the module docstring."""
 
 
-class AssetClass(StrEnum):
-    METAL = "metal"
-    FX = "fx"
-    INDEX_CFD = "index_cfd"
-
-
 class FeatureGate(StrEnum):
     """Later subsystems. Each stays off until the phase that implements it."""
 
@@ -61,8 +56,8 @@ class FeatureGate(StrEnum):
     VISUAL_STATION = "visual_station"  # Phase 9
 
 
-IMPLEMENTED_FEATURES: frozenset[FeatureGate] = frozenset()
-"""Gates whose subsystem exists. Empty in Phase 1; each later phase adds its gate."""
+IMPLEMENTED_FEATURES: frozenset[FeatureGate] = frozenset({FeatureGate.MARKET_DATA})
+"""Gates whose subsystem exists. Phase 2 adds market data; each later phase adds its gate."""
 
 
 class InstrumentConfig(StellarModel):
@@ -139,6 +134,14 @@ class FeatureGates(StellarModel):
         return bool(getattr(self, gate.value))
 
 
+class MarketDataConfig(StellarModel):
+    """Phase 2 market-data settings. No staleness threshold is chosen by default."""
+
+    max_staleness_intervals: int | None = Field(default=None, ge=1)
+    """A series is STALE when its newest bar closed more than this many timeframe
+    intervals before ``as_of``. ``None`` (default): freshness is reported as unknown."""
+
+
 class JournalConfig(StellarModel):
     path: Path = Path("~/.stellar/journal.sqlite3")
 
@@ -152,6 +155,7 @@ class StellarConfig(StellarModel):
     execution: ExecutionConfig = ExecutionConfig()
     instruments: tuple[InstrumentConfig, ...] = DEFAULT_INSTRUMENTS
     features: FeatureGates = FeatureGates()
+    market_data: MarketDataConfig = MarketDataConfig()
     journal: JournalConfig = JournalConfig()
 
     @field_validator("instruments")

@@ -55,11 +55,29 @@ def test_invalid_execution_modes_are_rejected(mode):
         parse_config({"execution": {"mode": mode}})
 
 
-@pytest.mark.parametrize("gate", [g.value for g in FeatureGate])
+@pytest.mark.parametrize(
+    "gate", [g.value for g in FeatureGate if g not in IMPLEMENTED_FEATURES]
+)
 def test_unimplemented_features_cannot_be_enabled(gate):
-    assert not IMPLEMENTED_FEATURES
     with pytest.raises(ConfigError, match="not implemented"):
         parse_config({"features": {gate: True}})
+
+
+def test_only_market_data_is_implemented_after_phase_2():
+    assert {FeatureGate.MARKET_DATA} == IMPLEMENTED_FEATURES
+    config = parse_config({"features": {"market_data": True}})
+    assert config.features.enabled(FeatureGate.MARKET_DATA)
+    # Enabling market data does not permit trading.
+    assert config.trading_permitted()[0] is False
+
+
+def test_market_data_staleness_threshold_is_unset_by_default():
+    assert StellarConfig().market_data.max_staleness_intervals is None
+    assert parse_config({"market_data": {"max_staleness_intervals": 3}}).market_data \
+        .max_staleness_intervals == 3
+    for bad in (0, -1, "three"):
+        with pytest.raises(ConfigError):
+            parse_config({"market_data": {"max_staleness_intervals": bad}})
 
 
 def test_config_rejects_unknown_keys_duplicates_and_bad_instruments():
