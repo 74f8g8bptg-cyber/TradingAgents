@@ -192,7 +192,7 @@ changes this file only.
 |---|---|
 | Purpose | Market-data snapshots and validation (T1), plus system health: journal and event-stream health, runtime health, reconciliation |
 | Size / shape | S, short; door in the north wall (`COR-N`), opposite L1 / L2 |
-| Mandatory furniture | `EQP-001` reactor column (hero; pulses **only** per `snapshot.created`), `CON-018` reactor console, `SRV-001` / `SRV-002` racks |
+| Mandatory furniture | `EQP-001` reactor column (hero; pulses **only** per `snapshot.created`), `CON-018` reactor console, `SRV-001` / `SRV-002` racks, `CON-027` reconciliation console (look-only; carries `DSP-DCR-05`; read from `datacore.visitor`, no work anchor; L4 sheet DK-4) |
 | Mandatory screens | `DSP-DCR-01`…`DSP-DCR-06` |
 | Anchors | `datacore.reactor_console` (R: `data_validator`) · `datacore.rack_check` · `datacore.visitor` |
 | Usual agents | `CHR-035` Data Validator |
