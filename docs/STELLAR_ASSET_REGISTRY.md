@@ -208,7 +208,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LGT-004` | Floor guide strip (points toward the hub doors) | corridors | Y | purpose changed (was "toward the lift") |
 | `LGT-005` | Cold panel light | L10 | Y | room changed |
 | `LGT-006` | Warm pendant | `H-HAB` | Y | kept |
-| `LGT-007` | Podium spotlight (side icon + colour) | L3 | Y | kept |
+| `LGT-007` | Podium spotlight (neutral light; side icon + text; no side colour) | L3 | Y | kept |
 | `LGT-008` | Airlock status lamp | — | — | **RETIRED** |
 | `LGT-009` | Dome light | `H-LAB` | Y | room changed |
 
@@ -320,7 +320,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `PRP-001` | Data crystal | a hand-off implied by `analysis.created` → the next consumer | for example `H-LAB` → L1 → `H-CMD` | route changed |
 | `PRP-002` | Item card | `research.item.accepted` hand-off | inside `H-LAB` | kept |
 | `PRP-003` | Proposal card | `trade.proposed` | courier `H-CMD` → `DR-S-CMD` → `COR-S` → L10 `risk.intake_drop` | route changed (was the decision lift) |
-| `PRP-004` | Evidence card | `debate.turn.completed` citing evidence | inside L3 | kept |
+| `PRP-004` | Evidence card | `debate.turn.completed` whose paired `agent.task.completed` case cites evidence | inside L3: placed on the central evidence stage (never passed between podiums) | kept |
 | `PRP-005` | Order capsule | `risk.approved` **and** `order.created` | E1 collects it at L10 `risk.outbox_pickup` → `COR-S` → L9 | route changed (was the airlock) |
 | `PRP-006` | Review crystal | `trade.closed` | → L6 shelf | kept |
 | `PRP-007` | Coffee cup | ambient only | `H-HAB` | kept |

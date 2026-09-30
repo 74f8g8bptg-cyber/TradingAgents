@@ -325,7 +325,7 @@ area with the lounge, café, billiard room and wellbeing spaces.
 | **Main Command Deck** | Final decisions, proposals and orchestration | Portfolio Manager (U8), Research Manager (U3), Trader (U4), Trade Proposal Builder (P1), Supervisor (O1) | Captain's chair; main viewscreen with the focus instrument's chart, the current Setup and the rating; **station alert lights** (§5.4); run queue; the global metrics strip |
 | **Market Analysis Wing** | Deterministic technical analysis; instrument desks | Market Session (T2), Market Structure (T3), Technical Indicator (T4), Candle / Price Action (T5), Pullback / Setup (T6), Entry Timing (T7), Technical Analyst (T8); market specialists S1–S4 at the XAU/USD, EUR/USD, USD/JPY and NAS100 desks | Holo chart tables that draw structure levels, indicators and candle features as they are computed; a session world clock; one desk per instrument |
 | **Macro & News Observatory** | Research and macro/causal analysis | Research roles R1–R6 (as active), Causal / Macro Analyst (M1) | Telescope toward a "news nebula"; incoming research items as stars, dimmed when rejected by validation; a driver board for the macro assessment with its coverage |
-| **Debate Chamber** | Investment debate and risk debate | Bull & Bear Researchers (inner ring), Aggressive / Conservative / Neutral Risk Debaters (outer ring) | Two concentric rings of podiums; a spotlight on the current speaker; a round counter (`round n / max`); a tug-of-war balance bar that shifts as arguments land |
+| **Debate Chamber** | Investment debate and risk debate | Bull & Bear Researchers (inner ring), Aggressive / Conservative / Neutral Risk Debaters (outer ring) | Podiums around a central evidence stage (inner pair, outer arc; open and level); neutral podium lights with side icon + text; a round counter (`round n / max`); no score, balance bar or winner (L3 sheet D5) |
 | **Risk Control Vault** | Deterministic risk gate | Contradiction Checker (P2), Risk Engine (P3) with its Vault personas (proposal checks, sizing, exposure, breaker) | The vault door (closed by default); a rule checklist that lights each check pass/fail; exposure bars against limits; the kill-switch lever (glows red when engaged) |
 | **Execution Bay** | Order routing | Execution Checker (P4), Paper Execution Agent (E1); MT5 Execution Agent (E2) only after the demo gate | Launch tubes (orders as shuttles); a docking board of open positions with live P&L; a "PAPER" or "DEMO" hull marking always visible; bridge link status once MT5 exists |
 | **Data Core** | Market data, research validation, telemetry | Data Validator (T1), research validators V1–V4 | Reactor column that brightens with request volume; one conduit per market-data and research source, coloured by health; the telemetry bus and journal |
@@ -434,8 +434,8 @@ OFF_DUTY <-> IDLE -> ASSIGNED -> {THINKING <-> FETCHING | CHECKING} -> REPORTING
 
 | Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
 |---|---|---|---|---|---|
-| **Bull Researcher** (U1, `bull_researcher`) | Argues for the setup | Debate Chamber, inner ring, left podium | turns; words per turn; "won" rate (Research Manager sided with it); conditional correctness (§6.3) | `WAITING` until every report is filed; then `SPEAKING` / `LISTENING` | Green spotlight when speaking; speech bubble with an excerpt; tug-of-war bar moves left |
-| **Bear Researcher** (U2, `bear_researcher`) | Argues against | Debate Chamber, inner ring, right podium | same as Bull | same | Red spotlight; bar moves right |
+| **Bull Researcher** (U1, `bull_researcher`) | Argues for the setup | Debate Chamber, inner ring, left podium | turns; words per turn; "won" rate (Research Manager sided with it); conditional correctness (§6.3) | `WAITING` until every report is filed; then `SPEAKING` / `LISTENING` | Neutral spotlight with bull icon + label; the excerpt appears on the bull wall (no speech bubble) |
+| **Bear Researcher** (U2, `bear_researcher`) | Argues against | Debate Chamber, inner ring, right podium | same as Bull | same | Neutral spotlight with bear icon + label; the excerpt appears on the bear wall |
 | **Aggressive Risk Debater** (U5, `risk_aggressive`) | Argues for the high-reward view of the Trader's plan | Debate Chamber, outer ring | turns; agreement with the final rating | Round-robin: Aggressive → Conservative → Neutral | Orange podium light; "upside" arrows |
 | **Conservative Risk Debater** (U6, `risk_conservative`) | Argues for caution | Debate Chamber, outer ring | same | same | Blue podium light; shield icon |
 | **Neutral Risk Debater** (U7, `risk_neutral`) | Balances the two | Debate Chamber, outer ring | same | same | White podium light; balance-scale icon |
@@ -756,7 +756,7 @@ follows and may take a second or two; truth never waits for animation.
 | `ASSIGNED` | walking to work position | walk; a dotted path line | ➜ white |
 | `THINKING` | work position | pulsing halo; live token counter | ✦ cyan, pulsing |
 | `FETCHING` | work position | a beam from the desk down to the Data Core conduit of the vendor used; tool label | ⇣ cyan + tool name |
-| `SPEAKING` | debate podium | spotlight; speech bubble with an excerpt; gestures | 🗨 bright, the side's colour |
+| `SPEAKING` | debate podium | neutral spotlight; the excerpt on the side's wall (no speech bubble); gestures | 🗨 bright, side icon + label |
 | `LISTENING` | debate seat | seated, head turned to the speaker | 👂 dim |
 | `WAITING` | work position or the waiting bench | seated; hourglass | ⌛ grey |
 | `REPORTING` | walking to the next room | carries a glowing data crystal (the report) and hands it over | ◆ gold |
@@ -1072,7 +1072,7 @@ decision is and whether anything is blocked; this matches the event log exactly.
 ### Theme LD-6 — Visual station v2: movement and life *(Foundation Phase 10)*
 
 - Pathfinding along corridors; walk animations; data-crystal hand-offs; debate staging with
-  spotlights and the tug-of-war bar.
+  neutral podium lights and the central evidence stage (no tug-of-war bar or score).
 - Shuttle launches from the Execution Bay; the docking board of positions.
 - Habitat life: lounge and café routines, billiards between off-duty agents, the Café Host; the
   Station Medic and Quartermaster personas of the Operational Wellbeing Monitor; the Vault

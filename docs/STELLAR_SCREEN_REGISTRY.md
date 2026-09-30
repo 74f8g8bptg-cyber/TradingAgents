@@ -104,7 +104,7 @@ displays list only these. Other family members (XAG, FX minors, other indices) s
 | Reserved rooms L5, L8, R2–R6 | — | 0 | — |
 | **Total** | | **81** | **9** |
 
-**Availability as of Phase 7** (against §2.1): **49 available** (`A`), **12 partial** (`P`), **11 not available** (`N`), **9 planned** (`X`).
+**Availability as of Phase 7** (against §2.1): **50 available** (`A`), **11 partial** (`P`), **11 not available** (`N`), **9 planned** (`X`).
 
 Column key:
 - **HW** = hardware type;
@@ -180,11 +180,11 @@ Footer on every specialist desk: **"Family desk · interim view of N runtime age
 
 | ID | Name | HW | Content | Src · events | Av | I/O | Missing / stale |
 |---|---|---|---|---|---|---|---|
-| `DSP-DEB-01` | Bull wall | `SCR-002` | Bull arguments | EV · `debate.turn.completed` | A | RO | **NO DEBATE IN PROGRESS** |
-| `DSP-DEB-02` | Bear wall | `SCR-002` | Bear arguments | EV · `debate.turn.completed` | A | RO | as above |
-| `DSP-DEB-03` | Evidence projector | `SCR-012` | Evidence cited in the current turn | EV · `debate.turn.completed` | A | NAV | **NO EVIDENCE CITED** |
+| `DSP-DEB-01` | Bull wall | `SCR-002` | Bull arguments | EV · `agent.task.completed` (`bull_researcher`: the case) paired with `debate.turn.completed` (round, side; carries no arguments) | A | RO | **NO DEBATE IN PROGRESS** |
+| `DSP-DEB-02` | Bear wall | `SCR-002` | Bear arguments | EV · `agent.task.completed` (`bear_researcher`: the case) paired with `debate.turn.completed` (round, side; carries no arguments) | A | RO | as above |
+| `DSP-DEB-03` | Evidence projector | `SCR-012` | Evidence cited in the current turn | EV · the speaking role's `agent.task.completed` (cited evidence ids) paired with `debate.turn.completed` | A | NAV | **NO EVIDENCE CITED** |
 | `DSP-DEB-04` | Round counter | `SCR-003` | Round n of N; debate type | EV · `debate.started`, `debate.turn.completed` | A | RO | as above |
-| `DSP-DEB-05` | Contradiction feed | `SCR-003` | Contradictions carried on the proposal | EV · `trade.proposed` | P | RO | **AWAITING DATA** |
+| `DSP-DEB-05` | Contradiction feed | `SCR-003` | P2 contradiction findings of the debate (remote data feed) | EV · `debate.completed` (findings) | A | RO | **AWAITING DATA** |
 | `DSP-DEB-06` | Verdict | `SCR-005` | Research plan / debate outcome | EV · `debate.completed`, `decision.research_plan.created` | A | NAV | **PENDING** |
 
 ### 5.6 `L4` — Data Core (system)

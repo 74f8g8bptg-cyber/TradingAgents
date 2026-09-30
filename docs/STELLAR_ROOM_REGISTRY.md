@@ -179,7 +179,7 @@ changes this file only.
 | Mandatory screens | `DSP-DEB-01`…`DSP-DEB-06` |
 | Anchors | `debate.podium_bull`, `debate.podium_bear`, `debate.podium_risk_1`…`_3` (each reserved to its debater) · `debate.judge_seat` (Research Manager; the PM when judging) · `debate.visitor` |
 | Usual agents | `CHR-006`–`CHR-010`; visits by `CHR-002` and `CHR-001` |
-| Lighting / accent | Podium spotlights carry a side icon as well as a colour |
+| Lighting / accent | Neutral podium spotlights; the side is shown by icon + text, never by colour (L3 sheet DC-3) |
 
 ### 3.7 `L4` — Data Core · ACTIVE
 

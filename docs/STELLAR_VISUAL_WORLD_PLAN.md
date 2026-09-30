@@ -448,11 +448,11 @@ approach:
 | O1 | Supervisor (`supervisor`) | First Officer Mara Solen | Main Command | Ops console; occasional room visits when a run starts (event-driven) |
 | U4 | Trader (`trader`) | Lt. Cmdr. Rook Halden | Main Command | Trading console; draws advisory levels as dashed lines |
 | P1 | Trade Proposal Builder (`trade_proposal_builder`) | Ensign Tavi Marr | Main Command | Assembles the proposal card; carries it along `COR-S` to the Risk Control Room intake |
-| U1 | Bull Researcher (`bull_researcher`) | Lt. Leo Brask | Debate Chamber | Left inner podium, green spotlight |
-| U2 | Bear Researcher (`bear_researcher`) | Lt. Ursa Venn | Debate Chamber | Right inner podium, red spotlight |
-| U5 | Aggressive Risk Debater (`risk_aggressive`) | Ensign Rhea Vantor | Debate Chamber | Outer ring, orange light |
-| U6 | Conservative Risk Debater (`risk_conservative`) | Ensign Hollis Crane | Debate Chamber | Outer ring, blue light |
-| U7 | Neutral Risk Debater (`risk_neutral`) | Ensign Tamsin Ly | Debate Chamber | Outer ring, white light |
+| U1 | Bull Researcher (`bull_researcher`) | Lt. Leo Brask | Debate Chamber | Left inner podium, neutral spotlight, bull icon + label |
+| U2 | Bear Researcher (`bear_researcher`) | Lt. Ursa Venn | Debate Chamber | Right inner podium, neutral spotlight, bear icon + label |
+| U5 | Aggressive Risk Debater (`risk_aggressive`) | Ensign Rhea Vantor | Debate Chamber | Outer arc, neutral light (unlit while the risk debate has no producer) |
+| U6 | Conservative Risk Debater (`risk_conservative`) | Ensign Hollis Crane | Debate Chamber | Outer arc, neutral light (unlit while the risk debate has no producer) |
+| U7 | Neutral Risk Debater (`risk_neutral`) | Ensign Tamsin Ly | Debate Chamber | Outer arc, neutral light (unlit while the risk debate has no producer) |
 | M1 | Causal / Macro Analyst (`causal_macro_analyst`) | Dr. Elara Maren | Lab / Research Hub (`H-LAB`) | Driver board; draws arrows between drivers and assets |
 | R1 | Central Bank Research (`research_central_bank`) | Lt. Cassian Rho | Lab / Research Hub (`H-LAB`) | Feed console; hands items to the Macro room |
 | R2 | Economic Data Research (`research_economic_data`) | Ensign Mira Dal | Lab / Research Hub (`H-LAB`) | Calendar console; active after releases |
@@ -533,7 +533,7 @@ apply: `offline` > `error` > `paused` > `overloaded` > `resting` > transient out
 | `validating` | Scanning item or snapshot cards | Lab / Research Hub (`H-LAB`) bench / Data Core | Pass/fail marks per item | ⌕ violet | No | idle, error |
 | `analysing` | Working the room's main display | Owning analysis room | Room screen updates as outputs arrive | ✦ cyan, pulsing | No | reviewing, waiting, idle, error |
 | `monitoring` | Watchful pose, periodic glance at a gauge | Assigned console | Live gauges | ◉ blue | No | analysing, executing, idle, paused |
-| `debating` | Speaking: gestures, spotlight; listening: facing speaker | Debate Chamber podium | Argument columns and evidence cards | 🗨 side colour | No (during debate) | reviewing (judges), idle |
+| `debating` | Speaking: gestures, spotlight; listening: facing speaker | Debate Chamber podium | Argument columns and evidence cards | 🗨 side icon + label | No (during debate) | reviewing (judges), idle |
 | `reviewing` | Judge seat or command chair; stamp gesture at the end | Debate Chamber judge seat / Main Command | Recommendation / rating appears | ⚖ gold | No | idle, walking |
 | `waiting` | Seated, hourglass | Work position or waiting bench | — | ⌛ grey | No | any working state |
 | `risk_review` | Checks lighting one by one | Risk Control Room (L10) | Rule checklist | ⌕ violet + shield | No | approved, rejected, idle |
@@ -591,7 +591,7 @@ proposal along `COR-S` to the Risk Control Room intake) happens only when an eve
 | Two agents at the same console | **A. Operational** | Both have tasks on the same artefact (e.g. T3 and T4 on the same snapshot id) |
 | Small group around the command table | **A. Operational** | `run.started` for a decision cycle: U3, U8, O1, U4 gather |
 | Debate participants facing each other | **A. Operational** | `debate.started` … `debate.completed` |
-| Evidence card passed between podiums | **A. Operational** | `debate.turn.completed` whose excerpt cites research or analysis ids |
+| Evidence card placed on the central evidence stage | **A. Operational** | `debate.turn.completed` whose paired `agent.task.completed` case cites research or analysis ids |
 | Hand-off of a data crystal / item card | **A. Operational** | `analysis.created` → next consumer's `agent.task.started`; `research.item.accepted` |
 | Proposal card carried along `COR-S` to the Risk Control Room intake | **A. Operational** | `trade.proposed` |
 | Supervisor visiting a room | **A. Operational** | `market.focus.changed`, `run.started`, `system.paused` (O1 walks to the room concerned) |
@@ -760,7 +760,7 @@ WorldState; the renderer then animates.
 | `analysis.created` | Report / assessment crystal appears | Producing room | Producer lifts the crystal; carries it to the consumer if one starts | Assessment summary on the producing room's screen |
 | `setup.state.changed` | Setup card changes state | Technical Deck | T6 moves the card on the lifecycle board | Setup lifecycle; `ARMED` glow |
 | `debate.started` | Chamber spotlights on | Debate Chamber | Participants walk to podiums and face each other | Round counter starts |
-| `debate.turn.completed` | Tug-of-war bar moves | Debate Chamber | Speaker gestures; evidence card passed if cited | New argument in the speaker's column |
+| `debate.turn.completed` | Round counter advances (no score, bar or winner) | Debate Chamber | Speaker gestures; evidence card placed on the central stage | New argument in the speaker's column (content from the paired `agent.task.completed`) |
 | `debate.completed` | Spotlights off; verdict shown | Debate Chamber | Judge stamps; participants return to seats / idle | Verdict |
 | `decision.final.created` | Rating stamped on the main viewscreen | Main Command | PM stamp gesture | Rating; `REVIEW` flashes amber with icon |
 | `trade.proposed` | Proposal card leaves Main Command | Main Command → `COR-S` → Risk Control Room intake | P1 carries the card to `risk.intake_drop` | Risk intake shows the proposal |
@@ -1156,7 +1156,7 @@ StarNet's **code** is MIT-licensed; its name, logo, artwork, sprites and brand i
 | VW-3 | Art production pipeline | 3D models rendered to isometric sprites; hand-painted art; commissioned artist; generated then retouched | Grey-box placeholder art in V1 |
 | VW-4 | Persona names | Original defaults (proposed); owner's local override with franchise names; no names (role titles only) | Original defaults in the repository |
 | VW-5 | Technical ids for M1, R*, V*, S*, T* | Confirm the proposed ids in Foundation Phase 1 | Proposed ids used in this document |
-| VW-6 | Contradiction Checker in the Debate Chamber | Remote evidence-screen feed (proposed); a visiting hologram of P2 | Remote feed |
+| VW-6 | Contradiction Checker in the Debate Chamber | Remote evidence-screen feed (proposed); a visiting hologram of P2 | **Decided:** remote / data feed only (`DSP-DEB-05` from `debate.completed`); no hologram (L3 sheet DC-10) |
 | VW-7 | Start the V1-E engine port (and the renderer spike) before the Foundation Phase 9 entry, on recorded or synthetic event fixtures | Allow (needs a Foundation Plan amendment); wait | Wait; art exploration only |
 | VW-8 | Sound | None; ambient only; event cues | None |
 | VW-9 | Display-time values (transient states, idle delay before ambient, maximum walk time, ambient beat budget, keepalive interval, snapshot refresh cadence, stale-marker durations) | UI / API settings tuned in V1-E and V2 | Short fixed values, configurable; snapshot refresh at StarNet's 30 s until tuned |
