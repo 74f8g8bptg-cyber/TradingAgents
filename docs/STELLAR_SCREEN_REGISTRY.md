@@ -104,7 +104,7 @@ displays list only these. Other family members (XAG, FX minors, other indices) s
 | Reserved rooms L5, L8, R2–R6 | — | 0 | — |
 | **Total** | | **81** | **9** |
 
-**Availability as of Phase 7** (against §2.1): **50 available** (`A`), **11 partial** (`P`), **11 not available** (`N`), **9 planned** (`X`).
+**Availability as of Phase 7** (against §2.1): **52 available** (`A`), **9 partial** (`P`), **11 not available** (`N`), **9 planned** (`X`).
 
 Column key:
 - **HW** = hardware type;
@@ -211,11 +211,11 @@ Footer on every specialist desk: **"Family desk · interim view of N runtime age
 
 | ID | Name | HW | Content | Src · events | Av | I/O | Missing / stale |
 |---|---|---|---|---|---|---|---|
-| `DSP-PRF-01` | Outcome board | `SCR-002` | Win / loss, expectancy, R distribution, from closed trades only | EV · `trade.closed` | P | RO | Below the sample threshold → **INSUFFICIENT SAMPLE** (hatched) |
-| `DSP-PRF-02` | Runtime metrics | `SCR-002` | Runs by outcome, stage timings | MT | A | RO | **STALE** |
-| `DSP-PRF-03` | Execution metrics | `SCR-003` | Paper submissions, execution failures, order outcomes | MT; EV · `order.*` | A | RO | **STALE** |
+| `DSP-PRF-01` | Outcome board | `SCR-002` | Recorded closed trades and the account totals the engine computes (realised / unrealised P&L, balance, equity, peak equity, open risk), labelled with the environment (`PAPER`). **No** win / loss counts, win rate, expectancy, R or other unsupported metric (L7 sheet DP-1, DP-2) | EV · `trade.closed`, `account.snapshot.created` | A | RO | **AWAITING DATA**; unknown money → **UNKNOWN** with the engine's reason |
+| `DSP-PRF-02` | Runtime metrics | `SCR-002` | Runs by outcome, stage timings | MT | A | RO | **AWAITING DATA**; otherwise the report with its read time and age (no STALE threshold; L7 sheet DP-3) |
+| `DSP-PRF-03` | Execution metrics | `SCR-003` | Paper submissions, execution failures (combined), per-order outcomes | MT; EV · `order.*` | A | RO | **AWAITING DATA**; otherwise the report with its read time and age (no STALE threshold; L7 sheet DP-3) |
 | `DSP-PRF-04` | Attribution | `SCR-003` | Per-agent contribution | Needs `memory.outcome.settled` (no producer) | N | RO | **NOT AVAILABLE · attribution** |
-| `DSP-PRF-05` | Workload & review metrics | `SCR-003` | Task counts, durations and failures per agent; LLM retries; review outcomes where they exist | EV · `agent.task.*`, `agent.llm_call.*`; MT | P | RO | Failed-review counts → **NOT AVAILABLE** until review events exist |
+| `DSP-PRF-05` | Workload & review metrics | `SCR-003` | Station-wide AI-model call totals computed by the engine (calls, attempts, retries, failed, tokens, cost). Per-agent workload and review outcomes → **NOT AVAILABLE** (not computed; no review producer; L7 sheet DP-5) | MT | A | RO | **AWAITING DATA**; cost unknown → **UNKNOWN** |
 
 ### 5.9 `L9` — Execution Bay
 

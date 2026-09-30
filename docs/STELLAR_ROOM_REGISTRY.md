@@ -213,7 +213,7 @@ changes this file only.
 
 | Field | Value |
 |---|---|
-| Purpose | Runtime metrics, execution metrics, attribution, workload and review metrics, with sample-size honesty |
+| Purpose | Runtime metrics, execution metrics, recorded outcomes and account totals, attribution, workload and review metrics, with sample-size honesty. **No producer today** for attribution (`memory.outcome.settled`), per-agent workload or review metrics: those read NOT AVAILABLE (L7 sheet DP-5, DP-6). Environment: `PAPER` only; never mixed with DEMO / LIVE (DP-7) |
 | Size / shape | S, short; door in the south wall (`COR-S`) |
 | Mandatory furniture | `CON-020` metrics terminal, `TBL-005` work table |
 | Mandatory screens | `DSP-PRF-01`…`DSP-PRF-05` |
