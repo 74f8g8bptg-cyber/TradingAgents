@@ -17,7 +17,7 @@
 | **Atmosphere** | Bright, quiet, focused discovery. A clean scientific space with a stronger blue / cyan research light than the rest of the vessel; never a dark laboratory |
 | **Visual identity** | A domed circular hub with a **lab dome ring** hero at the centre. Feed consoles form an arc on the west rim, a validation bench runs along the south, and a macro driver board sits on the north. Screens are brighter and denser than in other rooms (Visual Bible §6.2) |
 | **Importance level** | **High** (the second hub after Main Command). Its hero object must read at overview zoom |
-| **Relationship with Main Command** | **Physical:** there is no direct door. H-LAB reaches `H-CMD` along **either** corridor: `DR-N-LAB` → `COR-N` → `DR-N-CMD`, or `DR-S-LAB` → `COR-S` → `DR-S-CMD` (Topology v2 §6; two independent routes).<br>**Functional:** H-LAB is the **start** of the analysis chain. Its output flows east along `COR-N` to the Market Specialists (L1), then to Technical (L2) and Debate (L3), and reaches the Central Trader in `H-CMD`. H-LAB never makes decisions |
+| **Relationship with Main Command** | **Physical:** there is no direct door. H-LAB reaches `H-CMD` along **either** corridor: `DR-N-LAB` → `COR-N` → `DR-N-CMD`, or `DR-S-LAB` → `COR-S` → `DR-S-CMD` (Topology v2 §6; two independent routes).<br>**Functional:** H-LAB is the **start** of the analysis chain. Its output goes along `COR-N` to the Market Specialists (L1) and the Debate Chamber (L3), and reaches the Central Trader in `H-CMD`. The Technical Deck (L2) runs **before** the research stage on market data alone; the specialists use its technical evidence together with the research (engine order, L2 sheet TA-2). H-LAB never makes decisions |
 
 ---
 

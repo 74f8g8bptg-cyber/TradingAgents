@@ -279,8 +279,10 @@ A small top-right ship schematic, always visible:
 
 Layout principles:
 - **The floor plan follows the control flow.**
-  - Research leaves `H-LAB` along `COR-N` → Market Specialists (L1) → Technical Deck (L2) → Debate
-    Chamber (L3) → `H-CMD`.
+  - Analysis runs along `COR-N` in the **engine's order** (the engine is the source of truth): the
+    Technical Deck (L2) analyses the verified snapshot from the Data Core (L4) **first**; its
+    technical evidence and the research from `H-LAB` are then used by the Market Specialists (L1);
+    then the Debate Chamber (L3); then the setup evaluation in L2 (T6); then `H-CMD`.
   - Decisions leave `H-CMD` along `COR-S` to the Risk Control Room (L10), then the Execution Bay (L9).
 - **Risk isolation is logical, not geometric.** L10 and L9 have ordinary doors. Access is a
   per-role navigation permission, with restricted anchors and static markings (Character Registry
@@ -332,8 +334,12 @@ elsewhere. Every room's connections are its approved doors (Topology v2 §3).
 #### Technical Deck (L2)
 - **Purpose:** charts, candles, indicators, market structure, pullback / setup detection, entry
   timing, market sessions.
-- **Agents:** T2–T8.
-- **Visual style:** a long holo chart table with timeframe layers (context, setup, pullback, entry).
+- **Agents:** T2–T8. T3–T5 publish `analysis.created`; T6 publishes `setup.state.changed`. T2
+  (Market Session), T7 (Entry Timing) and T8 (Technical Analyst) have **no producer** today
+  (`idle`, displays NOT AVAILABLE).
+- **Visual style:** a long holo chart table showing the run's one timeframe. Timeframe layers
+  (context, setup, pullback, entry) are **NOT AVAILABLE** until multi-timeframe analysis is
+  connected in the runtime.
 - **Alert states:** setup `ARMED` glow; `EXPIRED` / `INVALIDATED` fade.
 - **Connections:** `COR-N`.
 
@@ -562,7 +568,7 @@ Movement is **cosmetic** and happens **after** the engine's state change (§1.6)
 | `validating` (market data, T1) | Data Core reactor console |
 | `analysing` — macro (M1) | Lab / Research Hub (`H-LAB`) driver board |
 | `analysing` — market-specific (S*) | Market Specialists Room (L1), the family desk; each underlying agent keeps its own task row (interim adapter) |
-| `analysing` — technical (T3–T8) | Technical Deck chart table |
+| `analysing` — technical (T3–T6; L2 sheet TA-4) | Technical Deck (L2): T3 and T4 at the central chart table (`technical.table_1` / `table_2`) during their real `analysis.created` result; T5 at its own station (`technical.station_t5`); T6 at its own setup station (`technical.station_t6`) on `setup.state.changed`. T2, T7 and T8 have **no producer**: they stay `idle` at their stations and are never shown analysing |
 | `analysing` — proposal (P1), Trader (U4) | Main Command consoles |
 | `debating` | Debate Chamber podium (assigned seat) |
 | `reviewing` | Debate Chamber judge seat (debate close) or Main Command chair (final rating) |

@@ -75,13 +75,18 @@ paths around it (A12).
 
 ### 2.1 Why this placement (the decision chain follows the corridors)
 
-The owner's chain is **Research → Specialists → Technical / Debate → Central Trader →
-Approval / Portfolio → deterministic Risk Engine → Execution**. It maps onto the approved geometry
-as follows:
+The chain follows the **engine's run order** (`MARKET_DATA` → `TECHNICAL` → `RESEARCH` → `SETUP`
+→ `PROPOSAL` → `RISK` → execution; the engine is the source of truth, L2 sheet TA-2): **Market data
+→ Technical → Research → Specialists → Debate → Setup → Central Trader → Approval / Portfolio →
+deterministic Risk Engine → Execution**. It maps onto the approved geometry as follows:
 
-- **Upper corridor `COR-N`** — analysis, flowing west → east:
-  - `H-LAB` (shared research) → `L1` specialists → `L2` technical (fed by the `L4` Data Core
-    opposite) → `L3` debate → `H-CMD`.
+- **Upper corridor `COR-N`** — analysis (a functional flow, not a walking order west → east):
+  - `L4` Data Core (snapshot) → `L2` technical analysis (T3–T5), which runs **before** the
+    specialist stage;
+  - `H-LAB` (shared research and macro) and the `L2` technical evidence → `L1` specialists (the
+    specialist stage **uses** the technical evidence produced in L2);
+  - → `L3` debate (also citing technical evidence) → the setup evaluation back in `L2` (T6, which
+    uses the debate verdict) → `H-CMD`.
 - **`H-CMD`** — the Central Trader, Portfolio Manager approval, and the proposal builder.
 - **Lower corridor `COR-S`** — decision and aftermath, near the `H-CMD` end:
   - `DR-S-CMD` → `L10` risk → `L9` execution;
@@ -165,7 +170,7 @@ changes this file only.
 | Mandatory furniture | `TBL-002` holo chart table, `CON-002` standing consoles × 6, `CON-010` session-clock pedestal |
 | Mandatory screens | `DSP-TEC-01`…`DSP-TEC-07` |
 | Anchors | `technical.station_t3`…`station_t8` · `technical.session_clock` (T2) · `technical.table_1`, `table_2` |
-| Usual agents | `CHR-026`–`CHR-032` |
+| Usual agents | `CHR-026`–`CHR-032`. T2 (`CHR-026`), T7 (`CHR-031`) and T8 (`CHR-032`) have **no producer** today: shown `idle` |
 | Lighting / accent | Science blue; chart-table glow |
 
 ### 3.6 `L3` — Debate Chamber · ACTIVE

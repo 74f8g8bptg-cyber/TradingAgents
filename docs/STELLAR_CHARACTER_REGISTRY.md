@@ -107,13 +107,13 @@ additional working states.
 | `CHR-023` | Lt. Elise Marchetti | **FX FAMILY DESK** (visual representation; interim adapter over **two** runtime agents: S2 `specialist_eurusd` + S3 `specialist_usdjpy`) | SCI | `L1` · `specialists.desk_fx` | ambient | analysing (per task row) | MP-FREE | ACTIVE | **re-scoped** to a family desk (§5) |
 | `CHR-024` | Lt. Ren Takeda | *(was USD/JPY Specialist)* | — | — | — | — | — | **RETIRED** | folded into FX; ID never reused |
 | `CHR-025` | Lt. Nash Coleman | **Indices FAMILY DESK** (visual representation; interim adapter over S4 `specialist_nas100`) | SCI | `L1` · `specialists.desk_indices` | ambient | analysing | MP-FREE | ACTIVE | **re-scoped** to a family desk (§5) |
-| `CHR-026` | Ensign Sol Meridian | Market Session (T2 · `market_session`) | SCI | `L2` · `technical.session_clock` | ambient | analysing, monitoring | MP-FREE | ACTIVE | room |
-| `CHR-027` | Lt. Vega Stone | Market Structure (T3 · `market_structure`) | SCI | `L2` · `technical.station_t3` | ambient | analysing | MP-FREE | ACTIVE | room |
+| `CHR-026` | Ensign Sol Meridian | Market Session (T2 · `market_session`) | SCI | `L2` · `technical.session_clock` | ambient | analysing, monitoring | MP-FREE | ACTIVE (**no producer**: no engine code, `market.session.changed` not emitted; shown `idle`) | room |
+| `CHR-027` | Lt. Vega Stone | Market Structure (T3 · `market_structure`) | SCI | `L2` · `technical.station_t3` | L1 `specialists.visitor` (technical hand-off, `PRP-001`); ambient | analysing | MP-FREE | ACTIVE | room |
 | `CHR-028` | Lt. Iris Calder | Technical Indicator (T4 · `technical_indicator`) | SCI | `L2` · `technical.station_t4` | ambient | analysing | MP-FREE | ACTIVE | room |
 | `CHR-029` | Ensign Wick Arlo | Candle / Price Action (T5 · `price_action`) | SCI | `L2` · `technical.station_t5` | ambient | analysing | MP-FREE | ACTIVE | room |
 | `CHR-030` | Lt. Tess Harrow | Pullback / Setup (T6 · `pullback_setup`) | SCI | `L2` · `technical.station_t6` | ambient | analysing | MP-FREE | ACTIVE | room |
 | `CHR-031` | Ensign Kit Sparrow | Entry Timing (T7 · `entry_timing`) | SCI | `L2` · `technical.station_t7` | ambient | analysing, monitoring | MP-FREE | ACTIVE (engine role not built: shown `idle`) | room |
-| `CHR-032` | Lt. Cmdr. Rune Halloway | Technical Analyst (T8 · `technical_analyst`) | SCI | `L2` · `technical.station_t8` | ambient | analysing | MP-FREE | ACTIVE | room |
+| `CHR-032` | Lt. Cmdr. Rune Halloway | Technical Analyst (T8 · `technical_analyst`) | SCI | `L2` · `technical.station_t8` | ambient | analysing | MP-FREE | ACTIVE (**no producer**: no stage calls the LLM role; shown `idle`) | room |
 | `CHR-033` | Archivist Quinn Morrow | Post-Trade Reviewer (L1 · `post_trade_reviewer`) | SCI | `L6` · `archive.terminal` | L7; ambient | post_trade_review | MP-FREE | ACTIVE | room |
 | `CHR-034` | Dr. Pax Lindqvist | Performance / Attribution (L2 · `attribution`) | SCI | `L7` · `perflab.terminal` | L6; ambient | post_trade_review | MP-FREE | ACTIVE | room |
 | `CHR-035` | Chief Engineer Oren Kade | Data Validator (T1 · `data_validator`) | OPS | `L4` · `datacore.reactor_console` | ambient | validating, monitoring | MP-FREE | ACTIVE | room |
@@ -231,10 +231,11 @@ The research layer **feeds the three specialists**. It is never duplicated per m
 
 | Step | Who | Where |
 |---|---|---|
+| Technical (runs first; its evidence is used by the specialists) | `CHR-026`–`032` (T3–T5 active) | `L2` |
 | Research | `CHR-011`–`021` | `H-LAB` |
 | Specialists | `CHR-022`, `023`, `025` | `L1` |
-| Technical | `CHR-026`–`032` | `L2` |
 | Debate | `CHR-006`–`010`, judged by `CHR-002` | `L3` |
+| Setup | `CHR-030` (T6) | `L2` |
 | Central Trader | `CHR-004` | `H-CMD` |
 | Approval / Portfolio | `CHR-001` | `H-CMD` |
 | Proposal | `CHR-005` | `H-CMD` → courier to `L10` intake |

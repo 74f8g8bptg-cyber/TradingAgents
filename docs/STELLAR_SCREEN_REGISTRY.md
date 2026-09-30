@@ -123,7 +123,7 @@ Column key:
 | `DSP-CMD-01` | Market Overview (main viewscreen, north rim) | `SCR-001` | The configured instruments grouped by family: latest snapshot price context with its time, session, active setup and latest specialist view | EV · `snapshot.created`, `setup.state.changed`, `analysis.created`; SN; CF | P | NAV | Live quotes → **NOT AVAILABLE · live quotes** (snapshot values never pose as live) |
 | `DSP-CMD-02` | Technical Analysis summary | `SCR-002` | Setup states per instrument; latest technical assessment | EV · `setup.state.changed`, `analysis.created` | A | NAV | **AWAITING DATA** |
 | `DSP-CMD-03` | Research / News | `SCR-002` | Latest research snapshot (counts, labels) and macro assessment | EV · `research.snapshot.created`, `analysis.created` (macro) | A | NAV | **AWAITING DATA**; news feed → dormant (R3 deferred) |
-| `DSP-CMD-04` | Agent Pipeline | `SCR-005` | The decision chain (research → specialists → technical → debate → trader → approval → risk → execution → review): each stage lit **only** by its event, with a timestamp; the working agents per stage | EV · the chain events, `agent.task.*`; RL checkpoints | A | NAV | Unreached stages stay unlit |
+| `DSP-CMD-04` | Agent Pipeline | `SCR-005` | The decision chain in the engine's run order (technical → research → specialists → debate → setup → trader → approval → risk → execution → review): each stage lit **only** by its event, with a timestamp; the working agents per stage | EV · the chain events, `agent.task.*`; RL checkpoints | A | NAV | Unreached stages stay unlit |
 | `DSP-CMD-05` | Portfolio | `SCR-002` | Paper balance / equity, open positions, P&L, drawdown | EV · `account.snapshot.created`, `position.*`, `trade.closed`; SN | A | NAV | Missing economics → **UNKNOWN** |
 | `DSP-CMD-06` | Global System Status | `SCR-002` | Health status and reasons, runs by state, breaker state, alert level, link state | HL; RL; LK; derived alert | A | NAV | Never "HEALTHY" by default; old read → **STALE** |
 | `DSP-CMD-07` | Alert band | `SCR-005` | Alert level word + icon | derived (§2.2) | P | RO | **NO TELEMETRY** |
@@ -168,11 +168,11 @@ Footer on every specialist desk: **"Family desk · interim view of N runtime age
 
 | ID | Name | HW | Content | Src · events | Av | I/O | Missing / stale |
 |---|---|---|---|---|---|---|---|
-| `DSP-TEC-01` | Chart table | `SCR-012` | Candles from the latest market snapshot | EV · `snapshot.created`; SN | A | RO | **AWAITING DATA** / **STALE** |
-| `DSP-TEC-02` | Indicator panels | `SCR-002` | EMA / RSI / MACD / ATR from the technical assessment | EV · `analysis.created` (technical) | A | RO | Disabled indicator → **NOT CONFIGURED** |
-| `DSP-TEC-03` | Structure & zones | `SCR-002` | Structure levels and zones | EV · `analysis.created` (technical) | A | RO | **AWAITING DATA** |
+| `DSP-TEC-01` | Chart table | `SCR-012` | Candles (and structure overlays) of the run's technical analysis, one timeframe | RL · the `TECHNICAL` checkpoint (`run.stage.completed`: `outputs.analysis` candles); EV · `snapshot.created` for freshness only (it carries no bars) | A | RO | **AWAITING DATA** / **STALE** |
+| `DSP-TEC-02` | Indicator panels | `SCR-002` | SMA / EMA / RSI / MACD / Bollinger / ATR values, as configured and computed by the engine; volatility | RL · the `TECHNICAL` checkpoint (`indicators`, `volatility`); EV · `analysis.created` (`momentum`) as trigger and ids (it carries no values) | A | RO | Disabled indicator → **NOT CONFIGURED**; unevaluated → **NOT AVAILABLE** with the engine's reason |
+| `DSP-TEC-03` | Structure & zones | `SCR-002` | Structure state; swings, structure events, levels and zones | EV · `analysis.created` (`structure`: state and ids); RL · the `TECHNICAL` checkpoint (levels, zones) | A | RO | **AWAITING DATA** |
 | `DSP-TEC-04` | Setup lifecycle | `SCR-005` | Setup states per instrument | EV · `setup.state.changed` | A | NAV | **NO ACTIVE SETUP** |
-| `DSP-TEC-05` | Pullback state | `SCR-003` | Pullback / rejection on the active setup | EV · `setup.state.changed`, `analysis.created` | A | RO | **NO ACTIVE SETUP** |
+| `DSP-TEC-05` | Pullback state | `SCR-003` | Pullback on the active setup's reference leg | EV · `setup.state.changed` (setup, reference leg); RL · the `TECHNICAL` checkpoint (`pullback`) | A | RO | **NO ACTIVE SETUP** |
 | `DSP-TEC-06` | Entry timing | `SCR-003` | Entry-timing countdown | No producer | N | RO | **NOT AVAILABLE · entry timing** |
 | `DSP-TEC-07` | Session clock | `SCR-010` | Market sessions | EV · `market.session.changed` (no producer) | N | RO | **NOT AVAILABLE · session feed**; the ring shows UTC (UI clock, not market state) |
 

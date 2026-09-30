@@ -317,7 +317,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 
 | ID | Name | Appears only when | Route | v2 |
 |---|---|---|---|---|
-| `PRP-001` | Data crystal | a hand-off implied by `analysis.created` → the next consumer | for example `H-LAB` → L1 → `H-CMD` | route changed |
+| `PRP-001` | Data crystal | a hand-off implied by `analysis.created` → the next consumer | for example `L2` → L1 (T3, technical evidence), `H-LAB` → L1, L1 → `H-CMD` | route changed |
 | `PRP-002` | Item card | `research.item.accepted` hand-off | inside `H-LAB` | kept |
 | `PRP-003` | Proposal card | `trade.proposed` | courier `H-CMD` → `DR-S-CMD` → `COR-S` → L10 `risk.intake_drop` | route changed (was the decision lift) |
 | `PRP-004` | Evidence card | `debate.turn.completed` whose paired `agent.task.completed` case cites evidence | inside L3: placed on the central evidence stage (never passed between podiums) | kept |

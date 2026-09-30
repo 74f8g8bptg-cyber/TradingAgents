@@ -48,6 +48,7 @@ StarNet checkout at pinned revision `fbddbf99` **read-only**:
 | **Importance level** | **Medium-high.** It is a key working room on the analysis chain; its desks read at hub-view zoom |
 | **Relationship with H-LAB** | **Upstream.** L1 is the **first room** on `COR-N` after `H-LAB` (`DR-N-LAB` → `COR-N` → `DR-L1`, 2 door crossings). Macro context arrives from M1 (a `PRP-001` walk into L1) and is repeated on `DSP-SPC-04` |
 | **Relationship with H-CMD** | **Downstream.** The specialists report to the **Central Trader**. A hand-off walks `DR-L1` → `COR-N` → `DR-N-CMD` **only** when a real downstream consumer uses the specialist's `analysis.created`. Market Overview in `H-CMD` (`DSP-CMD-01`) shows the families' latest views |
+| **Relationship with L2 Technical Deck** | **Upstream (engine order).** The technical stage runs **before** the specialist stage; the specialists **use the technical evidence produced in L2**. T3 (`CHR-027`) carries the technical crystal (`PRP-001`) `DR-L2` → `COR-N` → `DR-L1` → `specialists.visitor` **only** when a specialist's `agent.task.started` follows the analysis. No L2 role consumes a specialist view, so no desk walks to L2 (L2 sheet TA-2, TA-3) |
 | **Relationship with L3 Debate Chamber** | **Indirect.** L3 is at the east end of `COR-N` (`DR-L1` → `COR-N` → `DR-L3`). Specialists **do not debate**. Their assessments may be **cited** as evidence cards in L3 (`DSP-DEB-03`), shown there as data, not as a visit |
 
 ---
@@ -160,10 +161,11 @@ per underlying runtime agent**. States are **never merged**.
 
 | Figure | Works at | Movement pattern | Collaboration behaviour |
 |---|---|---|---|
-| Metals desk `CHR-022` (SCI) | West bay | Mostly seated. Hand-off walks: `DR-L1` → `COR-N` → the real consumer's room (`L2`, `L3` or `H-CMD`), then back. Idle ambient: `COR-N` → `H-CMD` → `H-HAB` only when **all** its underlying agents are idle | Receives M1 at `specialists.visitor`. No desk-to-desk "meetings" without a real shared task |
+| Metals desk `CHR-022` (SCI) | West bay | Mostly seated. Hand-off walks: `DR-L1` → `COR-N` → the real consumer's room (`L3` or `H-CMD`; no L2 role consumes a specialist view), then back. Idle ambient: `COR-N` → `H-CMD` → `H-HAB` only when **all** its underlying agents are idle | Receives M1 at `specialists.visitor`. No desk-to-desk "meetings" without a real shared task |
 | FX desk `CHR-023` (SCI) | North bay | As Metals; **each walk is tied to one underlying agent's output**. The figure never walks "on behalf of the FX desk" as a whole | As above; panels, not the figure, carry the per-agent status |
 | Indices desk `CHR-025` (SCI) | East bay | As Metals | As above |
 | Visitor: Causal / Macro Analyst `CHR-011` (from `H-LAB`) | `specialists.visitor` | Enters with a `PRP-001` when macro output is consumed here, then returns to `H-LAB` | Hand-off only |
+| Visitor: Market Structure `CHR-027` (T3, from L2) | `specialists.visitor` | Enters with the technical `PRP-001` when a specialist's `agent.task.started` follows the technical analysis, then returns to L2 | Hand-off only |
 | Visitor: Supervisor `CHR-003` | `specialists.entry` / `visitor` | Event-driven visits (`MP-SUPERVISOR`) | Observes; touches no desk anchor |
 | Visitor: Medic `CHR-041` | `specialists.entry` | Only on a real `error` / `overloaded` of an underlying agent. The Medic attends **that agent's panel position** at the desk | No authority gestures |
 
@@ -181,7 +183,7 @@ family tag (Character Bible §4.5–§4.7). There is **no emotional simulation**
 | 3 | **Indices family desk** | `CON-009` + `SCR-004` | Index analysis | East bay | `specialists.desk_indices` (R) | High |
 | 4 | Glass bay partitions | `WAL-005` | Separate the families while keeping them visible | Between the bays and the aisle | none (solid) | Medium |
 | 5 | **Macro context repeater** | `SCR-003` (`DSP-SPC-04`) | Macro context from `H-LAB` for all three desks | West wall, entry zone (clear of the door approach) | Look target | Medium |
-| 6 | Visitor / hand-off point | anchor `specialists.visitor` | Where hand-offs arrive (M1) and visitors stop | Entry zone | Hand-off anchor | Medium |
+| 6 | Visitor / hand-off point | anchor `specialists.visitor` | Where hand-offs arrive (M1, T3) and visitors stop | Entry zone | Hand-off anchor | Medium |
 | 7 | Console chairs, desk plants | `SEA-002` × 3, `PLT-003` | Seating; softening | At the desks | Seats | Low |
 
 **Not added** (owner decisions SP-1…SP-4): no specialist overview screen, no hand-off terminal, no
@@ -227,7 +229,7 @@ emotional simulation**.
 | **Comparing information** | An underlying agent's task updates while the macro repeater also updates (real data on both) | The desk figure turns between its desk screen and `DSP-SPC-04` | `look_screen` |
 | **Reviewing reports** | A new macro assessment arrives (`analysis.created` macro) | Desk figures glance at `DSP-SPC-04` | `look_screen` |
 | **Preparing hand-offs** | A specialist's `analysis.created` is about to be consumed downstream | The figure picks up `PRP-001` (tagged with the instrument) | `carry`, `walk` |
-| **Receiving hand-offs** | M1's macro output consumed in L1 | M1 at `specialists.visitor` | `carry`, `talk` / `listen` (neutral) |
+| **Receiving hand-offs** | M1's macro output or L2's technical evidence consumed in L1 | M1 or T3 at `specialists.visitor` | `carry`, `talk` / `listen` (neutral) |
 | **Collaboration** | Only when two desks have real tasks on related inputs at the same time (for example the same macro assessment) | Each figure at its **own** bay, facing the macro repeater. There is no collaboration table or area in V1 (SP-4), and no invented meetings | `look_screen` |
 | Idle | All underlying agents of a desk idle | At the desk; optional seeded ambient to `H-HAB` via `H-CMD` | `stand_idle` |
 
