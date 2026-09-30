@@ -51,6 +51,9 @@ class Claim(StellarModel):
     value: FiniteDecimal | None = None
     unit: ShortText | None = None
     period: ShortText | None = None
+    subject: Label | None = None
+    """Phase 6 (additive): what the claim is about (e.g. ``us_cpi_yoy``), so independent
+    sources on the same subject and period can be compared. None: not comparable."""
 
 
 _AFFECTED = r"^(?:[A-Z]{3}|XAUUSD|EURUSD|USDJPY|NAS100)$"
@@ -72,6 +75,12 @@ class ResearchItem(StellarModel):
     excerpt: Annotated[str, StringConstraints(min_length=1, max_length=4000)]
     content_hash: Sha256Hex
     claims: tuple[Claim, ...] = ()
+    # Phase 6 additions (optional, so earlier records stay valid):
+    topic: Label | None = None
+    derived_from: tuple[ResearchItemId, ...] = ()
+    """Items this one repeats or syndicates. A derived item is never an independent source."""
+    revision_of: ResearchItemId | None = None
+    """A later revision of an earlier item (vintage). Both stay in the store."""
 
     @model_validator(mode="after")
     def _times_and_claims(self) -> ResearchItem:
@@ -80,6 +89,8 @@ class ResearchItem(StellarModel):
         ids = [c.claim_id for c in self.claims]
         if len(set(ids)) != len(ids):
             raise ValueError("claim ids must be unique within an item")
+        if self.item_id in self.derived_from or self.revision_of == self.item_id:
+            raise ValueError("an item cannot derive from or revise itself")
         return self
 
 

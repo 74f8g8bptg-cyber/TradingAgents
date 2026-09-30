@@ -278,18 +278,57 @@ def test_technical_calculations_never_use_float():
 
 
 def test_nothing_imports_technical_except_its_own_package():
-    """Risk, execution and owner do not depend on technical evidence in Phase 5."""
+    """Risk, execution and owner do not depend on technical evidence. Phase 6: the research
+    pipeline is the one consumer of Phase 5 evidence (read-only, as given)."""
     offenders = sorted(
         str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
-        if p.relative_to(STELLAR_SRC).parts[0] != "technical"
+        if p.relative_to(STELLAR_SRC).parts[0] not in {"technical", "pipeline"}
         and any(m.startswith("stellar.technical") for m in _imported_modules(p))
     )
     assert offenders == []
 
 
+PHASE6 = ("research", "reasoning", "pipeline")
+
+
+def _phase6_files():
+    return [p for pkg in PHASE6 for p in (STELLAR_SRC / pkg).rglob("*.py")]
+
+
+def test_phase6_cannot_reach_execution_risk_approval_or_orders():
+    """Research, reasoning and debate are decision support: no path to orders or approvals."""
+    for path in _phase6_files():
+        modules = _imported_modules(path)
+        assert not any(m.startswith(("stellar.risk", "stellar.execution", "stellar.owner",
+                                     "stellar.schemas.proposal", "stellar.schemas.order",
+                                     "stellar.schemas.risk", "stellar.schemas.execution"))
+                       for m in modules), path
+        assert not {"TradeProposal", "OrderIntent", "RiskDecision", "PaperBroker",
+                    "RiskService", "RiskPolicy", "ExecutionResult", "owner_reset_breaker",
+                    "BreakerLedger"} & _calls(path), path
+
+
+def test_phase6_has_no_vendor_sdk_network_or_upstream_dependency():
+    forbidden = {"openai", "anthropic", "google", "langchain", "langchain_core", "langgraph",
+                 "requests", "urllib", "socket", "http", "httpx", "aiohttp", "websockets",
+                 "MetaTrader5", "mt5", "tradingagents", "cli", "random", "secrets", "subprocess",
+                 "os", "shutil"}
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in _phase6_files()
+        if {m.split(".")[0] for m in _imported_modules(p)} & forbidden
+    )
+    assert offenders == []
+
+
+def test_phase6_never_writes_live_or_demo_modes():
+    for path in _phase6_files():
+        assert not {"LIVE", "DEMO"} & _string_constants(path), path
+
+
 @pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
                                    "stellar.owner", "stellar.marketdata", "stellar.config",
-                                   "stellar.execution", "stellar.technical"])
+                                   "stellar.execution", "stellar.technical", "stellar.research",
+                                   "stellar.reasoning", "stellar.pipeline"])
 def test_every_package_imports_on_its_own(first):
     """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
     subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,

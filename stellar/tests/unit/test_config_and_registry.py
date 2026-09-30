@@ -63,9 +63,10 @@ def test_unimplemented_features_cannot_be_enabled(gate):
         parse_config({"features": {gate: True}})
 
 
-def test_implemented_gates_after_phase_5():
+def test_implemented_gates_after_phase_6():
     assert {FeatureGate.MARKET_DATA, FeatureGate.RISK_ENGINE, FeatureGate.PAPER_BROKER,
-            FeatureGate.TECHNICAL_ANALYSIS} == IMPLEMENTED_FEATURES
+            FeatureGate.TECHNICAL_ANALYSIS, FeatureGate.RESEARCH_PIPELINE,
+            FeatureGate.LLM_AGENTS} == IMPLEMENTED_FEATURES
     config = parse_config({"features": {"market_data": True, "risk_engine": True,
                                         "paper_broker": True}})
     assert config.features.enabled(FeatureGate.MARKET_DATA)
