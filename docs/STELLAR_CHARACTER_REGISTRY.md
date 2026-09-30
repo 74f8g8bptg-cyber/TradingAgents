@@ -28,7 +28,7 @@
 | Synthetic / System | `SYN` | **white / cyan / metallic** | diamond | service drones and system characters |
 
 **Colour grammar:** gold is reserved for roles with deterministic engineering, risk or operations
-duties. Advisory LLM roles (for example the risk debaters, and the future Coach by default) wear
+duties. Advisory LLM roles (for example the risk debaters, and the future Coach) wear
 blue. A uniform colour never implies an authority the agent does not have. Colour tokens
 `uniform.cmd` / `.sci` / `.ops` / `.syn` are set during art production. The shape icon always
 accompanies the colour.
@@ -256,8 +256,8 @@ Each step lights up only when its real event exists (Visual plan §10.1).
   - real cooldowns.
 - **Never:** emotions, mood, stress, or psychiatric terms or diagnoses. It has **no authority**
   over trading, Risk, runs or other agents; it produces recommendations for screens only.
-- **Department:** SCI blue by default (advisory). OPS gold only if the owner makes it a
-  deterministic operations role (open decision CR-2).
+- **Department:** SCI blue: an advisory, research-adjacent role; not Command, not Risk (owner
+  decision, Character Bible V1 K4).
 
 ---
 
@@ -301,5 +301,5 @@ Rules from the Visual plan:
 | # | Decision | Default |
 |---|---|---|
 | CR-1 | Engine migration to the three family specialists (a roster change outside this visual pass) | The interim adapter of §5 |
-| CR-2 | The Coach's department colour (advisory SCI blue vs deterministic OPS gold) | SCI blue |
+| CR-2 | ~~The Coach's department colour~~ | **Closed**: advisory SCI blue (Character Bible V1 K4) |
 | CR-3 | Exact uniform colour tokens under the four alert tints | Set during art production |
