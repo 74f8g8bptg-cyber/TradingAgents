@@ -207,6 +207,8 @@ Details: Foundation Plan §10; layer design §4.
 
 ## 11. The station
 
+> **Topology superseded (visual layer only).** The station map, rooms, lifts, vault and airlock described in this section belong to the earlier stacked-deck concept. The owner-approved physical topology is `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` **revision C** (a flat vessel with 3 hubs, L1–L10, R1–R6 and 21 explicit doors), detailed in the Visual Foundation v2 registries (`STELLAR_STATION_TOPOLOGY.md`, `STELLAR_ROOM_REGISTRY.md`, `STELLAR_CHARACTER_REGISTRY.md`, `STELLAR_SCREEN_REGISTRY.md`, `STELLAR_ASSET_REGISTRY.md`). Risk isolation is now a logical access rule (Risk Control Room L10, Execution Bay L9), not a vault, lift or airlock. The engine's rules (risk gate before execution; the UI never writes) are unchanged.
+
 **Art direction:** a futuristic spaceship / trading-station interior, semi-realistic stylized
 sci-fi, **not pixel art**: large screens, command rooms, corridors, analysis stations, risk
 control, execution bay, lounge, café, billiard room and wellbeing areas.

@@ -7,6 +7,7 @@
 | **Reuse sources** | `docs/STARNET_REUSE_AUDIT.md` (StarNet revision `fbddbf99`). Only StarNet **code** (MIT) is considered, for the engine layer (§1.7). **No StarNet artwork, sprites, branding, visual assets, station-drawing code or look is used, and StarNet's renderer is not adopted.** Matrix item ids (S1–S57) refer to the audit |
 | **Builds on** | `docs/STELLAR_FOUNDATION_PLAN.md` (v0.3, approved; canonical), `docs/STELLAR_LAYER_DESIGN.md` (v0.4; station and event detail), `docs/STELLAR_MASTER_ROADMAP.md` |
 | **Scope** | The visual world of Stellar Agents: architecture of the presentation layer, camera, ship layout, agent visuals, personas, states, movement, interactions, screens, event mapping, ambient life, art direction, rendering options, navigation, interaction model, accessibility, visual phases, local frontend security, testing, and licensing / provenance of reused code |
+| **Topology source of truth** | `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` **revision C** (owner-approved flat vessel), with `STELLAR_STATION_TOPOLOGY.md`, `STELLAR_ROOM_REGISTRY.md`, `STELLAR_ASSET_REGISTRY.md`, `STELLAR_CHARACTER_REGISTRY.md` and `STELLAR_SCREEN_REGISTRY.md` (all v2). Where this plan's older text mentions decks, lifts, the vault or the airlock, those documents win |
 | **Hard rule** | The visual world is a **presentation layer only**. It consumes events and snapshots. It never controls, delays or overrides research, risk, execution or the circuit breaker. |
 
 ---
@@ -27,15 +28,17 @@ Phases 9–10 (Station V1 and V2). Canonical sources are not changed here:
 
 | # | Extension | Layer design today |
 |---|---|---|
-| VX-1 | Room set grows from 10 to 17: adds **Research Observatory**, **Technical Deck**, **Performance Lab**, **Rest Area**, **Observation Deck**, and splits the habitat into **Café**, **Lounge**, **Billiard Room** | 10 rooms (§2.2, §2.3) |
-| VX-2 | Home rooms move: research roles R1–R6 and validators V1–V4 → Research Observatory; technical agents T3–T8 → Technical Deck; Performance / Attribution (L2) → Performance Lab | R* in Macro & News Observatory; V* in Data Core; T* in Market Analysis Wing; L2 in Memory Archive (§5.1) |
+| VX-1 | Room set becomes the owner-approved flat vessel: **19 room slots** (3 hubs, L1–L10, R1–R6; 11 active, 8 reserved), Room Registry v2 | 10 rooms (§2.2, §2.3) |
+| VX-2 | Home rooms move: research roles R1–R6, validators V1–V4 and M1 → `H-LAB`; market specialists → L1 family desks; technical agents T2–T8 → Technical Deck (L2); Performance / Attribution (L2) → Performance Lab (L7) | R* in Lab / Research Hub (`H-LAB`); V* in Data Core; T* in Market Specialists Room (L1); L2 in Memory Archive (§5.1) |
 | VX-3 | A **persona registry** (display names) separate from technical ids | Technical ids only |
 | VX-4 | **Visual states** (§6) as a documented derivation of the §3.2 runtime states | Runtime states and a status → visual table (§5.2) |
-| VX-5 | **Multi-deck navigation**: one tile grid per deck, lifts between decks (§16) | Single-plane room graph with pathfinding on corridors (§5.3) |
+| VX-5 | **Flat-vessel navigation**: one tile grid for the whole vessel, explicit doors only (§16; Topology v2) | Single-plane room graph with pathfinding on corridors (§5.3) |
 | VX-6 | **Local frontend security** for the read-only UI (§20), and reconciliation semantics for the existing `GET /snapshot` endpoint (§1.8; Foundation §4.28) | "localhost, read-only" (LD-5); snapshot listed without reconciliation semantics |
 
-The one-way airlock rule stays: **the Execution Bay is reachable only through the Risk Control
-Vault** (layer design §2.1).
+The layer design's one-way airlock (§2.1) is **superseded** by the approved flat vessel. The
+guarantee it expressed is kept as a **workflow and access rule**: no order is shown or moved
+without `risk.approved` and `order.created`, and only permitted roles enter the Risk Control Room
+(L10) and the Execution Bay (L9) (Character Registry v2 §3).
 
 ---
 
@@ -82,7 +85,7 @@ Telemetry / Event Bus + Event Store + Journal                     ← ordered, a
 Visual State Adapter (browser)                                    ← pure reducer: events → WorldState
       │ WorldState: agents, rooms, screens, station
       v
-Engine layer (browser, renderer-independent, StarNet-derived §1.7) ← decks, grids, paths, anchors,
+Engine layer (browser, renderer-independent, StarNet-derived §1.7) ← vessel grid, paths, anchors,
       │ logical tile coordinates + positions                          movement, traffic, zones
       v
 World Renderer (PixiJS candidate, §15)                            ← projects to isometric; draws
@@ -166,12 +169,12 @@ use it.
 
 | Capability | StarNet source (audit id) | Stellar adaptation | Class |
 |---|---|---|---|
-| Room / tile grid | `worldmodel.js` zone grid, rect-union rooms, corridors, `walkable`, indexed `roomAt` (S13) | **One grid per deck** (§16); rooms and corridors from the authored ship layout; no building, belts, pipelines, capabilities or materials | Copy + adapt |
-| Door / room connectivity | `worldmodel.js` auto-doors on adjacency + `canStep` (S13) | Auto-doors **where appropriate**: between corridors and ordinary rooms by default; **no** auto-doors on the Risk Control Vault or Execution Bay walls; the Vault → Execution Bay airlock is a **one-way** step in `canStep`; lift doors are explicit | Copy + adapt |
-| Pathfinding | `path` BFS + `smoothPath` string-pulling + conservative `segmentClear` line of sight (S14) | Per-deck grid search, then string-pulling that never crosses a seam without a door; StarNet's art-tuned foot / doorway clearance (S15) is **not** used | Copy + adapt |
+| Room / tile grid | `worldmodel.js` zone grid, rect-union rooms, corridors, `walkable`, indexed `roomAt` (S13) | **One grid for the flat vessel** (§16; Topology v2); rooms and corridors from the authored layout; no building, belts, pipelines, capabilities or materials | Copy + adapt |
+| Door / room connectivity | `worldmodel.js` auto-doors on adjacency + `canStep` (S13) | **Explicit doors only**: the 21 approved doors of Topology v2 §3 are the only crossings; StarNet's automatic doors on adjacency are **switched off**; restricted rooms (L9, L10) are a per-role navigation permission, not a door property | Copy + adapt |
+| Pathfinding | `path` BFS + `smoothPath` string-pulling + conservative `segmentClear` line of sight (S14) | Grid search on the single vessel grid, then string-pulling that never crosses a seam without a door; StarNet's art-tuned foot / doorway clearance (S15) is **not** used | Copy + adapt |
 | Walking movement | `stepGait`, `gaitMove`, `finishGait`, `bucketDir` (S21) | Eased speed, facing slew with hysteresis, corner arcs, distance-phased stride; injected clock; **8-way** facings for isometric sprites | Copy + adapt |
 | Collision / traffic | `stepTraffic` right-of-way, `separateBodies`, `containBody` (S22–S24) | Same pattern, rewritten with explicit arguments; **operational agents always have right of way over ambient ones**; jam give-up then teleport fallback | Reimplement (same pattern) |
-| Zones | `zones.js` (S18) | Idle containment: home room, habitat promenade, per-deck leash | Copy + adapt |
+| Zones | `zones.js` (S18) | Idle containment: home room, Habitat zones, room leash | Copy + adapt |
 | Prop / workstation anchors | `propanchor.js` approach tile + facing (S19); seat reservation (S25) | Named interaction points with capacity; role-owned operational anchors; claimable ambient anchors with timeouts | Copy + adapt / reimplement |
 | Waiting anchors | `waitanchor.js` anchor ladder with zone clamping (S20) | Ladder: room waiting bench → own workstation → room anchor; used for `waiting` and `paused` | Copy + adapt |
 | Deterministic randomness | `shared/clock-rng.js` (mulberry32, fnv, injected clock) (S5) | The **only** randomness source in the UI; keyed by seed, agent id and time bucket | Keep as-is |
@@ -214,13 +217,14 @@ S45, S47, S48). Provenance and attribution rules are in §22.
 
 ### 2.1 View model
 
-A **cutaway starship interior** in a fixed **isometric / 2.5D** projection: the hull is sliced so
-several decks and rooms are visible at once, like a lit architectural model.
+A **cutaway vessel interior** in a fixed **isometric / 2.5D** projection: the roof is cut away so
+the whole flat vessel (three hubs, two corridors, 16 small rooms) is visible at once, like a lit
+architectural model.
 
 | Mode | Shows | Detail level | Entered by |
 |---|---|---|---|
-| **Overview** | The whole ship: all 17 rooms across five decks | Rooms as lit volumes; agents as small figures with coloured state pips; each room shows at most one glanceable KPI; station alert lighting | App start; `Home` key; minimap "whole ship" |
-| **Deck view** | One deck (3–5 rooms) | Agents readable with name tags; room screens show headline values | Zoom in on a deck; click a deck label |
+| **Overview** | The whole vessel: all 19 room slots (reserved slots dark) | Rooms as lit volumes; agents as small figures with coloured state pips; each room shows at most one glanceable KPI; station alert lighting | App start; `Home` key; minimap "whole ship" |
+| **Hub view** | One hub with its corridor or radial rooms | Agents readable with name tags; room screens show headline values | Zoom in on a hub; click a hub label |
 | **Room focus** | One room, with its neighbours dimmed at the edges | Full room screens (§10), all agent HUDs in minimal form, interaction points visible | Click a room |
 | **Agent focus** | One agent, camera follows it | Expanded HUD (§9), a side panel with its task, recent events and metrics | Click an agent; select from the roster panel |
 
@@ -229,7 +233,7 @@ several decks and rooms are visible at once, like a lit architectural model.
 - Transitions are short eased camera moves (pan + zoom together). In reduced-motion mode they
   become instant cuts (§18).
 - Zoom is continuous (mouse wheel / pinch) between the overview and room-focus levels, with **three
-  snap levels** (overview, deck, room) so text is always rendered at a readable size.
+  snap levels** (overview, hub, room) so text is always rendered at a readable size.
 - Level of detail changes with zoom: screens, name tags and HUDs appear only when they would be
   legible.
 - Pan with drag or arrow keys. `Esc` steps out one level.
@@ -238,14 +242,14 @@ several decks and rooms are visible at once, like a lit architectural model.
 
 A small top-right ship schematic, always visible:
 - every room as a coloured tile (its alert state), the viewport rectangle, and a dot per agent;
-- the Risk Control Vault and Execution Bay are always drawn with their airlock link;
+- the Risk Control Room (L10) and Execution Bay (L9) are always drawn with their restricted markings;
 - clicking a tile focuses that room.
 
 ### 2.4 Clutter rules
 
 - Overview shows all rooms, but **agent labels are hidden** at that level; only state pips and room
   KPIs appear.
-- Deck view shows up to five rooms with names; room focus shows one room fully plus dimmed
+- Hub view shows a hub and its adjacent rooms with names; room focus shows one room fully plus dimmed
   neighbours.
 - At most **one** animated screen per room is active in overview; other screens render as static
   frames until focused.
@@ -255,199 +259,133 @@ A small top-right ship schematic, always visible:
 
 ## 3. Ship layout
 
-### 3.1 Decks (cutaway, forward to the right)
+> **Topology source of truth:** `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` **revision C**
+> (owner-approved), detailed in `docs/STELLAR_STATION_TOPOLOGY.md` v2. Room functions are in
+> `docs/STELLAR_ROOM_REGISTRY.md` v2. The stacked five-deck layout, the central and decision lifts,
+> the vault antechamber and the one-way airlock of v0.1–v0.2 are **superseded** and must not be
+> built.
 
-```
-DECK 1  BRIDGE         [ OBSERVATION DECK ]════[        MAIN COMMAND DECK         ]
-                                                          │ central lift
-DECK 2  INTELLIGENCE   [ RESEARCH OBSERVATORY ]══[ MACRO & NEWS OBSERVATORY ]══[ DEBATE CHAMBER ]
-                                                          │
-DECK 3  ANALYSIS       [ MARKET ANALYSIS WING: XAU | EUR | JPY | NAS ]══[ TECHNICAL DECK ]
-                                                          │ central lift
-DECK 4  OPERATIONS     [ MEMORY ARCHIVE ]══[ PERFORMANCE LAB ]   [ RISK CONTROL VAULT ]##>[ EXECUTION BAY ]
-                                                          │                              :
-DECK 5  ENGINEERING &  [ DATA CORE ]····························································:
-        HABITAT        [ WELLBEING ROOM ]══[ CAFÉ ]══[ LOUNGE ]══[ BILLIARD ROOM ]══[ REST AREA ]
+### 3.1 The vessel (flat, one level)
 
- ══  open corridor     │  lift     ##>  one-way airlock (only agent entry to the Execution Bay)
- ··  data conduit (market ticks, fills; agents cannot pass)
-```
+- **Hubs:** three circular hubs, left to right:
+  - `H-LAB` Lab / Research Hub;
+  - `H-CMD` Main Command / Central Operations;
+  - `H-HAB` Habitat.
+- **Corridors:** between `H-LAB` and `H-CMD`, two parallel corridors (`COR-N`, `COR-S`) serve ten
+  small rooms, L1–L10. Each small room has exactly one door onto its corridor.
+- **Radial rooms:** six rooms R1–R6 stand around `H-HAB`, each with one door into it.
+- **Doors:** 21 explicit doors, all ordinary 2-tile sliding doors. There are **no lifts, no decks,
+  no airlocks, no automatic doors and no hidden passages**.
 
-Layout principles, carried over from the layer design and extended:
-- **The floor plan follows the control flow:** intelligence (deck 2) and analysis (deck 3) feed the
-  Debate Chamber and Command Deck; decisions go **down** the central lift into the **Vault**; the
-  only door into the **Execution Bay** is the Vault's one-way airlock.
-- The **Vault is visually isolated**: its own deck section, armoured bulkheads, and no corridor
-  other than the lift and the airlock.
-- The **Data Core** sits at the bottom as the ship's reactor; data conduits (not corridors) reach the
-  analysis decks and the Execution Bay.
-- **Habitat** rooms share one continuous promenade, so ambient walking stays out of working rooms.
+Layout principles:
+- **The floor plan follows the control flow.**
+  - Research leaves `H-LAB` along `COR-N` → Market Specialists (L1) → Technical Deck (L2) → Debate
+    Chamber (L3) → `H-CMD`.
+  - Decisions leave `H-CMD` along `COR-S` to the Risk Control Room (L10), then the Execution Bay (L9).
+- **Risk isolation is logical, not geometric.** L10 and L9 have ordinary doors. Access is a
+  per-role navigation permission, with restricted anchors and static markings (Character Registry
+  §3). An order is only ever shown after `risk.approved` and `order.created`.
+- **`H-CMD` is the through-hub** between the working side and the Habitat, so it keeps a clear
+  walkway.
+- **The Habitat keeps ambient walking out of working rooms:** café, lounge, billiards, plants, rest
+  and the recovery pods for real cooldowns are zones of `H-HAB`.
+- **Reserved slots:** L5, L8 and R1–R6 are empty. R1 is designated for the future
+  Performance & Wellbeing / Coaching Room.
 
 ### 3.2 Rooms
 
-Agent codes are Foundation §5.1 codes. "Visits" are agents that come for a task but live elsewhere.
+Agent codes are Foundation §5.1 codes. "Visits" are agents that come for a task but live
+elsewhere. Every room's connections are its approved doors (Topology v2 §3).
 
-#### Main Command Deck (deck 1)
-- **Purpose:** central command; the final decision; global portfolio and risk status.
-- **Agents:** Portfolio Manager (U8), Research Manager (U3), Trader (U4), Trade Proposal Builder (P1),
-  Supervisor (O1).
-- **Visual style:** the ship's largest room: a raised command chair, a curved front wall of display,
-  an oval command table.
-- **Screens / objects:** main viewscreen (focus instrument, current setup and rating); portfolio and
-  risk status wall; run queue; station alert lighting; mode indicator `PAPER` / `DEMO`.
-- **Normal activity:** Supervisor at the ops console; PM reviewing at the chair when a decision is in
-  progress; Trader at the trading console.
+#### Main Command (`H-CMD`)
+- **Purpose:** central command; the Central Trader across all concurrent opportunities; the final
+  decision; global portfolio and system status.
+- **Agents:** Portfolio Manager (U8), Research Manager (U3), Central Trader (U4), Trade Proposal
+  Builder (P1), Supervisor (O1); the Quartermaster persona of O2.
+- **Visual style:** the vessel's largest hub: a raised command chair and oval command table on a
+  dais, a curved main viewscreen on the north rim, and a clear walkway linking its three doors.
+- **Screens / objects:** Market Overview, Technical Analysis, Research / News, Agent Pipeline,
+  Portfolio, Global System Status; alert band; mode plaque `PAPER` from telemetry (Screen Registry
+  v2 §5.1).
 - **Alert states:** AMBER edge lighting on a `REVIEW` rating or a degraded source; RED on a breaker
-  trip (whole ship).
-- **Connections:** Observation Deck (corridor); central lift to decks 2–4.
+  trip (whole vessel).
+- **Connections:** `COR-N`, `COR-S`, `H-HAB`.
 
-#### Research Observatory (deck 2)
-- **Purpose:** source discovery, research intake and **source validation**.
-- **Agents:** research roles R1–R6 (home); validators V1–V4 (home, at the validation bench).
-- **Visual style:** a domed room with feed consoles around the rim and a central validation bench.
-- **Screens / objects:** incoming-item stream per role; source reliability board; freshness clocks;
-  duplicate clusters; the Fact / Reaction / Interpretation tagger.
-- **Normal activity:** collectors at feed consoles while `FETCHING`; validators inspecting items at
-  the bench.
-- **Alert states:** amber when a source is failing or the allowlist rejects many items; grey
-  consoles for deferred roles (R3–R6 until their sources are approved).
-- **Connections:** Macro & News Observatory; lift.
+#### Lab / Research Hub (`H-LAB`)
+- **Purpose:** the **shared** research team for all market families: source intake, validation,
+  fact / reaction / interpretation separation, and macro / context synthesis.
+- **Agents:** research roles R1–R6 (R3–R6 dormant while deferred), validators V1–V4, and the
+  Causal / Macro Analyst (M1). The future Research Lab bench is not rendered.
+- **Visual style:** a domed hub with feed consoles around the rim, a validation bench and a
+  macro driver board.
+- **Alert states:** amber when a source is failing; grey consoles for deferred roles.
+- **Connections:** `COR-N`, `COR-S`.
 
-#### Macro & News Observatory (deck 2)
-- **Purpose:** central banks, economic events, rates/bonds, geopolitical and news analysis — the
-  **causal / macro** picture.
-- **Agents:** Causal / Macro Analyst (M1, home). Visits: research roles hand off validated items here.
-- **Visual style:** a large observation window onto a planet; a driver board wall; a calendar ring.
-- **Screens / objects:** central-bank panel (Fed, ECB, BoJ), economic calendar, yields and spreads,
-  geopolitical board, macro-driver board with coverage.
-- **Normal activity:** M1 at the driver board while `THINKING`; research roles delivering items.
-- **Alert states:** event-window highlight before scheduled high-impact events (from the calendar);
-  "coverage partial" banner when research roles are missing.
-- **Connections:** Research Observatory, Debate Chamber; lift.
+#### Market Specialists Room (L1)
+- **Purpose:** three **family desks** (Metals, FX, Indices) reporting to the Central Trader. These
+  are **not** one desk per instrument.
+- **Engine note (interim adapter):** the engine still has four per-instrument specialists
+  (S1–S4). The desks show every underlying runtime agent's own state and task (Character
+  Registry v2 §5).
+- **Connections:** `COR-N`.
 
-#### Market Analysis Wing (deck 3)
-- **Purpose:** instrument-specific analysis, with **four dedicated desks: XAU/USD, EUR/USD, USD/JPY,
-  NAS100**.
-- **Agents:** market specialists S1–S4 (one per desk); Market Session Agent (T2) at the session clock.
-- **Visual style:** four bays along a gallery, each with its own accent (gold for XAU/USD, blue for
-  EUR/USD, red for USD/JPY, violet for NAS100; each also has a unique desk icon, never colour alone).
-- **Screens / objects:** per desk: price, candles, the instrument's macro context, active setup;
-  the world clock of sessions.
-- **Normal activity:** only the focus instrument's desk is active in a cycle; other specialists
-  `OFF_DUTY` or at their desks idle.
-- **Alert states:** desk outline for stale data; event-risk window highlight.
-- **Connections:** Technical Deck; lift.
-
-#### Technical Deck (deck 3)
-- **Purpose:** charts, candles, indicators, market structure, pullback / setup detection, entry timing.
-- **Agents:** Market Structure (T3), Technical Indicator (T4), Candle / Price Action (T5),
-  Pullback / Setup (T6), Entry Timing (T7), Technical Analyst (T8).
-- **Visual style:** a long holo chart table with timeframe layers stacked vertically (context,
-  setup, pullback, entry).
-- **Screens / objects:** EMA, RSI, MACD, ATR panels; structure levels; candle highlights; setup
-  lifecycle board; the entry-timing countdown.
-- **Normal activity:** T3–T6 at the chart table on each setup-timeframe close; T7 monitoring an armed
-  setup on the entry timeframe.
+#### Technical Deck (L2)
+- **Purpose:** charts, candles, indicators, market structure, pullback / setup detection, entry
+  timing, market sessions.
+- **Agents:** T2–T8.
+- **Visual style:** a long holo chart table with timeframe layers (context, setup, pullback, entry).
 - **Alert states:** setup `ARMED` glow; `EXPIRED` / `INVALIDATED` fade.
-- **Connections:** Market Analysis Wing; lift.
+- **Connections:** `COR-N`.
 
-#### Debate Chamber (deck 2)
-- **Purpose:** the investment debate and risk debate, with visible evidence exchange.
-- **Agents:** Bull (U1) and Bear (U2) on the inner ring; Aggressive / Conservative / Neutral Risk
-  Debaters (U5–U7) on the outer ring. Visits: Research Manager (U3) and Portfolio Manager (U8) at the
-  judge seat to close each debate.
-- **Contradictions:** the Contradiction Checker (P2) stays in the Vault (the Vault is never entered
-  by debate agents and never leaves). Its findings appear on the chamber's **evidence screen** as a
-  remote feed.
-- **Visual style:** an amphitheatre with two podium rings and a central evidence projector.
-- **Screens / objects:** Bull and Bear argument columns; evidence cards linked to research and
-  analysis ids; the tug-of-war bar; round counter.
-- **Normal activity:** speaker spotlit; listeners seated facing the speaker.
-- **Alert states:** none of its own; mirrors the station alert.
-- **Connections:** Macro & News Observatory; lift to the Command Deck.
+#### Debate Chamber (L3)
+- **Purpose:** the investment debate and the risk debate, with visible evidence exchange.
+- **Agents:** Bull (U1), Bear (U2), and the Aggressive / Conservative / Neutral Risk Debaters
+  (U5–U7). Visits: the Research Manager (U3) and Portfolio Manager (U8) at the judge seat.
+- **Contradictions:** the Contradiction Checker (P2) works in the Risk Control Room (L10). Its
+  findings appear here as a remote feed.
+- **Connections:** `COR-N`.
 
-#### Risk Control Vault (deck 4)
-- **Purpose:** the deterministic risk layer.
-- **Agents:** Contradiction Checker (P2), Risk Engine / Risk Auditor (P3) with its Vault personas
-  (intake officer, sizing console, exposure wall, breaker lever).
-- **Visual style:** armoured, cooler lighting, heavy doors, a visibly different material palette
-  from the rest of the ship. The vault door is closed by default.
-- **Screens / objects:** proposed risk; rule checklist with pass / fail per check; blocked reason;
-  exposure bars against limits; breaker state and lever.
-- **Normal activity:** proposals arrive by lift; checks light one by one.
-- **Alert states:** RED when the breaker is tripped (vault door sealed, lever down); amber when a
-  limit is approached.
-- **Connections:** lift from the Command Deck; **one-way airlock to the Execution Bay**.
+#### Data Core (L4)
+- **Purpose:** market-data snapshots and validation (T1), plus journal, event-stream and runtime
+  health, and reconciliation.
+- **Visual style:** a reactor column that pulses only per `snapshot.created`.
+- **Connections:** `COR-N`.
 
-#### Execution Bay (deck 4)
-- **Purpose:** order routing — **Paper Broker first**; the MT5 / Vantage demo only after the demo
-  gate.
-- **Agents:** Execution Checker (P4), Paper Execution Agent (E1); MT5 Execution Agent (E2) appears
-  only after Foundation Phase 8.
-- **Visual style:** launch tubes and a docking board; a large hull marking `PAPER` (later `DEMO`)
-  that is always visible.
-- **Screens / objects:** order lifecycle board; open positions with live P&L; pre-flight checklist;
-  reconciliation status.
-- **Normal activity:** pre-flight, launch, fills arriving as docking ships.
-- **Alert states:** RED lockdown on breaker trip or reconciliation mismatch.
-- **Connections:** only the airlock from the Vault (agents); data conduit from the Data Core.
+#### Memory Archive (L6) and Performance Lab (L7)
+- **Memory Archive:** closed trades, a read-only run replay index, reviews. Post-Trade Reviewer (L1).
+- **Performance Lab:** runtime and execution metrics, attribution, workload / review metrics with
+  sample-size honesty. Performance / Attribution (L2).
+- **Connections:** `COR-S`.
 
-#### Data Core (deck 5)
-- **Purpose:** market-data feeds, data validation, stale-feed alerts, system health.
-- **Agents:** Data Validator (T1).
-- **Visual style:** a reactor column with conduits branching upward.
-- **Screens / objects:** one conduit per market-data source (health colour + icon); snapshot
-  pulses; stale-feed warnings; event-bus and journal status.
-- **Normal activity:** reactor pulse per snapshot.
-- **Alert states:** conduit flicker and amber for stale data; red for a rejected snapshot.
-- **Connections:** data conduits only to analysis decks and the Execution Bay; lift for agents.
+#### Execution Bay (L9) — restricted
+- **Purpose:** paper order routing. **Paper Broker only**; the MT5 / Vantage demo path is deferred
+  and is not rendered.
+- **Agents:** Execution Checker (P4), Paper Execution Agent (E1).
+- **Visual style:** launch tubes, a docking board, and a large `PAPER` hull marking from telemetry.
+- **Connections:** `COR-S` (ordinary door with a restricted marking).
 
-#### Memory Archive (deck 4)
-- **Purpose:** past analyses, decisions, settled trades, reviews.
-- **Agents:** Post-Trade Reviewer (L1).
-- **Visual style:** crystal shelves, one crystal per trade, green / red once settled (with icons).
-- **Screens / objects:** comparable past setups; trade history; post-trade lessons.
-- **Normal activity:** L1 shelving a review after `trade.closed`.
-- **Alert states:** none.
-- **Connections:** Performance Lab; lift.
+#### Risk Control Room (L10) — restricted
+- **Purpose:** the deterministic risk layer. Zones:
+  - **intake:** the courier drops the proposal here;
+  - **core:** the contradiction check (P2), rule checks, sizing, exposure and the breaker (P3);
+  - **outbox:** E1 collects an order here, only after `risk.approved` + `order.created`.
+- **Visual style:** cooler light and a darker palette; the breaker lever is display only.
+- **Alert states:** RED when the breaker is tripped (door panel shows **BREAKER TRIPPED**, outbox
+  dark); amber on `REVIEW_REQUIRED`.
+- **Connections:** `COR-S` (ordinary door with a restricted marking).
 
-#### Performance Lab (deck 4)
-- **Purpose:** metrics, strategy results, agent contribution, sample-size warnings.
-- **Agents:** Performance / Attribution (L2).
-- **Visual style:** a clean lab with a wall of small multiples.
-- **Screens / objects:** win/loss, expectancy, drawdown, R-multiple distribution, per-agent
-  contribution — each with its sample size, and a hatched "insufficient sample" overlay below the
-  minimum.
-- **Normal activity:** L2 updating panels after settlements.
-- **Alert states:** none.
-- **Connections:** Memory Archive; lift.
+#### Habitat (`H-HAB`)
+- **Purpose:** ambient life (§12): café, lounge, billiards, plants, cosmetic rest. It also holds
+  the **recovery zone** with real-cooldown pods and the Medic persona's vitals board (§13).
+  Cosmetic rest pods and real-cooldown pods are visibly different.
+- **Agents:** the Habitat Host (cosmetic), the Medic persona (O2), idle agents, and agents in a real
+  cooldown.
+- **Alert states:** lighting follows the station alert level.
+- **Connections:** `H-CMD`, and R1–R6 (reserved in V1).
 
-#### Wellbeing Room (deck 5)
-- **Purpose:** operational health: workload, retries, latency, rate limits, budgets, rest and pause
-  coordination.
-- **Agents:** Operational Wellbeing Monitor (O2), shown as the Station Medic and Quartermaster
-  personas; agents that are resting.
-- **Visual style:** soft lighting, rest pods, a vitals board.
-- **Screens / objects:** per-agent load, error rates, provider rate limits, budget gauges (§13).
-- **Normal activity:** Medic persona checking the vitals board.
-- **Alert states:** amber when any agent is overloaded or a budget warning is active.
-- **Connections:** habitat promenade; lift.
-
-#### Café, Lounge, Billiard Room, Rest Area (deck 5, habitat promenade)
-- **Purpose:** ambient, cosmetic life (§12). **No operational meaning.**
-- **Agents:** Café Host (cosmetic); off-duty and idle agents.
-- **Visual style:** warm lighting, plants, large windows onto space; distinct from working rooms.
-- **Objects:** café counter; lounge sofas; billiard table; rest pods (Rest Area, distinct from the
-  Wellbeing Room's pods: Rest Area is cosmetic, Wellbeing pods mean a real cooldown).
-- **Alert states:** lighting follows the station alert level, so RED is visible everywhere.
-- **Connections:** one promenade corridor; lift.
-
-#### Observation Deck (deck 1)
-- **Purpose:** ambient space with the ship's largest window.
-- **Agents:** idle agents (ambient).
-- **Visual style:** panoramic window with stars and a slowly rotating planet.
-- **Alert states:** follows the station alert level.
-- **Connections:** Main Command Deck.
+#### Reserved rooms (L5, L8, R1–R6)
+- Empty, unlit shells with a "RESERVED" plate; no agents enter in V1.
+- R1 is designated for the future Performance & Wellbeing / Coaching Room.
 
 ---
 
@@ -463,8 +401,8 @@ telemetry and the agent registry; display fields come from the persona registry 
 | `display_name` | Persona registry (UI only) | "Lt. Cmdr. Sera Quill" |
 | `role` | Registry | Risk Auditor |
 | `department` | Registry group | Validation and risk |
-| `current_room` / `target_room` | Adapter (§7) | `risk_vault` / `risk_vault` |
-| `anchor` | Adapter (interaction point in the room) | `vault.sizing_console` |
+| `current_room` / `target_room` | Adapter (§7) | `L10` / `L10` |
+| `anchor` | Adapter (interaction point in the room) | `risk.sizing_console` |
 | `current_task` | `agent.task.started` payload | "risk checks: proposal prop_7f3a" |
 | `market_focus` | `market.focus.changed`, task payload | `EURUSD` |
 | `runtime_state` | Telemetry (layer design §3.2) | `CHECKING` |
@@ -505,32 +443,32 @@ approach:
 
 | Code | Technical role (`technical_id`) | Suggested display persona | Room | Visual behaviour |
 |---|---|---|---|---|
-| U8 | Portfolio Manager (`portfolio_manager`) | Captain Aurelia Voss | Command Deck | Command chair; stands to stamp the rating; walks to the judge seat to close the risk debate |
-| U3 | Research Manager (`research_manager`) | Commander Idris Kael | Command Deck | Strategy table; judge seat to close the investment debate |
-| O1 | Supervisor (`supervisor`) | First Officer Mara Solen | Command Deck | Ops console; occasional room visits when a run starts (event-driven) |
-| U4 | Trader (`trader`) | Lt. Cmdr. Rook Halden | Command Deck | Trading console; draws advisory levels as dashed lines |
-| P1 | Trade Proposal Builder (`trade_proposal_builder`) | Ensign Tavi Marr | Command Deck | Assembles the proposal card; carries it to the lift |
+| U8 | Portfolio Manager (`portfolio_manager`) | Captain Aurelia Voss | Main Command | Command chair; stands to stamp the rating; walks to the judge seat to close the risk debate |
+| U3 | Research Manager (`research_manager`) | Commander Idris Kael | Main Command | Strategy table; judge seat to close the investment debate |
+| O1 | Supervisor (`supervisor`) | First Officer Mara Solen | Main Command | Ops console; occasional room visits when a run starts (event-driven) |
+| U4 | Trader (`trader`) | Lt. Cmdr. Rook Halden | Main Command | Trading console; draws advisory levels as dashed lines |
+| P1 | Trade Proposal Builder (`trade_proposal_builder`) | Ensign Tavi Marr | Main Command | Assembles the proposal card; carries it along `COR-S` to the Risk Control Room intake |
 | U1 | Bull Researcher (`bull_researcher`) | Lt. Leo Brask | Debate Chamber | Left inner podium, green spotlight |
 | U2 | Bear Researcher (`bear_researcher`) | Lt. Ursa Venn | Debate Chamber | Right inner podium, red spotlight |
 | U5 | Aggressive Risk Debater (`risk_aggressive`) | Ensign Rhea Vantor | Debate Chamber | Outer ring, orange light |
 | U6 | Conservative Risk Debater (`risk_conservative`) | Ensign Hollis Crane | Debate Chamber | Outer ring, blue light |
 | U7 | Neutral Risk Debater (`risk_neutral`) | Ensign Tamsin Ly | Debate Chamber | Outer ring, white light |
-| M1 | Causal / Macro Analyst (`causal_macro_analyst`) | Dr. Elara Maren | Macro & News Observatory | Driver board; draws arrows between drivers and assets |
-| R1 | Central Bank Research (`research_central_bank`) | Lt. Cassian Rho | Research Observatory | Feed console; hands items to the Macro room |
-| R2 | Economic Data Research (`research_economic_data`) | Ensign Mira Dal | Research Observatory | Calendar console; active after releases |
-| R3 | Market News Research (`research_market_news`) | Ensign Poe Varga | Research Observatory | Feed console (deferred: greyed) |
-| R4 | Geopolitical Research (`research_geopolitical`) | Lt. Imre Castell | Research Observatory | Feed console (deferred: greyed) |
-| R5 | Rates/Bonds Research (`research_rates_bonds`) | Lt. Selah Ward | Research Observatory | Yield-curve console (deferred: greyed) |
-| R6 | Corporate/Earnings Research (`research_corporate_earnings`) | Ensign Theo Brandt | Research Observatory | Earnings console (deferred: greyed) |
-| V1 | Source Validator (`source_validator`) | Specialist Ada Kerr | Research Observatory | Scanner gate at the bench |
-| V2 | Freshness Checker (`freshness_checker`) | Specialist Noor Hale | Research Observatory | Timestamp ring tool |
-| V3 | Duplicate Detector (`duplicate_detector`) | Specialist Jem Oris | Research Observatory | Merges duplicate item cards |
-| V4 | Fact / Reaction / Interpretation Classifier (`claim_classifier`) | Specialist Lyra Fenn | Research Observatory | Tags claim cards F / R / I |
-| S1 | XAU/USD Specialist (`specialist_xauusd`) | Lt. Auric Reyes | Market Analysis Wing, XAU desk | Desk screen, gold accent |
-| S2 | EUR/USD Specialist (`specialist_eurusd`) | Lt. Elise Marchetti | Market Analysis Wing, EUR desk | Desk screen, blue accent |
-| S3 | USD/JPY Specialist (`specialist_usdjpy`) | Lt. Ren Takeda | Market Analysis Wing, JPY desk | Desk screen, red accent |
-| S4 | NAS100 Specialist (`specialist_nas100`) | Lt. Nash Coleman | Market Analysis Wing, NAS desk | Desk screen, violet accent |
-| T2 | Market Session (`market_session`) | Ensign Sol Meridian | Market Analysis Wing | Session world clock |
+| M1 | Causal / Macro Analyst (`causal_macro_analyst`) | Dr. Elara Maren | Lab / Research Hub (`H-LAB`) | Driver board; draws arrows between drivers and assets |
+| R1 | Central Bank Research (`research_central_bank`) | Lt. Cassian Rho | Lab / Research Hub (`H-LAB`) | Feed console; hands items to the Macro room |
+| R2 | Economic Data Research (`research_economic_data`) | Ensign Mira Dal | Lab / Research Hub (`H-LAB`) | Calendar console; active after releases |
+| R3 | Market News Research (`research_market_news`) | Ensign Poe Varga | Lab / Research Hub (`H-LAB`) | Feed console (deferred: greyed) |
+| R4 | Geopolitical Research (`research_geopolitical`) | Lt. Imre Castell | Lab / Research Hub (`H-LAB`) | Feed console (deferred: greyed) |
+| R5 | Rates/Bonds Research (`research_rates_bonds`) | Lt. Selah Ward | Lab / Research Hub (`H-LAB`) | Yield-curve console (deferred: greyed) |
+| R6 | Corporate/Earnings Research (`research_corporate_earnings`) | Ensign Theo Brandt | Lab / Research Hub (`H-LAB`) | Earnings console (deferred: greyed) |
+| V1 | Source Validator (`source_validator`) | Specialist Ada Kerr | Lab / Research Hub (`H-LAB`) | Scanner gate at the bench |
+| V2 | Freshness Checker (`freshness_checker`) | Specialist Noor Hale | Lab / Research Hub (`H-LAB`) | Timestamp ring tool |
+| V3 | Duplicate Detector (`duplicate_detector`) | Specialist Jem Oris | Lab / Research Hub (`H-LAB`) | Merges duplicate item cards |
+| V4 | Fact / Reaction / Interpretation Classifier (`claim_classifier`) | Specialist Lyra Fenn | Lab / Research Hub (`H-LAB`) | Tags claim cards F / R / I |
+| S1 | XAU/USD Specialist (`specialist_xauusd`) | Lt. Auric Reyes (**Metals family desk**, interim adapter) | Market Specialists Room (L1) | Own task row on the Metals desk |
+| S2 | EUR/USD Specialist (`specialist_eurusd`) | Lt. Elise Marchetti (**FX family desk**, interim adapter) | Market Specialists Room (L1) | Own task row and own state on the FX desk |
+| S3 | USD/JPY Specialist (`specialist_usdjpy`) | shown on the **FX family desk** (interim adapter; separate task row and state, never merged with S2) | Market Specialists Room (L1) | Own task row and own state on the FX desk |
+| S4 | NAS100 Specialist (`specialist_nas100`) | Lt. Nash Coleman (**Indices family desk**, interim adapter) | Market Specialists Room (L1) | Own task row on the Indices desk |
+| T2 | Market Session (`market_session`) | Ensign Sol Meridian | Technical Deck (L2) | Session clock ring |
 | T3 | Market Structure (`market_structure`) | Lt. Vega Stone | Technical Deck | Draws structure levels |
 | T4 | Technical Indicator (`technical_indicator`) | Lt. Iris Calder | Technical Deck | Indicator panels |
 | T5 | Candle / Price Action (`price_action`) | Ensign Wick Arlo | Technical Deck | Highlights candles at levels |
@@ -538,15 +476,15 @@ approach:
 | T7 | Entry Timing (`entry_timing`) | Ensign Kit Sparrow | Technical Deck | Countdown on an armed setup |
 | T8 | Technical Analyst (`technical_analyst`) | Lt. Cmdr. Rune Halloway | Technical Deck | Assembles the report crystal |
 | T1 | Data Validator (`data_validator`) | Chief Engineer Oren Kade | Data Core | Reactor console |
-| P2 | Contradiction Checker (`contradiction_checker`) | Lt. Nyx Aldren | Risk Control Vault | Intake checklist |
-| P3 | Risk Engine / Risk Auditor (`risk_engine`) | Lt. Cmdr. Sera Quill | Risk Control Vault | Rule checklist; breaker lever |
+| P2 | Contradiction Checker (`contradiction_checker`) | Lt. Nyx Aldren | Risk Control Room (L10) | Intake checklist |
+| P3 | Risk Engine / Risk Auditor (`risk_engine`) | Lt. Cmdr. Sera Quill | Risk Control Room (L10) | Rule checklist; breaker lever |
 | P4 | Execution Checker (`execution_checker`) | Chief Dane Corso | Execution Bay | Pre-flight checklist |
 | E1 | Paper Execution Agent (`paper_execution`) | Lt. Kiri Sato | Execution Bay | Launch console (paper) |
 | E2 | MT5 Execution Agent (`mt5_execution`) | Lt. Bram Oduya | Execution Bay | Appears only after the demo gate |
 | L1 | Post-Trade Reviewer (`post_trade_reviewer`) | Archivist Quinn Morrow | Memory Archive | Shelves review crystals |
 | L2 | Performance / Attribution (`attribution`) | Dr. Pax Lindqvist | Performance Lab | Updates metric walls |
-| O2 | Operational Wellbeing Monitor (`wellbeing_monitor`) | Dr. Noa Ferris (Medic persona); QM Bex Talon (Quartermaster persona) | Wellbeing Room | Medic visits overloaded agents; Quartermaster tends budget gauges |
-| — | Café Host (`cafe_host`, cosmetic) | Bix, service drone | Café | Serves drinks; no operational meaning |
+| O2 | Operational Wellbeing Monitor (`wellbeing_monitor`) | Dr. Noa Ferris (Medic persona); QM Bex Talon (Quartermaster persona) | Habitat recovery zone (Medic); Main Command (Quartermaster) | Medic visits overloaded agents; Quartermaster tends budget gauges |
+| — | Habitat Host (`habitat_host`, cosmetic, UI-only id) | Bix, service drone | Habitat café zone | Serves drinks; no operational meaning |
 
 Technical ids not yet fixed in the layer design (M1, V*, S*, T*, R*) are **proposals** to be
 confirmed in Foundation Phase 1 when the registry is written.
@@ -590,20 +528,20 @@ apply: `offline` > `error` > `paused` > `overloaded` > `resting` > transient out
 | Visual state | Animation | Room behaviour | Screen behaviour | Badge (icon + colour) | Movement | Possible next states |
 |---|---|---|---|---|---|---|
 | `idle` | Relaxed stance at desk; may start ambient after a delay | Home workstation, or habitat when ambient | Own screens show last result | ● neutral | Yes (ambient only) | walking, any working state, offline, paused |
-| `walking` | Walk cycle along the path | Corridor / lift | — | ➜ white | Yes | the target state; idle |
-| `researching` | Reading streams at a feed console | Research Observatory | Item stream animates | ⇣ teal | No | validating (hand-off), idle, error, overloaded |
-| `validating` | Scanning item or snapshot cards | Research Observatory bench / Data Core | Pass/fail marks per item | ⌕ violet | No | idle, error |
+| `walking` | Walk cycle along the path | Corridor / hub walkway | — | ➜ white | Yes | the target state; idle |
+| `researching` | Reading streams at a feed console | Lab / Research Hub (`H-LAB`) | Item stream animates | ⇣ teal | No | validating (hand-off), idle, error, overloaded |
+| `validating` | Scanning item or snapshot cards | Lab / Research Hub (`H-LAB`) bench / Data Core | Pass/fail marks per item | ⌕ violet | No | idle, error |
 | `analysing` | Working the room's main display | Owning analysis room | Room screen updates as outputs arrive | ✦ cyan, pulsing | No | reviewing, waiting, idle, error |
 | `monitoring` | Watchful pose, periodic glance at a gauge | Assigned console | Live gauges | ◉ blue | No | analysing, executing, idle, paused |
 | `debating` | Speaking: gestures, spotlight; listening: facing speaker | Debate Chamber podium | Argument columns and evidence cards | 🗨 side colour | No (during debate) | reviewing (judges), idle |
-| `reviewing` | Judge seat or command chair; stamp gesture at the end | Debate Chamber judge seat / Command Deck | Recommendation / rating appears | ⚖ gold | No | idle, walking |
+| `reviewing` | Judge seat or command chair; stamp gesture at the end | Debate Chamber judge seat / Main Command | Recommendation / rating appears | ⚖ gold | No | idle, walking |
 | `waiting` | Seated, hourglass | Work position or waiting bench | — | ⌛ grey | No | any working state |
-| `risk_review` | Checks lighting one by one | Risk Control Vault | Rule checklist | ⌕ violet + shield | No | approved, rejected, idle |
-| `approved` | Stamp and door light turns green (display time only) | Vault | Checklist all ✓; airlock light green | ✔ green | No | risk_review, idle |
-| `rejected` | Stamp and door stays shut (display time only) | Vault | Blocked reason highlighted | ✖ red-orange + reason icon | No | risk_review, idle |
+| `risk_review` | Checks lighting one by one | Risk Control Room (L10) | Rule checklist | ⌕ violet + shield | No | approved, rejected, idle |
+| `approved` | Stamp and outbox light turns green (display time only) | Risk Control Room | Checklist all ✓; outbox light green | ✔ green | No | risk_review, idle |
+| `rejected` | Stamp; outbox stays dark (display time only) | Risk Control Room | Blocked reason highlighted | ✖ red-orange + reason icon | No | risk_review, idle |
 | `executing` | Pre-flight checks, launch, docking | Execution Bay | Order lifecycle board | 🚀 white on dark | No | monitoring, idle, error |
 | `post_trade_review` | Shelving crystals / updating walls | Memory Archive / Performance Lab | Review and metric panels update | ◆ gold | No | idle |
-| `resting` | In a pod with a recharge bar and countdown | Wellbeing Room | Vitals board shows cooldown | ☾ soft blue | Only to the pod | idle |
+| `resting` | In a pod with a recharge bar and countdown | Habitat recovery zone | Vitals board shows cooldown | ☾ soft blue | Only to the pod | idle |
 | `overloaded` | Steam / sparks at the console | Stays at its console | Vitals board flags it | ♨ orange | No | resting, working state, error |
 | `paused` | Standing still at station; lights dimmed | Where it is | Screens frozen with "PAUSED" | ⏸ grey-blue | No | previous state on `system.resumed` |
 | `error` | Red beacon; still pose | Where it is | Error summary on its console | ✖ red | No | idle, working state (on next task) |
@@ -619,29 +557,29 @@ Movement is **cosmetic** and happens **after** the engine's state change (§1.6)
 
 | Visual state / trigger | Destination |
 |---|---|
-| `researching` | Research Observatory, the role's feed console |
-| `validating` (research) | Research Observatory validation bench |
+| `researching` | Lab / Research Hub (`H-LAB`), the role's feed console |
+| `validating` (research) | Lab / Research Hub (`H-LAB`) validation bench |
 | `validating` (market data, T1) | Data Core reactor console |
-| `analysing` — macro (M1) | Macro & News Observatory driver board |
-| `analysing` — market-specific (S*) | Market Analysis Wing, the instrument's desk |
+| `analysing` — macro (M1) | Lab / Research Hub (`H-LAB`) driver board |
+| `analysing` — market-specific (S*) | Market Specialists Room (L1), the family desk; each underlying agent keeps its own task row (interim adapter) |
 | `analysing` — technical (T3–T8) | Technical Deck chart table |
-| `analysing` — proposal (P1), Trader (U4) | Command Deck consoles |
+| `analysing` — proposal (P1), Trader (U4) | Main Command consoles |
 | `debating` | Debate Chamber podium (assigned seat) |
-| `reviewing` | Debate Chamber judge seat (debate close) or Command Deck chair (final rating) |
-| `risk_review`, `approved`, `rejected` | Risk Control Vault |
+| `reviewing` | Debate Chamber judge seat (debate close) or Main Command chair (final rating) |
+| `risk_review`, `approved`, `rejected` | Risk Control Room (L10) |
 | `executing` | Execution Bay |
 | `post_trade_review` | Memory Archive (L1) / Performance Lab (L2) |
 | `monitoring` | The agent's duty console |
 | `waiting` | Stay at the work position, or the room's waiting bench |
-| `overloaded` | **Stays at its console**; moves to the Wellbeing Room only when `agent.resting` arrives (a real cooldown) |
-| `resting` | Wellbeing Room pod |
-| `idle` | Home workstation; after an idle delay, optionally café, lounge, observation deck, billiards or rest area (§12) |
+| `overloaded` | **Stays at its console**; moves to the Habitat recovery zone only when `agent.resting` arrives (a real cooldown) |
+| `resting` | Habitat recovery zone pod |
+| `idle` | Home workstation; after an idle delay, optionally a Habitat zone: café, lounge, window bench, billiards or rest (§12) |
 | `paused` | No movement; stays where it is |
 | `error` | No movement; the Medic persona walks to it |
 | `offline` | Removed from rooms |
 
-Hand-off movement (a research role carrying an item to the Macro room, P1 carrying a proposal to the
-lift) happens only when an event implies the hand-off, e.g. `research.item.accepted` or
+Hand-off movement (a research role carrying an item to the macro driver board, P1 carrying a
+proposal along `COR-S` to the Risk Control Room intake) happens only when an event implies the hand-off, e.g. `research.item.accepted` or
 `trade.proposed`.
 
 ---
@@ -655,12 +593,12 @@ lift) happens only when an event implies the hand-off, e.g. `research.item.accep
 | Debate participants facing each other | **A. Operational** | `debate.started` … `debate.completed` |
 | Evidence card passed between podiums | **A. Operational** | `debate.turn.completed` whose excerpt cites research or analysis ids |
 | Hand-off of a data crystal / item card | **A. Operational** | `analysis.created` → next consumer's `agent.task.started`; `research.item.accepted` |
-| Proposal card down the lift to the Vault | **A. Operational** | `trade.proposed` |
+| Proposal card carried along `COR-S` to the Risk Control Room intake | **A. Operational** | `trade.proposed` |
 | Supervisor visiting a room | **A. Operational** | `market.focus.changed`, `run.started`, `system.paused` (O1 walks to the room concerned) |
-| Medic persona visiting an overloaded agent | **A. Operational** | `agent.overloaded`; escort to the Wellbeing Room on `agent.resting` |
+| Medic persona visiting an overloaded agent | **A. Operational** | `agent.overloaded`; escort to the Habitat recovery zone on `agent.resting` |
 | Idle agents chatting | **B. Ambient** | Both agents `idle` beyond the ambient delay; seeded selection |
-| Billiards, café, lounge, observation deck | **B. Ambient** | `idle` / `OFF_DUTY`; seeded selection |
-| Café Host serving | **B. Ambient** | Agents present in the café |
+| Billiards, café, lounge, window bench (Habitat) | **B. Ambient** | `idle` / `OFF_DUTY`; seeded selection |
+| Habitat Host serving | **B. Ambient** | Agents present in the café zone |
 
 Rules:
 - Operational interactions show only relationships present in the event data (shared artefact ids,
@@ -680,7 +618,7 @@ Rules:
   ⌕ risk review · EURUSD        ← state (icon + word) · market focus if any
 ```
 
-Shown from deck view inward. In overview, only the state pip is drawn.
+Shown from hub view inward. In overview, only the state pip is drawn.
 
 ### 9.2 Expanded HUD (hover / click)
 
@@ -694,7 +632,7 @@ Shown from deck view inward. In overview, only the state pip is drawn.
 | Recent contribution | analysis and debate agents: agreement / calibration measures (layer design §6.3) **with sample size**; hidden below the minimum sample |
 | Role metrics | research: items collected, acceptance rate; validators: accepted / rejected by reason; technical: setups by state; risk: checks, rejections by rule; execution: orders, fills, slippage; review: trades reviewed |
 
-**No profit figures for agents that do not trade.** P&L appears only on the Command Deck, in the
+**No profit figures for agents that do not trade.** P&L appears only on the Main Command, in the
 Execution Bay (positions) and in the Performance Lab (strategy level). Agent-level "profit" is never
 shown, because no single agent owns a trade's outcome.
 
@@ -702,23 +640,25 @@ shown, because no single agent owns a trade's outcome.
 
 ## 10. Room screens
 
+> The authoritative display list, placements and data sources are `docs/STELLAR_SCREEN_REGISTRY.md` v2. The table below is the original concept summary, with room names updated to the approved vessel.
+
 Screens render only from WorldState (events + snapshots). Each value carries its source timestamp;
 values older than their freshness window are drawn dimmed with an age label.
 
 | Room | Screens |
 |---|---|
-| **Command Deck** | Global P/L; paper balance / equity; open positions; drawdown; system mode `PAPER` / `DEMO`; risk and breaker state; station alert level; market activity for the four instruments; current setup and rating |
-| **Research Observatory** | Source feeds per role; new findings (accepted / rejected); source reliability (trust tier, acceptance rate); freshness clocks; duplicates merged; F / R / I label mix |
-| **Macro & News Observatory** | Central-bank events (Fed, ECB, BoJ); rates and yields; spreads; economic-calendar events with countdowns; geopolitical board; causal-analysis summary with driver arrows and coverage |
-| **Market Analysis Wing (per desk)** | Price and candles; relevant macro context from the specialist; active setup; event-risk windows; session clock |
+| **Main Command** | Global P/L; paper balance / equity; open positions; drawdown; system mode `PAPER` from telemetry (no DEMO / LIVE path); risk and breaker state; station alert level; market activity for the four instruments; current setup and rating |
+| **Lab / Research Hub (`H-LAB`)** | Source feeds per role; new findings (accepted / rejected); source reliability (trust tier, acceptance rate); freshness clocks; duplicates merged; F / R / I label mix |
+| **Lab / Research Hub (`H-LAB`), macro zone** | Central-bank events (Fed, ECB, BoJ); rates and yields; spreads; economic-calendar events with countdowns; geopolitical board; causal-analysis summary with driver arrows and coverage |
+| **Market Specialists Room (L1), per family desk (one row per underlying agent / instrument)** | Price and candles; relevant macro context from the specialist; active setup; event-risk windows; session clock |
 | **Technical Deck** | EMA, RSI, MACD, ATR panels; market structure levels; candle / price-action highlights; pullback state; setup lifecycle; entry-timing countdown |
 | **Debate Chamber** | Bull arguments; Bear arguments; contradictions (remote feed from P2); evidence cards; round counter; verdict |
-| **Risk Control Vault** | Proposed risk (% of equity at stop); rule checks with value vs limit; blocked reason; exposure bars; breaker state |
+| **Risk Control Room (L10)** | Proposed risk (% of equity at stop); rule checks with value vs limit; blocked reason; exposure bars; breaker state |
 | **Execution Bay** | Order lifecycle: created → sent → acknowledged → filled / rejected → closed; pending orders; pre-flight results; reconciliation status |
 | **Data Core** | Feed health per source; snapshot pulses; stale-feed alerts; event-bus and journal health |
 | **Memory Archive** | Previous comparable setups; trade history; post-trade reviews and lessons |
 | **Performance Lab** | Win / loss; expectancy; drawdown; R-multiple distribution; per-agent contribution; sample sizes and "insufficient sample" overlays |
-| **Wellbeing Room** | Per-agent load; retries; latency; rate limits; request queue; budget gauges; rest schedule |
+| **Habitat recovery zone** | Per-agent load; retries; latency; rate limits; request queue; budget gauges; rest schedule |
 
 ### 10.1 The decision chain on screen
 
@@ -733,17 +673,17 @@ RESEARCH FINDINGS → VALIDATED FACTS → CAUSAL / MACRO INTERPRETATION → MARK
 
 | Stage | Source (Foundation) | Event(s) | Shown in | Screen content |
 |---|---|---|---|---|
-| Research findings | `ResearchItem` (R1–R6) | `research.item.collected` | Research Observatory | New items per role, source, age |
-| Validated facts | Validation V1–V4, claim labels | `research.item.accepted` / `rejected`, `research.snapshot.created` | Research Observatory bench | Accepted claims tagged **FACT / REACTION / INTERPRETATION**; rejections with reasons |
-| Causal / macro interpretation | `MacroAssessment` (M1) | `analysis.created` (macro) | Macro & News Observatory | Drivers with direction and strength, each linked to cited claim ids; coverage |
-| Market bias | `MarketAssessment` (S1–S4) | `analysis.created` (market) | Instrument desk; Command Deck strip | Pressure on the instrument, primary drivers, **counter-evidence**, event-risk windows, coverage, age |
-| Technical confirmation | Structure / momentum / price action / setup (T3–T7) | `analysis.created`, `setup.state.changed` | Technical Deck; instrument desk | Higher-timeframe bias, pullback state, candle / price-action confirmation, setup lifecycle |
-| Trade proposal | `TradeProposal` (P1) from the PM's rating on the setup | `decision.final.created`, `trade.proposed` | Command Deck | Direction, entry, stop, target, reward:risk, rating, contradictions |
-| Risk decision | `RiskDecision` (P3) | `risk.check.*`, `risk.approved` / `risk.rejected` | Risk Control Vault | Every rule with value vs limit; approved size or blocked reason |
+| Research findings | `ResearchItem` (R1–R6) | `research.item.collected` | Lab / Research Hub (`H-LAB`) | New items per role, source, age |
+| Validated facts | Validation V1–V4, claim labels | `research.item.accepted` / `rejected`, `research.snapshot.created` | Lab / Research Hub (`H-LAB`) bench | Accepted claims tagged **FACT / REACTION / INTERPRETATION**; rejections with reasons |
+| Causal / macro interpretation | `MacroAssessment` (M1) | `analysis.created` (macro) | Lab / Research Hub (`H-LAB`) | Drivers with direction and strength, each linked to cited claim ids; coverage |
+| Market bias | `MarketAssessment` (S1–S4) | `analysis.created` (market) | Market Specialists family desk (L1; interim adapter); Main Command Agent Pipeline | Pressure on the instrument, primary drivers, **counter-evidence**, event-risk windows, coverage, age |
+| Technical confirmation | Structure / momentum / price action / setup (T3–T7) | `analysis.created`, `setup.state.changed` | Technical Deck; family desk | Higher-timeframe bias, pullback state, candle / price-action confirmation, setup lifecycle |
+| Trade proposal | `TradeProposal` (P1) from the PM's rating on the setup | `decision.final.created`, `trade.proposed` | Main Command | Direction, entry, stop, target, reward:risk, rating, contradictions |
+| Risk decision | `RiskDecision` (P3) | `risk.check.*`, `risk.approved` / `risk.rejected` | Risk Control Room (L10) | Every rule with value vs limit; approved size or blocked reason |
 | Execution | Order intent → Paper Broker (E1) | `order.*` | Execution Bay | `PAPER` order: entry, stop, target, size, lifecycle |
 | Post-trade review | `TradeReview` (L1), settlement (L2) | `trade.closed`, `memory.review.created`, `memory.outcome.settled` | Memory Archive, Performance Lab | Outcome, R multiple, what the chain said at each stage |
 
-The **Command Deck main viewscreen** carries a compact **decision-chain strip** for the focus
+The **Main Command Agent Pipeline display** (`DSP-CMD-04`) carries the **decision-chain strip** for the focus
 instrument: the nine stages as a row of tiles with the current stage lit, each showing its
 timestamp. Clicking a tile opens that stage's room screen, and clicking the chain opens the proposal
 timeline (§17).
@@ -805,46 +745,46 @@ WorldState; the renderer then animates.
 | Event | Visual response (world) | Room response | Agent animation | Screen update |
 |---|---|---|---|---|
 | `station.heartbeat.emitted` | Clears "telemetry lost" if shown | — | — | Uptime indicator |
-| `station.alert_level.changed` | Ship lighting changes (GREEN / BLUE / AMBER / RED) | All rooms relit | — | Command Deck alert panel |
-| `run.started` | Decision cycle begins | Command Deck brightens | Supervisor, PM, RM, Trader gather at the command table | Run queue |
-| `market.focus.changed` | Focus instrument highlighted on the minimap | Instrument desk lights up; other desks dim | Specialist for the instrument walks to its desk; Supervisor visits | Main viewscreen switches instrument |
+| `station.alert_level.changed` | Ship lighting changes (GREEN / BLUE / AMBER / RED) | All rooms relit | — | Main Command alert panel |
+| `run.started` | Decision cycle begins | Main Command brightens | Supervisor, PM, RM, Trader gather at the command table | Run queue |
+| `market.focus.changed` | Focus instrument highlighted on the minimap | The instrument's row on its family desk lights up | The family specialist is at its desk; Supervisor visits | Main viewscreen switches instrument |
 | `agent.task.started` | Badge → derived working state | Target room marks the work position | Walk to work position, then working animation | Task label in HUD |
 | `agent.task.completed` | Badge → next state (usually idle) | — | Working animation ends; hand-off if a consumer starts | Output appears on the relevant screen |
 | `agent.task.failed` | Badge → `error` | Room outline amber | Red beacon; Medic persona walks over | Error summary on the agent's console |
 | `agent.state.changed` | Badge → derived visual state (§6.1) | — | Per state catalogue | — |
 | `snapshot.created` / `snapshot.rejected` | Reactor pulse / red flash | Data Core | T1 validating | Feed health; stale alerts |
-| `market.data.stale_detected` | Conduit flicker | Data Core, affected desk outlined | — | Stale-feed alert with age |
-| `research.item.collected` | New star in the item stream | Research Observatory | Collector at feed console | Findings stream |
-| `research.item.accepted` / `research.item.rejected` | Item passes the gate / dims | Research Observatory bench | Validator scan; hand-off to Macro room on accept | Reliability and acceptance counters |
-| `research.snapshot.created` | Coverage bar refresh | Macro & News Observatory | — | Coverage line |
+| `market.data.stale_detected` | Conduit flicker | Data Core, affected family-desk row outlined | — | Stale-feed alert with age |
+| `research.item.collected` | New star in the item stream | Lab / Research Hub (`H-LAB`) | Collector at feed console | Findings stream |
+| `research.item.accepted` / `research.item.rejected` | Item passes the gate / dims | Lab / Research Hub (`H-LAB`) bench | Validator scan; hand-off to the macro driver board on accept | Reliability and acceptance counters |
+| `research.snapshot.created` | Coverage bar refresh | Lab / Research Hub (`H-LAB`) | — | Coverage line |
 | `analysis.created` | Report / assessment crystal appears | Producing room | Producer lifts the crystal; carries it to the consumer if one starts | Assessment summary on the producing room's screen |
 | `setup.state.changed` | Setup card changes state | Technical Deck | T6 moves the card on the lifecycle board | Setup lifecycle; `ARMED` glow |
 | `debate.started` | Chamber spotlights on | Debate Chamber | Participants walk to podiums and face each other | Round counter starts |
 | `debate.turn.completed` | Tug-of-war bar moves | Debate Chamber | Speaker gestures; evidence card passed if cited | New argument in the speaker's column |
 | `debate.completed` | Spotlights off; verdict shown | Debate Chamber | Judge stamps; participants return to seats / idle | Verdict |
-| `decision.final.created` | Rating stamped on the main viewscreen | Command Deck | PM stamp gesture | Rating; `REVIEW` flashes amber with icon |
-| `trade.proposed` | Proposal card goes down the lift | Command Deck → Vault | P1 carries the card to the lift | Vault intake shows the proposal |
-| `risk.check.started` / `risk.check.completed` | Checklist lines light one by one | Risk Control Vault | P2 / P3 `risk_review` | Rule checks with value vs limit |
-| `risk.approved` | Airlock light turns green | Vault → Execution Bay | P3 `approved` (display time), card passes through the airlock | "Approved" with size and risk % |
-| `risk.rejected` | Vault door stays shut | Vault | P3 `rejected` (display time) | Blocked reason(s) highlighted |
+| `decision.final.created` | Rating stamped on the main viewscreen | Main Command | PM stamp gesture | Rating; `REVIEW` flashes amber with icon |
+| `trade.proposed` | Proposal card leaves Main Command | Main Command → `COR-S` → Risk Control Room intake | P1 carries the card to `risk.intake_drop` | Risk intake shows the proposal |
+| `risk.check.started` / `risk.check.completed` | Checklist lines light one by one | Risk Control Room (L10) | P2 / P3 `risk_review` | Rule checks with value vs limit |
+| `risk.approved` | Outbox light turns green | Risk Control Room | P3 `approved` (display time); an order capsule appears in the outbox **only after** `order.created`, and E1 carries it to the Execution Bay | "Approved" with size and risk % |
+| `risk.rejected` | Outbox stays dark | Risk Control Room | P3 `rejected` (display time) | Blocked reason(s) highlighted |
 | `order.created` | Shuttle loaded in a launch tube | Execution Bay | E1 at the launch console | Order row "created" |
 | `order.preflight.failed` | Launch aborted | Execution Bay amber | P4 shakes head; checklist item ✖ | Pre-flight failure reason |
 | `order.sent` | Shuttle launches | Execution Bay | E1 launch gesture | Row "sent" |
 | `order.filled` | Shuttle docks | Execution Bay | — | Row "filled", fill price, slippage |
 | `order.rejected` | Shuttle returns | Execution Bay | — | Row "rejected", reason |
-| `trade.closed` | Crystal travels to the Memory Archive | Execution Bay → Memory Archive | L1 receives and shelves it | Trade history; P/L on Command Deck |
+| `trade.closed` | Crystal travels to the Memory Archive | Execution Bay → Memory Archive | L1 receives and shelves it | Trade history; P/L on Main Command |
 | `memory.review.created` | Crystal glows | Memory Archive | L1 `post_trade_review` | Review summary |
 | `memory.outcome.settled` | Performance Lab wall updates | Performance Lab | L2 `post_trade_review` | Metrics with sample sizes |
-| `wellbeing.load.updated` | Load bar on the vitals board | Wellbeing Room | — | Per-agent load |
+| `wellbeing.load.updated` | Load bar on the vitals board | Habitat recovery zone | — | Per-agent load |
 | `agent.degraded` | Flicker modifier on the agent | — | Slower animation, ⚠ badge | Degraded source listed |
-| `agent.overloaded` | Badge → `overloaded` | Wellbeing Room amber | Steam at its console; Medic persona walks over | Vitals board flags the agent |
-| `agent.resting` | Badge → `resting` | Wellbeing Room | Agent walks (or fades) to a pod | Cooldown countdown |
+| `agent.overloaded` | Badge → `overloaded` | Habitat recovery zone amber | Steam at its console; Medic persona walks over | Vitals board flags the agent |
+| `agent.resting` | Badge → `resting` | Habitat recovery zone | Agent walks (or fades) to a pod | Cooldown countdown |
 | `agent.rest.ended` | Badge → `idle` | — | Leaves the pod | — |
-| `budget.warning` | Quartermaster gauge turns amber | Wellbeing Room | Quartermaster persona at the gauges | Budget used vs limit |
+| `budget.warning` | Quartermaster gauge turns amber | Main Command (budget console) | Quartermaster persona at the gauges | Budget used vs limit |
 | `system.paused` | Ship dims; "PAUSED" banner | All rooms | Everyone freezes in place (`paused`) | Screens frozen with reason |
 | `system.resumed` | Lights restore | All rooms | Agents resume their telemetry states | — |
-| `circuit_breaker.tripped` | Ship goes RED | Vault lever drops; Execution Bay locked | P3 at the lever; others stop working animations | Breaker panel: tripped, rule, value vs limit; "Only the owner can reset (owner command)" |
-| `circuit_breaker.reset` | RED clears to the current alert level | Vault door unseals | P3 raises the lever | Reset time and owner reason |
+| `circuit_breaker.tripped` | Ship goes RED | Risk Control Room lever drops (display only); door panel shows BREAKER TRIPPED; outbox dark | P3 at the lever; others stop working animations | Breaker panel: tripped, rule, value vs limit; "Only the owner can reset (owner command)" |
+| `circuit_breaker.reset` | RED clears to the current alert level | Door panel clears | P3 raises the lever | Reset time and owner reason |
 
 ---
 
@@ -852,8 +792,8 @@ WorldState; the renderer then animates.
 
 - **Eligibility:** only agents whose runtime state is `IDLE` or `OFF_DUTY`, after an idle delay (a
   UI setting).
-- **Activities:** café, lounge conversation, observation deck, billiards, rest area, walking the
-  promenade.
+- **Activities:** café, lounge conversation, window bench, billiards, rest zone, walking the
+  Habitat ring (all zones of `H-HAB`).
 - **Selection:** a seeded generator keyed on time and agent ids (layer design §5.3 rule 5), so
   replays match. The generator is the ported `clock-rng` (mulberry32 / fnv, audit S5) with an
   injected clock: seed = station seed + agent id + time bucket. **No `Math.random`, `Date.now` or
@@ -876,8 +816,9 @@ WorldState; the renderer then animates.
 - **No implied emotions:** ambient scenes show routine activity (drinking coffee, playing billiards,
   looking out of the window). They never display moods, satisfaction, fatigue or "happiness" as
   facts about an AI agent. Tooltips on ambient activity read "ambient animation".
-- **Separation of pods:** Rest Area pods are ambient; **Wellbeing Room pods mean a real cooldown**
-  (`agent.resting`). They look different (Wellbeing pods show a countdown and the vitals link).
+- **Separation of pods:** cosmetic rest pods are ambient; **recovery pods (Habitat recovery zone)
+  mean a real cooldown** (`agent.resting`). They look different (recovery pods show a countdown and
+  the vitals link).
 
 ---
 
@@ -890,7 +831,7 @@ decision; its only real effects are pauses and cooldowns decided in the engine.
 |---|---|
 | Latency vs the agent's baseline | Pulse speed on its vitals row |
 | Retry rate, model / API errors | Retry counter; ⚠ markers |
-| Request queue length | Queue bar at the Supervisor's console and in the Wellbeing Room |
+| Request queue length | Queue bar at the Supervisor's console and in the Habitat recovery zone |
 | Rate limits (429s) per provider | Provider row turns amber |
 | Cost budget | Quartermaster fuel-cell gauges |
 | Repeated failures | `error` badges; Medic visits |
@@ -925,8 +866,8 @@ you can read at a glance.
 
 - Warm off-white composite wall panels with soft seams; brushed titanium trim; dark smoked glass for
   displays; matte deep-navy floors.
-- **Vault:** gunmetal and armoured plating, darker and colder, with visible bulkhead ribs; the one
-  room that feels heavy.
+- **Risk Control Room (L10):** gunmetal, darker and colder, with visible hull ribs and restricted
+  markings; no armoured bulkhead, blast door or airlock (security is logical).
 - **Habitat:** light wood-like laminates, fabric, plants, warm light.
 
 ### 14.3 Lighting
@@ -948,11 +889,11 @@ you can read at a glance.
 ### 14.5 Floors, walls, consoles
 
 - Curved walls and rounded corners throughout; corridors with light strips that point toward the
-  lift.
+  hub doors.
 - Consoles: gently curved desks with a tilted upper display and a flat touch surface; standing
-  consoles in the Technical Deck; a circular command table on the Command Deck.
-- Each room has one **hero object** readable in overview: command chair, observatory dome, instrument
-  desks, chart table, amphitheatre, vault door, launch tubes, reactor, crystal shelves, metric wall,
+  consoles in the Technical Deck; a circular command table in Main Command.
+- Each room has one **hero object** readable in overview: command chair, lab dome, family
+  desks, chart table, evidence stage, breaker panel, launch tubes, reactor, crystal shelves, metric wall,
   rest pods, billiard table.
 
 ### 14.6 Agents
@@ -1012,7 +953,7 @@ rooms) and keeps the UI a read-only local web page.
 **Renderer spike before lock-in (VW-2).** A small, time-boxed prototype (about one week, in the
 engine-port stage V1-E, §19) decides between PixiJS and Canvas 2D:
 
-- one deck with an 8×8-tile room and a corridor, isometric projection, grey-box placeholder art
+- one 8×8-tile room and a corridor, isometric projection, grey-box placeholder art
   only;
 - 20 animated placeholder agents walking via the ported pathfinding (§16) and driven by a recorded
   event fixture;
@@ -1029,33 +970,32 @@ recorded in VW-2. Until then PixiJS is a planning assumption, not a decision.
 
 Navigation is part of the UI's **engine layer (§1.7)** and has **no connection to trading logic**.
 It adopts StarNet's proven tile-grid approach (audit S13, S14, S18–S24; recommendations VR-5,
-VR-6) instead of the navmesh + A* design of v0.1, extended to several decks.
+VR-6) instead of the navmesh + A* design of v0.1, applied to the single flat-vessel grid (Topology v2).
 
-**Coordinates.** All navigation works in **logical coordinates**: `(deck, tx, ty)` tiles and
+**Coordinates.** All navigation works in **logical coordinates**: `(tx, ty)` tiles on the one vessel grid and
 sub-tile positions. They are renderer-independent. The **isometric view is a presentation-only
 projection** applied by the renderer at draw time; no path, anchor, zone or collision rule ever uses
 screen coordinates. A renderer change (VW-2) does not touch navigation.
 
 | Element | Design |
 |---|---|
-| **Deck grids** | **One navigation grid per deck** (§3.1). Rooms are unions of tile rectangles; corridors are tile strips; `walkable` and an indexed tile → room lookup are built from the authored layout (layout format VW-15) |
-| **Doors** | **Automatic doors where appropriate:** generated where a corridor meets an ordinary room. **Not** generated on the Risk Control Vault or Execution Bay walls, whose doors are authored explicitly. Every step is checked by `canStep(from, to)` |
-| **One-way airlock** | The Vault → Execution Bay door is **one-way in `canStep`**: agents may step Vault → Execution Bay, never the reverse, and the Execution Bay has no other agent door (layer design §2.1). Agents based in the bay (P4, E1, E2) never walk out of it; when they must appear elsewhere they fade out and in (Fallback) |
-| **Lifts / transport links** | A small **graph between decks**: nodes are lift stops (a tile on each deck); edges are lift links with a nominal travel time. A cross-deck route = grid path to a lift stop → lift edge (the agent fades into the lift and appears at the destination stop) → grid path on the target deck. Lift doors are explicit, never auto-generated |
-| **Path search** | Per deck: **BFS** over walkable tiles, then **string-pulling** with a conservative line-of-sight check (`segmentClear`) that never cuts a corner or crosses a wall seam without a door. Across decks: shortest route through the lift graph, then per-deck paths. StarNet's art-tuned doorway clearances are not used (audit S15) |
+| **Vessel grid** | **One navigation grid for the whole flat vessel** (Topology v2 §8). Rooms, hubs and corridors are rasterised by tile centre; `walkable` and an indexed tile → space lookup are built from the authored layout (layout format VW-15). Round rims and rotated R rooms are art shapes over stepped walk tiles |
+| **Doors** | **Explicit doors only.** The 21 approved doors (Topology v2 §3) are the only crossings; StarNet's automatic doors on adjacency are **switched off**. Every step is checked by `canStep(from, to)` |
+| **Restricted rooms** | There is no one-way door and no airlock. Entry to the Risk Control Room (L10) and the Execution Bay (L9) is a **per-role navigation permission** (Character Registry v2 §3); restricted anchors are reserved per role. An order capsule appears only after `risk.approved` + `order.created` |
+| **Path search** | **BFS** over walkable tiles of the vessel grid, then **string-pulling** with a conservative line-of-sight check (`segmentClear`) that never cuts a corner or crosses a wall seam without a door. StarNet's art-tuned doorway clearances are not used (audit S15) |
 | **Walking** | Eased speed, facing slew with hysteresis, corner arcs, stride phase from distance travelled; **8 facings** for isometric sprites; injected clock (audit S21) |
-| **Zones** | Idle containment per agent: home room, habitat promenade, per-deck leash (audit S18) |
-| **Interaction points** | Named anchors per room (`vault.sizing_console`, `debate.podium_bull`, `cafe.seat_3`), each with an approach tile, a facing and a capacity (audit S19) |
+| **Zones** | Idle containment per agent: home room, Habitat zones, room leash (audit S18) |
+| **Interaction points** | Named anchors per room (`risk.sizing_console`, `debate.podium_bull`, `habitat.cafe_seat_3`), each with an approach tile, a facing and a capacity (audit S19) |
 | **Reserved seats** | Operational anchors are reserved per agent role (a podium belongs to its debater); ambient anchors are claimed first-come with a timeout, and released at once when an operational agent needs them (audit S25 pattern) |
 | **Waiting anchors** | For `waiting` / `paused`: room waiting bench → own workstation → room anchor, clamped to the agent's zone (audit S20) |
 | **Target points** | The adapter gives a room and an anchor; navigation computes the route |
 | **Traffic and collision** | Pattern from StarNet, reimplemented with explicit arguments (audit S22–S24): corridor **right of way** (operational agents always pass before ambient ones; ties broken deterministically), **soft separation** between bodies, and a **containment backstop** that returns any body pushed off walkable tiles. No physics |
 | **Path queue** | Each agent keeps at most one pending destination; a newer one replaces it |
-| **Fallback** | If no path is found, a lift link is missing, or the walk exceeds its maximum visual time, **fade out and fade in** at the destination |
-| **No deadlock** | A traffic jam is given up after a short timeout and the blocked agent teleports; door and lift queues time out; ambient agents always yield to operational agents. Pathfinding and containment tests prove this (§21) |
+| **Fallback** | If no path is found, or the walk exceeds its maximum visual time, **fade out and fade in** at the destination |
+| **No deadlock** | A traffic jam is given up after a short timeout and the blocked agent teleports; door queues time out; ambient agents always yield to operational agents. Pathfinding and containment tests prove this (§21) |
 
-The multi-deck model (one grid per deck plus a lift graph, versus a single grid with vertical
-offsets) and isometric depth sorting in the cutaway are recorded as VW-13.
+The multi-deck model of v0.1 is **superseded**: the owner-approved floor plan (revision C) is one
+flat vessel on one grid. Isometric depth sorting in the cutaway remains open (VW-13).
 
 ---
 
@@ -1065,7 +1005,7 @@ offsets) and isometric depth sorting in the cutaway are recorded as VW-13.
 |---|---|
 | Click an agent | Agent focus: expanded HUD and side panel (task, recent events, metrics with sample sizes) |
 | Click a room | Room focus: full screens and interaction points |
-| Inspect market | Instrument desk panel: price, candles, specialist assessment, active setup |
+| Inspect market | Family desk panel (one row per instrument / underlying agent): price, candles, specialist assessment, active setup |
 | Inspect trade | Proposal timeline: setup → proposal → risk checks → orders → fills → close → review, linked by ids |
 | Inspect debate | Transcript of turns, verdict, evidence cards with links to research and analysis |
 | Inspect risk rejection | Rule-by-rule table: value vs limit, blocked reason, config version |
@@ -1115,10 +1055,10 @@ replayed with a frozen clock and seeded ambient, compared by signature diff (§2
 |---|---|---|---|---|
 | **V0** | Final visual design and wireframes: this plan, room wireframes, persona sheet, style frames | Approved Phase 0 documents | Owner approval; layer design reconciliation of VX-1 to VX-4 | All code and final art |
 | **V1** | Static ship layout; room navigation (camera modes, minimap); **live state badges** from the event stream; replay | Foundation Phase 6 exit; read-only API (`/snapshot`, `/events`, event stream; transport VW-14) with local frontend security (§20) | Badges match the event log exactly for recorded runs; stale / gap handling works; no write endpoints; §20 security tests pass; golden screenshots of the static layout and badge states | Agent movement, ambient life |
-| **V1-E** | **Engine port / adaptation** (§1.7) with grey-box placeholder art: per-deck room grids, doors and the one-way airlock, lifts, pathfinding, walking, collision / traffic, zones, workstation and waiting anchors, event-stream simulation from fixtures, reconnect and stale-state handling; the PixiJS vs Canvas 2D spike (§15) | V1; the StarNet-derived modules' provenance and notices in place (§22); layout format (VW-15) | Pathfinding, containment, traffic and no-deadlock tests pass; the airlock is never crossed in reverse; reconnect, gap-reset and stale-state tests pass on a fake stream; deterministic replay produces identical golden screenshots on repeated runs; spike measurements recorded (VW-2) | Agent artwork, sprites, ambient life, advanced animation |
+| **V1-E** | **Engine port / adaptation** (§1.7) with grey-box placeholder art: the flat vessel grid with the 21 explicit doors and restricted-room permissions, pathfinding, walking, collision / traffic, zones, workstation and waiting anchors, event-stream simulation from fixtures, reconnect and stale-state handling; the PixiJS vs Canvas 2D spike (§15) | V1; the StarNet-derived modules' provenance and notices in place (§22); layout format (VW-15) | Pathfinding, containment, traffic and no-deadlock tests pass; no route crosses a wall except at the 21 doors, and only permitted roles enter L9 / L10; reconnect, gap-reset and stale-state tests pass on a fake stream; deterministic replay produces identical golden screenshots on repeated runs; spike measurements recorded (VW-2) | Agent artwork, sprites, ambient life, advanced animation |
 | **V2** | Agent sprites; movement between rooms on the V1-E engine layer (walking along computed paths, fade fallback); event-driven visual states | V1-E; persona registry; first sprite sheets | Every §11 event produces the specified badge and position; teleport-when-late verified; golden screenshots per visual state | Interactions, advanced animation |
 | **V3** | Room screens: market displays, debate, risk and execution visualisation; Performance Lab and Wellbeing screens | V2; metrics API | Screen values equal journal / metrics values for recorded runs; stale values dimmed with age; decision-chain screens (§10.1) golden-tested for each stage | Ambient life |
-| **V4** | Ambient life: café, lounge, billiards, observation deck, rest area | V3 | Ambient never delays a badge or task animation (measured); ambient yields immediately to operational tasks; replays of ambient scenes are identical (seeded; golden screenshots); determinism lint passes | Rich animation |
+| **V4** | Ambient life in the Habitat: café, lounge, billiards, window bench, rest zone | V3 | Ambient never delays a badge or task animation (measured); ambient yields immediately to operational tasks; replays of ambient scenes are identical (seeded; golden screenshots); determinism lint passes | Rich animation |
 | **V5** | Richer animations, operational interactions (§8), polish | V4; anchors authored for all rooms | No visual deadlock in soak runs; interactions only appear with their triggering events; golden screenshots of interactions | — |
 | **V6** | Performance, accessibility and low-power modes hardened (basic accessibility is required from V1) | V5 | 60 fps target met (render-time percentiles, §18); render-fault overlay and recovery tested; reduced-motion, colour-independence and keyboard checks pass; UI off → trading unchanged | — |
 
@@ -1158,7 +1098,7 @@ frozen clock and a fixed seed. None touches the trading engine.
 | Test family | What it proves |
 |---|---|
 | **Deterministic visual replay** | The same fixture + seed + clock produce the same WorldState and the same frames, run after run; replay mode equals live mode for the same events |
-| **Pathfinding** | Every authored anchor is reachable from every room on its deck and through lifts across decks; smoothed paths never cross walls or seams without doors (checked against an independent dense-sampling oracle, not the path code itself); the Vault → Execution Bay airlock is never crossed in reverse; no route enters the Execution Bay except through the Vault |
+| **Pathfinding** | Every authored anchor is reachable on the vessel grid; smoothed paths never cross walls or seams without doors (checked against an independent dense-sampling oracle, not the path code itself); there are exactly 21 crossings (Topology v2 §3); no character without permission is ever routed into L9 or L10 |
 | **Containment and traffic** | Bodies never end on non-walkable tiles; zones hold idle agents; two agents crossing in a 2-tile corridor both pass; operational agents win right of way; jams give up and teleport within the timeout (scenario ideas from audit S52, written as behavioural tests) |
 | **Stale state** | Link-down after 1.5× the keepalive without data; per-agent "no update for N s" markers; working states are never animated as finished without an event |
 | **Reconnect** | Against a fake stream: cursor resume, gap → `reset` → snapshot replace, duplicate and replayed events applied once, backoff capped, one stream at a time, "RECONNECTING — verifying state" until the snapshot is applied |
@@ -1216,9 +1156,9 @@ StarNet's **code** is MIT-licensed; its name, logo, artwork, sprites and brand i
 | VW-10 | Day / night lighting tied to FX sessions | Yes (layer design LD-6); no | Off until V5 |
 | VW-11 | How StarNet-derived modules enter Stellar (audit Q2) | Vendor (copy + adapt with MIT notices, §22); clean-room reimplementation from the audit's descriptions | Vendor with notices for the COPY + ADAPT items; nothing copied before approval |
 | VW-12 | Language for `stellar_ui` (audit Q3) | TypeScript; JavaScript with JSDoc types | TypeScript assumed for planning |
-| VW-13 | Multi-deck model and isometric depth sorting (audit Q5, Q6) | One grid per deck + lift graph (proposed, §16); a single grid with vertical offsets. Depth key per layer (floor, props, bodies, tall screens, walls) for the cutaway | One grid per deck; depth key decided in the spike |
+| VW-13 | Isometric depth sorting (audit Q6). The multi-deck question (Q5) is **resolved** by Floor Plan revision C: one flat grid | Depth key per layer (floor, props, bodies, tall screens, walls) for the cutaway | Depth key decided in the spike |
 | VW-14 | Event-stream transport | WebSocket (named in Foundation §4.28); SSE with the same cursor semantics (`epoch:seq`, `ready` / `reset`, data keepalive; StarNet pattern) | Transport-neutral adapter; Foundation's WebSocket until amended |
-| VW-15 | Ship layout authoring (audit Q7) | Hand-written JSON layout (tiles, rooms, doors, lifts, anchors, zones); a small internal editor later | JSON layout, validated by the pathfinding tests |
+| VW-15 | Ship layout authoring (audit Q7) | Hand-written JSON layout (tiles, rooms, explicit doors, anchors, zones); a small internal editor later | JSON layout, validated by the pathfinding tests |
 | VW-16 | Is StarNet's procedural art code "code" or "artwork"? (audit Q1) | Artwork (conservative); code | Artwork: not reused |
 | VW-17 | StarNet revision to track, and whether its default branch is its release trunk (audit Q9, Q10) | Pin `fbddbf99`; re-audit a later revision before any copying | Pinned to `fbddbf99`; re-check before V1-E starts |
 | VW-18 | Snapshot contents and semantics (audit Q8; §1.8 rule 7) | Adopt the §1.8 list in the Foundation API contract; extend it | §1.8 list proposed; reconciled with Foundation §4.28 under VX-6 |

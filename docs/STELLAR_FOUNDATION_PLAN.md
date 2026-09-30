@@ -537,6 +537,8 @@ LLM cost proportional to opportunities, not to clock ticks.
 
 ### 5.2 Minimum executable V1 roster
 
+> **Station room names** in the roster tables below (for example "Risk Control Vault") refer to the earlier stacked-deck concept. The approved visual topology is `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` revision C and the Visual Foundation v2 registries; for example, P2 / P3 work in the Risk Control Room (L10). The roster itself is unchanged.
+
 Everything needed to run the full chain end to end on **paper**:
 
 | Group | Agents in minimum V1 |

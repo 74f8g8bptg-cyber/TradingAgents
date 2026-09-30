@@ -253,6 +253,8 @@ Plain upstream runs (e.g. a stock through the unmodified engine) still follow
 
 ## 2. Space-station visual concept
 
+> **Topology superseded (visual layer only).** The station map, rooms, lifts, vault and airlock described in this section belong to the earlier stacked-deck concept. The owner-approved physical topology is `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` **revision C** (a flat vessel with 3 hubs, L1–L10, R1–R6 and 21 explicit doors), detailed in the Visual Foundation v2 registries (`STELLAR_STATION_TOPOLOGY.md`, `STELLAR_ROOM_REGISTRY.md`, `STELLAR_CHARACTER_REGISTRY.md`, `STELLAR_SCREEN_REGISTRY.md`, `STELLAR_ASSET_REGISTRY.md`). Risk isolation is now a logical access rule (Risk Control Room L10, Execution Bay L9), not a vault, lift or airlock. The engine's rules (risk gate before execution; the UI never writes) are unchanged.
+
 ### 2.1 Design idea: the floor plan is the control flow
 
 The station layout mirrors the real pipeline, so someone watching can understand the system by
@@ -714,6 +716,8 @@ Unchanged: `run.*`, `agent.moved`, `agent.llm_call.started`, `agent.tool_call.st
 ## 5. UI and visual states
 
 ### 5.1 Home rooms and work positions
+
+> **Topology superseded (visual layer only).** The station map, rooms, lifts, vault and airlock described in this section belong to the earlier stacked-deck concept. The owner-approved physical topology is `docs/STELLAR_MASTER_FLOOR_PLAN_V1.md` **revision C** (a flat vessel with 3 hubs, L1–L10, R1–R6 and 21 explicit doors), detailed in the Visual Foundation v2 registries (`STELLAR_STATION_TOPOLOGY.md`, `STELLAR_ROOM_REGISTRY.md`, `STELLAR_CHARACTER_REGISTRY.md`, `STELLAR_SCREEN_REGISTRY.md`, `STELLAR_ASSET_REGISTRY.md`). Risk isolation is now a logical access rule (Risk Control Room L10, Execution Bay L9), not a vault, lift or airlock. The engine's rules (risk gate before execution; the UI never writes) are unchanged.
 
 Each agent has a **home room** (where it idles) and one or more **work positions** (where it goes
 when active). Most analysts work in their home room; decision and debate agents travel.

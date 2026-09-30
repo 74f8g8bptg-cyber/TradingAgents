@@ -8,6 +8,7 @@
 | **Revision audited** | `fbddbf992f8e7082196f07c3024781fcf1c276fc` (2026-09-28 15:29 −04:00, "fix(station.layout): the tool's clock is injected…"), the repository's default branch at clone time: `feat/harness-backend`. Desktop build version in `src-tauri/tauri.conf.json`: 0.12.5 |
 | **Method** | Shallow read-only clone; code read directly (not inferred from filenames). Sizes are `wc -l` at this revision |
 | **Compared against** | `docs/STELLAR_VISUAL_WORLD_PLAN.md` v0.1 (uncommitted), `docs/STELLAR_FOUNDATION_PLAN.md` v0.3, `docs/STELLAR_LAYER_DESIGN.md` v0.4 |
+| **Later note** | Historical audit. Its deck / lift / airlock recommendations (for example VR-5) are superseded by the owner-approved flat vessel (`STELLAR_MASTER_FLOOR_PLAN_V1.md` revision C) and `STELLAR_STARNET_VISUAL_ADAPTATION.md`. Licence and asset findings remain valid |
 
 ---
 
