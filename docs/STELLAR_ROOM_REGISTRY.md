@@ -277,8 +277,8 @@ changes this file only.
 
 | Space | Function | Furniture | Screens | Rule |
 |---|---|---|---|---|
-| `COR-N` | Transit for the analysis chain (LAB → L1 / L2 / L3 / L4 → CMD) | `COR-008` segments, `COR-009` hub junctions × 2, `COR-007` door niches, `SGN-001` name plates, `SGN-003` wayfinding | `DSP-CRN-01` alert repeater | Transit only: no ambient loitering, no furniture in the path, and the corridor ends (hub doors) stay clear |
-| `COR-S` | Transit for the decision chain (CMD → L10 → L9; L6 / L7) | as `COR-N` | `DSP-CRS-01` alert repeater | as `COR-N`. The courier and the order hand-off use this corridor |
+| `COR-N` | Transit for the analysis side in the engine's order: L2 technical evidence → L1; `H-LAB` macro → L1; L1 → `H-CMD` (when the Trader's task starts); `H-CMD` ↔ L3 (Research Manager); Supervisor visits to L1–L4 on their `run.failed`; Medic visits; idle ambient transit (Corridor sheet §6) | `COR-008` segments, `COR-009` hub junctions × 2, `COR-007` door niches, `SGN-001` name plates, `SGN-003` wayfinding | `DSP-CRN-01` alert repeater | Transit only: no ambient loitering, no furniture in the path, and the corridor ends (hub doors) stay clear |
+| `COR-S` | Transit for the decision chain (CMD → L10 → L9; L6 / L7) | as `COR-N` | `DSP-CRS-01` alert repeater | as `COR-N`. Used by the proposal courier (`H-CMD` → L10), the order hand-off (L9 ↔ L10), the Record Crystal (L9 → L6), Supervisor visits to the L9 / L10 entries on their `run.failed`, Medic visits and idle ambient transit (Corridor sheet §6) |
 
 ---
 
