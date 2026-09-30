@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stellar-agents"
+dynamic = ["version"]
+description = "Stellar Agents: a multi-agent trading layer built beside TradingAgents"
+requires-python = ">=3.11"
+# Stellar may depend on the local tradingagents package (install with
+# `pip install -e . -e ./stellar`); tradingagents never depends on Stellar.
+dependencies = [
+    "tradingagents",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "stellar.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "unit: fast isolated unit tests",
+    "contract: tests that pin the boundary with upstream TradingAgents",
+]
