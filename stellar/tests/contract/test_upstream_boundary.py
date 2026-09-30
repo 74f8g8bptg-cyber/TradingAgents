@@ -210,8 +210,44 @@ def test_risk_engine_has_no_llm_or_network_dependency():
     assert offenders == []
 
 
+def test_execution_has_no_network_llm_or_broker_sdk_dependency():
+    """Phase 4: the Paper Broker is internal. No MT5, broker SDK, network or LLM import."""
+    forbidden = {"langchain", "langgraph", "openai", "anthropic", "requests", "urllib", "socket",
+                 "http", "httpx", "aiohttp", "websockets", "MetaTrader5", "mt5", "tradingagents",
+                 "cli", "random", "secrets"}
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in (STELLAR_SRC / "execution").rglob("*.py")
+        if {m.split(".")[0] for m in _imported_modules(p)} & forbidden
+    )
+    assert offenders == []
+
+
+def test_risk_does_not_depend_on_execution():
+    """The dependency points one way: execution reads risk state, never the reverse."""
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in (STELLAR_SRC / "risk").rglob("*.py")
+        if any(m.startswith("stellar.execution") for m in _imported_modules(p))
+    )
+    assert offenders == []
+
+
+def test_only_the_execution_package_builds_execution_results():
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if "ExecutionResult" in _calls(p) and p.relative_to(STELLAR_SRC).parts[0] != "execution"
+    )
+    assert offenders == []
+
+
+def test_no_live_or_demo_execution_path_exists():
+    """Phase 4 builds PAPER orders only; no module mentions a live account mode."""
+    for path in (STELLAR_SRC / "execution").rglob("*.py"):
+        assert "LIVE" not in _string_constants(path), path
+
+
 @pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
-                                   "stellar.owner", "stellar.marketdata", "stellar.config"])
+                                   "stellar.owner", "stellar.marketdata", "stellar.config",
+                                   "stellar.execution"])
 def test_every_package_imports_on_its_own(first):
     """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
     subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,

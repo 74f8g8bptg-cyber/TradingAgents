@@ -4,6 +4,8 @@ Statuses follow the order events of layer design §4.3 (``order.created``,
 ``order.preflight.failed``, ``order.sent``, ``order.acknowledged``,
 ``order.partially_filled``, ``order.filled``, ``order.rejected``). Closing a
 position is a trade record (``trade.closed``), defined with settlement in Phase 4.
+Phase 4 adds, additively, ``cancelled`` and ``expired`` for working orders that end
+without a fill (``order.cancelled``, ``order.expired``).
 """
 
 from __future__ import annotations
@@ -43,6 +45,9 @@ class ExecutionStatus(StrEnum):
     PARTIALLY_FILLED = "partially_filled"
     FILLED = "filled"
     REJECTED = "rejected"
+    # Phase 4 additions: a working (pending) order can end without a fill.
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
 
 
 _NO_FILL = {
@@ -51,6 +56,8 @@ _NO_FILL = {
     ExecutionStatus.SENT,
     ExecutionStatus.ACKNOWLEDGED,
     ExecutionStatus.REJECTED,
+    ExecutionStatus.CANCELLED,
+    ExecutionStatus.EXPIRED,
 }
 _NEEDS_REASON = {ExecutionStatus.PREFLIGHT_FAILED, ExecutionStatus.REJECTED}
 

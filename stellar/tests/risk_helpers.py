@@ -67,8 +67,8 @@ def engine(p: RiskPolicy | None = None) -> RiskEngine:
     return RiskEngine(p or TEST_POLICY, allow_test_policy=True)
 
 
-def _bar(i: int, symbol: str, proxy: bool) -> Candle:
-    start = AS_OF - 6 * H
+def _bar(i: int, symbol: str, proxy: bool, at: datetime = AS_OF) -> Candle:
+    start = at - 6 * H
     open_ = Decimal("2398.00") + Decimal(i)
     return Candle(instrument="XAUUSD", timeframe="H1", open_time=start + i * H,
                   close_time=start + (i + 1) * H, open=open_, high=open_ + Decimal("2.40"),
@@ -79,8 +79,8 @@ def _bar(i: int, symbol: str, proxy: bool) -> Candle:
 
 def market(*, kind: MappingKind = MappingKind.EXACT, symbol: str = "XAUUSD",
            bid: str = "2399.80", ask: str = "2400.10", quote_ts=None, bars=None,
-           allow: SubstitutionPolicy | None = None):
-    """A synthetic in-memory source for XAUUSD; returns (snapshot, quote response)."""
+           allow: SubstitutionPolicy | None = None, at: datetime = AS_OF):
+    """A synthetic in-memory source for XAUUSD as of ``at``; returns (snapshot, quote response)."""
     proxy = kind is not MappingKind.EXACT
     info = MarketDataSourceInfo(provider_id="mem", name="Synthetic", kind="IN_MEMORY",
                                 price_side="bid", volume_kind="tick", supports_quotes=True,
@@ -88,17 +88,18 @@ def market(*, kind: MappingKind = MappingKind.EXACT, symbol: str = "XAUUSD",
     mapping = ProviderSymbolMapping(provider_id="mem", instrument="XAUUSD", kind=kind,
                                     provider_symbol=symbol,
                                     description="synthetic proxy" if proxy else None)
-    quotes = [Quote(instrument="XAUUSD", bid=bid, ask=ask, ts=quote_ts or AS_OF - timedelta(
+    quotes = [Quote(instrument="XAUUSD", bid=bid, ask=ask, ts=quote_ts or at - timedelta(
         seconds=5), source="mem", provider_symbol=symbol, proxy=proxy)]
     source = InMemoryMarketDataSource(
-        info, [mapping], {("XAUUSD", "H1"): bars or [_bar(i, symbol, proxy) for i in range(5)]},
-        quotes={"XAUUSD": quotes}, clock=lambda: AS_OF)
+        info, [mapping],
+        {("XAUUSD", "H1"): bars or [_bar(i, symbol, proxy, at) for i in range(5)]},
+        quotes={"XAUUSD": quotes}, clock=lambda: at)
     allow = allow or SubstitutionPolicy(allow_proxy=proxy, allow_derived=proxy)
     response = source.candles(MarketDataRequest(instrument="XAUUSD", timeframe="H1",
-                                                as_of=AS_OF, substitution=allow))
-    snap = build_verified_snapshot(response, snapshot_id="snap_risk_test", created_at=AS_OF,
+                                                as_of=at, substitution=allow))
+    snap = build_verified_snapshot(response, snapshot_id="snap_risk_test", created_at=at,
                                    config_hash=CONFIG_HASH)
-    return snap, source.quote("XAUUSD", AS_OF, allow)
+    return snap, source.quote("XAUUSD", at, allow)
 
 
 def context(**overrides: Any) -> RiskContext:

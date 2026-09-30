@@ -79,9 +79,12 @@ EVENT_TYPES: frozenset[str] = MINIMUM_V1_EVENT_TYPES | frozenset({
     "order.preflight.failed",
     "order.acknowledged",
     "order.partially_filled",
+    "order.cancelled",  # Phase 4 addition: a pending paper order cancelled
+    "order.expired",  # Phase 4 addition: a pending paper order reached expires_at
     "position.opened",
     "position.updated",
     "account.snapshot.created",
+    "account.opened",  # Phase 4 addition: the journaled genesis of a paper account
     # Review and memory
     "memory.review.created",
     "memory.outcome.settled",
@@ -107,7 +110,10 @@ REQUIRED_PAYLOAD_KEYS: dict[str, frozenset[str]] = {
     "order.sent": frozenset({"order_id"}),
     "order.filled": frozenset({"order_id", "fill_price", "filled_volume"}),
     "order.rejected": frozenset({"order_id", "reason"}),
+    "order.cancelled": frozenset({"order_id"}),
+    "order.expired": frozenset({"order_id"}),
     "trade.closed": frozenset({"trade_id"}),
+    "account.opened": frozenset({"account_id", "currency", "starting_balance"}),
     "circuit_breaker.tripped": frozenset({"rule"}),
     "circuit_breaker.reset": frozenset({"by", "reason"}),
     "circuit_breaker.reset_refused": frozenset({"source", "reason"}),

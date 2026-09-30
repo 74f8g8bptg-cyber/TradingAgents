@@ -409,3 +409,31 @@ def test_returning_to_an_earlier_context_is_journaled_again(journal):
     back = svc.evaluate(context())  # identical inputs to the first, but not the latest
     assert back == first and len(svc.evaluations_for("prop_01")) == 3
     assert svc.authorize_intent(back, context(), **intent_kwargs())
+
+
+# --- execution-time confirmation (Phase 4, additive) -----------------------------------------------
+
+
+def test_confirm_intent_accepts_only_the_current_authorised_intent(journal):
+    svc = service(journal)
+    approved = svc.evaluate(context())
+    intent = svc.authorize_intent(approved, context(), **intent_kwargs())
+    assert svc.confirm_intent(intent, context()) == approved
+    tampered = intent.model_copy(update={"volume": Decimal("0.40")})
+    with pytest.raises(IntentRefused):
+        svc.confirm_intent(tampered, context())
+    later = context(daily={**context().daily.model_dump(), "realised_pnl": "-500"})
+    with pytest.raises(ReevaluationRequired):
+        svc.confirm_intent(intent, later)
+    svc.evaluate(later)  # supersedes the approval the intent came from
+    with pytest.raises(ReevaluationRequired):
+        svc.confirm_intent(intent, context())
+
+
+def test_confirm_intent_refuses_under_a_tripped_breaker(journal):
+    svc = service(journal)
+    approved = svc.evaluate(context())
+    intent = svc.authorize_intent(approved, context(), **intent_kwargs())
+    svc.breaker.trip(trip())
+    with pytest.raises(IntentRefused, match="TRIPPED"):
+        svc.confirm_intent(intent, context())

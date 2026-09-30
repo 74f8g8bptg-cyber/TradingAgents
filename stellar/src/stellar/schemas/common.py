@@ -130,6 +130,8 @@ DecisionId = _id(IdKind.DECISION)
 IntentId = _id(IdKind.INTENT)
 OrderId = _id(IdKind.ORDER)
 FillId = _id(IdKind.FILL)
+TradeId = _id(IdKind.TRADE)
+PositionId = _id(IdKind.POSITION)
 
 _ANY_RECORD_ID = re.compile(
     rf"^(?:{'|'.join(k.value for k in IdKind)})_{ID_TOKEN}$"

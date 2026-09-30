@@ -18,6 +18,9 @@
   its fingerprint equals the fingerprint of the *current* context under the
   service's *current* policy (``ReevaluationRequired`` otherwise). There is no
   time-based expiry; ``as_of`` is simply one of the fingerprinted inputs.
+- **Execution-time confirmation** (Phase 4, additive). ``confirm_intent`` repeats
+  those checks for an intent about to be executed, and requires the intent to be
+  exactly what ``authorize_intent`` builds from the current evaluation.
 - **Events** (canonical names): ``risk.check.started``, one ``risk.check.completed``
   per rule, then ``risk.approved`` / ``risk.rejected`` / ``risk.review.requested``
   whose payload carries the fingerprint and the complete evaluation (context,
@@ -111,6 +114,34 @@ class RiskService:
 
         ``context`` is the caller's current risk context for the same proposal.
         """
+        self._require_current(evaluation, context)
+        return _build_order_intent(evaluation, intent_id=intent_id, broker_symbol=broker_symbol,
+                                   created_at=created_at, expires_at=expires_at,
+                                   take_profit=take_profit)
+
+    def confirm_intent(self, intent: OrderIntent, context: RiskContext) -> RiskEvaluation:
+        """Execution-time check (Phase 4): ``intent`` is still currently authorised.
+
+        The same checks as ``authorize_intent`` (breaker, latest evaluation, fingerprint
+        of the current context under the current policy), and the intent must be exactly
+        the intent the safe path builds from that evaluation. Returns the evaluation.
+        """
+        intent = OrderIntent.model_validate(intent.model_dump())  # re-validate
+        evaluation = self.latest_evaluation(intent.proposal_id)
+        if evaluation is None or evaluation.decision.decision_id != intent.decision_id:
+            raise ReevaluationRequired(
+                f"{intent.decision_id} is not the latest journaled evaluation of "
+                f"{intent.proposal_id}")
+        self._require_current(evaluation, context)
+        expected = _build_order_intent(
+            evaluation, intent_id=intent.intent_id, broker_symbol=intent.broker_symbol,
+            created_at=intent.created_at, expires_at=intent.expires_at,
+            take_profit=intent.take_profit)
+        if expected != intent:
+            raise IntentRefused("the intent is not the one its evaluation authorises")
+        return evaluation
+
+    def _require_current(self, evaluation: RiskEvaluation, context: RiskContext) -> None:
         if self.breaker.state().status is BreakerStatus.TRIPPED:
             raise IntentRefused("the circuit breaker is TRIPPED")
         proposal_id = evaluation.decision.proposal_id
@@ -125,9 +156,6 @@ class RiskService:
         if self.engine.fingerprint(current) != evaluation.fingerprint:
             raise ReevaluationRequired(
                 f"the risk context or policy changed since {evaluation.decision.decision_id}")
-        return _build_order_intent(evaluation, intent_id=intent_id, broker_symbol=broker_symbol,
-                                   created_at=created_at, expires_at=expires_at,
-                                   take_profit=take_profit)
 
     # ----------------------------------------------------------------- helpers --
 

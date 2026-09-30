@@ -40,6 +40,7 @@ class IdKind(StrEnum):
     TRADE = "trade"
     REVIEW = "rev"
     SETTLEMENT = "stl"
+    POSITION = "pos"  # Phase 4 addition: paper broker positions
 
 
 def id_pattern(kind: IdKind) -> re.Pattern[str]:
