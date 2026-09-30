@@ -279,10 +279,12 @@ def test_technical_calculations_never_use_float():
 
 def test_nothing_imports_technical_except_its_own_package():
     """Risk, execution and owner do not depend on technical evidence. Phase 6: the research
-    pipeline is the one consumer of Phase 5 evidence (read-only, as given)."""
+    pipeline reads Phase 5 evidence as given; Phase 6b: setups, the proposal builder (the
+    decimal context only) and the trader desk read it as given too."""
     offenders = sorted(
         str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
-        if p.relative_to(STELLAR_SRC).parts[0] not in {"technical", "pipeline"}
+        if p.relative_to(STELLAR_SRC).parts[0] not in {"technical", "pipeline", "setups",
+                                                      "proposals", "trader"}
         and any(m.startswith("stellar.technical") for m in _imported_modules(p))
     )
     assert offenders == []
@@ -325,10 +327,122 @@ def test_phase6_never_writes_live_or_demo_modes():
         assert not {"LIVE", "DEMO"} & _string_constants(path), path
 
 
+PHASE6B = ("setups", "proposals", "trader")
+
+
+def _phase6b_files():
+    return [p for pkg in PHASE6B for p in (STELLAR_SRC / pkg).rglob("*.py")]
+
+
+def _builds(path: Path, name: str) -> bool:
+    """``name(...)`` or ``name.model_validate / model_construct / model_copy(...)``."""
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id == name:
+                return True
+            if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) and \
+                    func.value.id == name and func.attr.startswith("model_"):
+                return True
+    return False
+
+
+def test_phase6b_cannot_reach_risk_approval_orders_broker_or_breaker():
+    """The trader layer proposes; it never approves, sizes, orders, fills or resets."""
+    assert _phase6b_files()
+    for path in _phase6b_files():
+        modules = _imported_modules(path)
+        assert not any(m.startswith(("stellar.risk", "stellar.execution", "stellar.owner",
+                                     "stellar.schemas.order", "stellar.schemas.risk",
+                                     "stellar.schemas.execution", "stellar.config"))
+                       for m in modules), path
+        assert not {"OrderIntent", "RiskDecision", "PaperBroker", "RiskService", "RiskPolicy",
+                    "ExecutionResult", "ExecutionChecker", "FillAuthorisation",
+                    "owner_reset_breaker", "BreakerLedger", "authorize_intent",
+                    "confirm_intent", "evaluate_proposal"} & _calls(path), path
+        for name in ("OrderIntent", "RiskDecision", "FillAuthorisation"):
+            assert not _builds(path, name), path
+
+
+def test_only_the_proposal_builder_builds_trade_proposals():
+    """P1 is the one builder (Foundation §4.13). The Risk Engine only re-validates."""
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if _builds(p, "TradeProposal")
+        and str(p.relative_to(STELLAR_SRC)) not in {"proposals/builder.py", "risk/rules.py"}
+    )
+    assert offenders == []
+
+
+def test_setups_are_deterministic_and_never_call_a_model():
+    for path in (STELLAR_SRC / "setups").rglob("*.py"):
+        modules = _imported_modules(path)
+        assert not any(m.startswith(("stellar.reasoning.provider", "stellar.reasoning.structured",
+                                     "stellar.proposals", "stellar.trader",
+                                     "stellar.schemas.proposal")) for m in modules), path
+    for path in (STELLAR_SRC / "proposals").rglob("*.py"):
+        assert not any(m.startswith(("stellar.reasoning", "stellar.trader", "stellar.journal",
+                                     "stellar.telemetry"))
+                       for m in _imported_modules(path)), path
+
+
+def test_phase6b_has_no_vendor_sdk_network_randomness_or_upstream_dependency():
+    forbidden = {"openai", "anthropic", "google", "langchain", "langchain_core", "langgraph",
+                 "requests", "urllib", "socket", "http", "httpx", "aiohttp", "websockets",
+                 "MetaTrader5", "mt5", "tradingagents", "cli", "random", "secrets", "subprocess",
+                 "os", "shutil"}
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in _phase6b_files()
+        if {m.split(".")[0] for m in _imported_modules(p)} & forbidden
+    )
+    assert offenders == []
+
+
+def test_phase6b_never_writes_live_or_demo_modes_or_uses_float():
+    for path in _phase6b_files():
+        assert not {"LIVE", "DEMO"} & _string_constants(path), path
+        assert "float" not in _calls(path), path
+
+
+def test_phase6b_emits_only_catalogued_events_and_never_critical_ones_but_trade_proposed():
+    from stellar.telemetry.catalogue import EVENT_TYPES, is_critical  # noqa: PLC0415
+
+    for path in _phase6b_files():
+        emitted = {c for c in _string_constants(path) if c in EVENT_TYPES}
+        assert all(not is_critical(e) or e == "trade.proposed" for e in emitted), path
+
+
+def test_setups_never_turn_candle_counts_into_a_rule():
+    """No "two or three red candles = entry": the evaluator reads legs and pullback
+    measurements only, never the counter-bar counts or sequence runs."""
+    source = (STELLAR_SRC / "setups" / "evaluate.py").read_text(encoding="utf-8")
+    for name in ("counter_direction_bars", "with_direction_bars", "consecutive_down",
+                 "consecutive_up", "sequences", "counter_body_total"):
+        assert name not in source, name
+
+
+def test_trader_output_schema_has_no_numeric_field():
+    """Numbers can never come from LLM text: the Trader's schema cannot even hold one."""
+    import typing  # noqa: PLC0415
+    from decimal import Decimal  # noqa: PLC0415
+
+    from stellar.trader.contracts import TraderSelectionOutput  # noqa: PLC0415
+
+    def numeric(tp) -> bool:
+        if tp in (int, float, Decimal):
+            return True
+        return any(numeric(a) for a in typing.get_args(tp))
+
+    assert TraderSelectionOutput.__pydantic_complete__  # every annotation resolved
+    for name, field in TraderSelectionOutput.model_fields.items():
+        assert not numeric(field.annotation), name
+
+
 @pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
                                    "stellar.owner", "stellar.marketdata", "stellar.config",
                                    "stellar.execution", "stellar.technical", "stellar.research",
-                                   "stellar.reasoning", "stellar.pipeline"])
+                                   "stellar.reasoning", "stellar.pipeline", "stellar.setups",
+                                   "stellar.proposals", "stellar.trader"])
 def test_every_package_imports_on_its_own(first):
     """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
     subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,
