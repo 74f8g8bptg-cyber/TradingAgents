@@ -116,7 +116,8 @@ keeps a premium exploration / science-vessel feel.)*
 **Primary:**
 - warm off-white structural panels;
 - titanium / light metallic trims;
-- deep navy floors;
+- deep navy floors (in working spaces; **exception:** `H-HAB` uses the warm wood-like habitat floor as
+  its main floor identity, per the H-HAB design sheet HH-1);
 - transparent technology surfaces.
 
 **Secondary:**
