@@ -56,8 +56,11 @@ class FeatureGate(StrEnum):
     VISUAL_STATION = "visual_station"  # Phase 9
 
 
-IMPLEMENTED_FEATURES: frozenset[FeatureGate] = frozenset({FeatureGate.MARKET_DATA})
-"""Gates whose subsystem exists. Phase 2 adds market data; each later phase adds its gate."""
+IMPLEMENTED_FEATURES: frozenset[FeatureGate] = frozenset(
+    {FeatureGate.MARKET_DATA, FeatureGate.RISK_ENGINE}
+)
+"""Gates whose subsystem exists. Phase 2 adds market data, Phase 3 the risk engine;
+each later phase adds its gate. Enabling a gate never permits trading by itself."""
 
 
 class InstrumentConfig(StellarModel):

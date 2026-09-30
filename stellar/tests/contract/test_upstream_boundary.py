@@ -61,7 +61,7 @@ def test_importing_stellar_loads_no_upstream_module():
     code = (
         "import sys, stellar, stellar.schemas, stellar.telemetry, stellar.journal, "
         "stellar.config, stellar.agents, stellar.validation, stellar.risk, stellar.marketdata, "
-        "stellar.marketdata.providers\n"
+        "stellar.marketdata.providers, stellar.owner\n"
         "print(sorted(m for m in sys.modules if m.split('.')[0] in {'tradingagents', 'cli'}))"
     )
     out = subprocess.run(
@@ -134,3 +134,85 @@ def test_stellar_classifies_upstream_symbol_substitutions_as_proxies():
     for pair in ("EURUSD", "USDJPY"):
         assert {pair[:3], pair[3:]} <= tables["_FOREX_CURRENCIES"]
         assert ref.get(pair).provider_symbol == f"{pair}=X"
+
+
+def _calls(path: Path) -> set[str]:
+    names = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Call):
+            func = node.func
+            names.add(func.id if isinstance(func, ast.Name) else getattr(func, "attr", ""))
+    return names
+
+
+def _string_constants(path: Path) -> set[str]:
+    return {n.value for n in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+
+
+def test_only_the_risk_package_builds_decisions_and_order_intents():
+    """Foundation §8.4: an OrderIntent (and a RiskDecision) is built only by the Risk Engine."""
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if {"RiskDecision", "OrderIntent"} & _calls(p) and "risk" not in p.relative_to(
+            STELLAR_SRC).parts[:1]
+    )
+    assert offenders == []
+
+
+def test_only_the_owner_command_writes_breaker_resets():
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if "circuit_breaker.reset" in _string_constants(p)
+        and p.relative_to(STELLAR_SRC).parts[0] not in {"owner", "telemetry"}
+        and p.name != "ledger.py"  # reads (and filters) resets; never writes one
+    )
+    assert offenders == []
+    ledger_calls = _new_event_types(STELLAR_SRC / "risk" / "ledger.py")
+    assert "circuit_breaker.reset" not in ledger_calls
+
+
+def _new_event_types(path: Path) -> set[str]:
+    types = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if (isinstance(node, ast.Call) and getattr(node.func, "id", "") == "new_event"
+                and node.args and isinstance(node.args[0], ast.Constant)):
+            types.add(node.args[0].value)
+    return types
+
+
+def test_nothing_outside_owner_imports_the_owner_package():
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in STELLAR_SRC.rglob("*.py")
+        if p.relative_to(STELLAR_SRC).parts[0] != "owner"
+        and any(n.startswith("stellar.owner") for n in _imported_modules(p))
+    )
+    assert offenders == []
+
+
+def _imported_modules(path: Path) -> set[str]:
+    names = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            names |= {a.name for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module)
+    return names
+
+
+def test_risk_engine_has_no_llm_or_network_dependency():
+    forbidden = {"langchain", "langgraph", "openai", "anthropic", "requests", "urllib", "socket",
+                 "http", "tradingagents", "cli"}
+    offenders = sorted(
+        str(p.relative_to(STELLAR_SRC)) for p in (STELLAR_SRC / "risk").rglob("*.py")
+        if {m.split(".")[0] for m in _imported_modules(p)} & forbidden
+    )
+    assert offenders == []
+
+
+@pytest.mark.parametrize("first", ["stellar.journal", "stellar.telemetry", "stellar.risk",
+                                   "stellar.owner", "stellar.marketdata", "stellar.config"])
+def test_every_package_imports_on_its_own(first):
+    """Regression (Phase 3): importing stellar.journal first used to hit a circular import."""
+    subprocess.run([sys.executable, "-c", f"import {first}"], cwd=STELLAR_ROOT,
+                   env={"PYTHONPATH": str(STELLAR_ROOT / "src"), "PATH": ""}, check=True)

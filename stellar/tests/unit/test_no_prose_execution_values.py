@@ -45,6 +45,7 @@ ALLOWED_TEXT_FIELDS = {
     "TradeProposal": {"schema_version", "proposal_id", "run_id", "snapshot_id", "setup_id",
                       "profile", "report_hashes"},
     "PriceLevel": {"basis"},
+    "RiskCheck": {"reason"},  # Phase 3: a pattern-checked machine label
     "RiskDecision": {"schema_version", "decision_id", "proposal_id", "run_id"},
     "OrderIntent": {"schema_version", "intent_id", "proposal_id", "decision_id",
                     "broker_symbol", "idempotency_key"},

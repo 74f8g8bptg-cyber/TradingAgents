@@ -74,6 +74,7 @@ EVENT_TYPES: frozenset[str] = MINIMUM_V1_EVENT_TYPES | frozenset({
     "risk.check.completed",
     "risk.limit.approached",
     "circuit_breaker.reset_refused",
+    "risk.review.requested",  # Phase 3 addition: the REVIEW outcome had no event
     # Orders, trades and account
     "order.preflight.failed",
     "order.acknowledged",
@@ -100,6 +101,7 @@ REQUIRED_PAYLOAD_KEYS: dict[str, frozenset[str]] = {
     "trade.proposed": frozenset({"proposal_id", "setup_id", "instrument", "direction"}),
     "risk.approved": frozenset({"proposal_id", "decision_id"}),
     "risk.rejected": frozenset({"proposal_id", "decision_id", "reasons"}),
+    "risk.review.requested": frozenset({"proposal_id", "decision_id", "reasons"}),
     "order.created": frozenset({"order_id", "intent_id", "idempotency_key", "mode"}),
     "order.preflight.failed": frozenset({"order_id", "reason"}),
     "order.sent": frozenset({"order_id"}),

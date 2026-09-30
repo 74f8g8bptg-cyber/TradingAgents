@@ -18,7 +18,10 @@ import logging
 import threading
 from collections.abc import Callable
 
-from stellar.journal.store import JournalWriteError, StellarJournal
+# Module import (not ``from … import``): stellar.journal.store imports
+# stellar.telemetry, so names are resolved at call time to keep either import
+# order working.
+import stellar.journal.store as journal_store
 from stellar.telemetry.catalogue import is_critical
 from stellar.telemetry.events import StellarEvent
 
@@ -28,7 +31,7 @@ Subscriber = Callable[[StellarEvent], None]
 
 
 class EventBus:
-    def __init__(self, journal: StellarJournal) -> None:
+    def __init__(self, journal: journal_store.StellarJournal) -> None:
         self._journal = journal
         self._subscribers: list[Subscriber] = []
         self._lock = threading.Lock()
@@ -49,7 +52,7 @@ class EventBus:
         """Journal ``event`` and deliver it once. Returns the stored event."""
         try:
             stored, is_new = self._journal.append_new(event)
-        except JournalWriteError:
+        except journal_store.JournalWriteError:
             if is_critical(event.type):
                 raise
             log.exception("could not journal non-critical event %s", event.type)
