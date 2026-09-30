@@ -166,7 +166,7 @@ per underlying runtime agent**. States are **never merged**.
 | Indices desk `CHR-025` (SCI) | East bay | As Metals | As above |
 | Visitor: Causal / Macro Analyst `CHR-011` (from `H-LAB`) | `specialists.visitor` | Enters with a `PRP-001` when macro output is consumed here, then returns to `H-LAB` | Hand-off only |
 | Visitor: Market Structure `CHR-027` (T3, from L2) | `specialists.visitor` | Enters with the technical `PRP-001` when a specialist's `agent.task.started` follows the technical analysis, then returns to L2 | Hand-off only |
-| Visitor: Supervisor `CHR-003` | `specialists.entry` / `visitor` | Event-driven visits (`MP-SUPERVISOR`) | Observes; touches no desk anchor |
+| Visitor: Supervisor `CHR-003` | `specialists.entry` / `visitor` | Only on a real `run.failed` with `RESEARCH_FAILED` (`MP-SUPERVISOR`; H-CMD HC-16) | Observes; touches no desk anchor |
 | Visitor: Medic `CHR-041` | `specialists.entry` | Only on a real `error` / `overloaded` of an underlying agent. The Medic attends **that agent's panel position** at the desk | No authority gestures |
 
 **Departments:** all three desks are **Science / Research (blue)**, distinguished by silhouette and

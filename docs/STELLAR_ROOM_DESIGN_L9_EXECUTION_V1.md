@@ -149,7 +149,7 @@ beard, with a tablet and badge.
 |---|---|
 | **Risk Agent** `CHR-037` | **Does not enter L9.** `MP-RISK` does not include L9 (Character Registry §3). The Risk → Execution hand-off happens at the **L10 outbox** (§10, E1) |
 | **Proposal Builder** `CHR-005` | **Does not enter L9.** `MP-COURIER` reaches only the L10 intake (§10, E2) |
-| **Supervisor** `CHR-003` | Entry zone only (`execbay.entry`), on real events; touches no station |
+| **Supervisor** `CHR-003` | Entry zone only (`execbay.entry`), only on a real `run.failed` with `PAPER_BROKER_FAILED` or `PAPER_PREFLIGHT_FAILED` (H-CMD HC-16); touches no station |
 | **Medic** `CHR-041` | Entry zone only, on a real `error` / `overloaded` of P4 or E1 |
 | Any other agent | Not routed into L9 (restricted) |
 
@@ -203,7 +203,7 @@ E7).
 | **Pending / action** | `DSP-EXB-02` Working Orders | Orders not yet final: PENDING / BLOCKED | East wall, near the entry | **NO WORKING ORDERS** only when fresh |
 | **Checker** | `DSP-EXB-04` Pre-flight Results | Pre-flight checks for the latest order (a failure is explicit; there is no pass event) | On the pre-flight console | **AWAITING DATA** |
 | **Status** | `DSP-EXB-03` Positions | Open paper positions, unrealised P&L | East wall | **UNKNOWN** for missing economics |
-| | `DSP-EXB-05` PAPER marking | Mode from telemetry (`account.opened`) | South wall, large | **MODE UNKNOWN** (amber + icon + text) |
+| | `DSP-EXB-05` PAPER marking | Mode from the order events' `mode` and the Paper-Broker account state (not `account.opened`, which has no mode field; H-CMD HC-13) | South wall, large | **MODE UNKNOWN** (amber + icon + text) |
 
 **Screen rules for this room:**
 - **Never invent** orders, prices, positions, execution results, latency or success values.

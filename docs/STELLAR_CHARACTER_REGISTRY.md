@@ -82,9 +82,9 @@ additional working states.
 
 | ID | Name | Role (code · technical id) | Dept | Home room · anchor | Other rooms | Role states | Class | Status | v2 change |
 |---|---|---|---|---|---|---|---|---|---|
-| `CHR-001` | Captain Aurelia Voss | Portfolio Manager (U8 · `portfolio_manager`) | CMD | `H-CMD` · `command.chair` | L3 judge seat; ambient | reviewing | MP-FREE | ACTIVE | room |
+| `CHR-001` | Captain Aurelia Voss | Portfolio Manager (U8 · `portfolio_manager`) | CMD | `H-CMD` · `command.chair` | L3 judge seat (future: no risk-debate producer); ambient | reviewing | MP-FREE | ACTIVE (**no producer**: no PM model; the approval record comes from the run request; idle in V1, H-CMD HC-8) | room |
 | `CHR-002` | Commander Idris Kael | Research Manager (U3 · `research_manager`) | CMD | `H-CMD` · `command.table_head` | L3 `debate.judge_seat` | reviewing, analysing | MP-FREE | ACTIVE | room |
-| `CHR-003` | First Officer Mara Solen | Supervisor (O1 · `supervisor`) | CMD | `H-CMD` · `command.console_ops` | every active room (entry zones of L9 / L10) | monitoring | MP-SUPERVISOR | ACTIVE | room, class |
+| `CHR-003` | First Officer Mara Solen | Supervisor (O1 · `supervisor`) | CMD | `H-CMD` · `command.console_ops` | a room (entry zones of L9 / L10) only on a real `run.failed` whose failure belongs to that room's stage (H-CMD HC-16) | monitoring | MP-SUPERVISOR | ACTIVE (run lifecycle only: `run.*` events; no scheduling, market focus or pauses; HC-20) | room, class |
 | `CHR-004` | Lt. Cmdr. Rook Halden | **Central Trader** (U4 · `trader`) | CMD | `H-CMD` · `command.console_trader` | ambient | analysing | MP-FREE | ACTIVE | role wording (§6) |
 | `CHR-005` | Ensign Tavi Marr | Trade Proposal Builder (P1 · `trade_proposal_builder`) | CMD | `H-CMD` · `command.console_proposal` | L10 `risk.intake_drop` | analysing | MP-COURIER | ACTIVE | route |
 | `CHR-006` | Lt. Leo Brask | Bull Researcher (U1 · `bull_researcher`) | SCI | `L3` · `debate.podium_bull` | ambient | debating | MP-FREE | ACTIVE | room |
@@ -123,7 +123,7 @@ additional working states.
 | `CHR-039` | Lt. Kiri Sato | Paper Execution Agent (E1 · `paper_execution`) | OPS | `L9` · `execbay.launch` | L10 `risk.outbox_pickup`; L6 `archive.shelf` (Record Crystal after `trade.closed`); public spaces | executing, monitoring | MP-EXEC | ACTIVE | room, class, route |
 | `CHR-040` | Lt. Bram Oduya | MT5 Execution Agent (E2 · `mt5_execution`) | OPS | — | — | — | MP-NONE | **DEFERRED**: not rendered | — |
 | `CHR-041` | Dr. Noa Ferris (Medic persona) | Operational Wellbeing Monitor (O2 · `wellbeing_monitor`) | OPS | `H-HAB` · `habitat.vitals` | entry zone of any active room (attends `error` / `overloaded`) | monitoring | MP-MEDIC | ACTIVE (producers mostly not emitted: mostly `idle`) | room, class |
-| `CHR-042` | QM Bex Talon (Quartermaster persona) | Operational Wellbeing Monitor (O2 · `wellbeing_monitor`) | OPS | `H-CMD` · `command.console_budget` | ambient | monitoring | MP-FREE | ACTIVE | room |
+| `CHR-042` | QM Bex Talon (Quartermaster persona) | Operational Wellbeing Monitor (O2 · `wellbeing_monitor`) | OPS | `H-CMD` · `command.console_budget` | ambient | monitoring | MP-FREE | ACTIVE (**no producer**: no O2 code; `budget.warning` not emitted; idle, H-CMD HC-19) | room |
 | `CHR-043` | Bix | Habitat Host (cosmetic · `habitat_host`) | SYN | `H-HAB` · `habitat.counter` | `H-HAB` only | ambient service only | MP-HOST | ACTIVE (cosmetic; no operational meaning) | room, id text |
 | `CHR-044` | Dr. Juno Pell | Lab Explorer (future · `lab_explorer`) | SCI | `H-LAB` · `lab.experiment_bench` (future) | L5 (future) | analysing | MP-NONE until built | **FUTURE** (Research Lab; not rendered) | room |
 | `CHR-045` | Dr. Cato Ilves | Lab Validator (future · `lab_validator`) | SCI | `H-LAB` · `lab.experiment_bench` (future) | L5 (future) | validating | MP-NONE until built | **FUTURE** | room |

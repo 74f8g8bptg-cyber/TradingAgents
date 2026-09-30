@@ -138,7 +138,7 @@ interfaces or security aesthetics.
 | **Contradiction Checker** `CHR-036` (P2, OPS) | Contradiction check at intake | `CON-001` · `risk.intake_desk` (R) | Seated at the intake desk | Mostly stationary; checks each proposal as `trade.proposed` arrives | Receives cards from P1; passes to P3 (the check result on `DSP-RSK-02`) |
 | Trade Proposal Builder `CHR-005` (P1, CMD) — visitor | Courier | `risk.intake_drop` | — | `H-CMD` → `COR-S` → drop → back, **only** after `trade.proposed` (`MP-COURIER`) | Drop only; never enters the core |
 | Paper Execution Agent `CHR-039` (E1, OPS) — visitor | Order pickup | `risk.outbox_pickup` (R) | — | L9 → `COR-S` → outbox → L9, **only** after `risk.approved` + `order.created` (`MP-EXEC`) | Pickup only |
-| Supervisor `CHR-003` — visitor | Monitoring | `risk.entry_wait` | — | Event-driven visits (`MP-SUPERVISOR`), entry only | Observes; touches no console |
+| Supervisor `CHR-003` — visitor | Monitoring | `risk.entry_wait` | — | Only on a real `run.failed` with `RISK_FAILED` or `ORDER_AUTHORISATION_FAILED` (`MP-SUPERVISOR`; H-CMD HC-16), entry only | Observes; touches no console |
 | Medic `CHR-041` — visitor | Operational wellbeing | `risk.entry_wait` | — | Only on a real `error` / `overloaded` of P2 or P3; entry only | Attends from the entry |
 
 **Monitoring in the vessel's sense** (screens, breaker state) happens **in this room on displays**.
