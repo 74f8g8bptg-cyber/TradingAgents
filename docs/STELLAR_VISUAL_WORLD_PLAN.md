@@ -868,8 +868,11 @@ you can read at a glance.
   displays; matte deep-navy floors.
 - Secondary: dark graphite for consoles, technical areas and accents. The vessel is never fully
   dark (Visual Bible C1).
-- **Risk Control Room (L10):** gunmetal, darker and colder, with visible hull ribs and restricted
-  markings; no armoured bulkhead, blast door or airlock (security is logical).
+- **Risk Control Room (L10):** gunmetal structural elements combined with warm off-white panels and
+  graphite technical accents, on the approved grating floor; cooler and more focused through
+  materials and lighting, never a black military bunker. Visible hull ribs and restricted
+  markings; no armoured bulkhead, blast door or airlock (security is logical). See the L10 design
+  sheet RC-1 and RC-2.
 - **Habitat:** light wood-like laminates, fabric, plants, warm light.
 
 ### 14.3 Lighting
