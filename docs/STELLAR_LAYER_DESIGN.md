@@ -2,8 +2,9 @@
 
 | | |
 |---|---|
-| **Status** | v0.3 — design approved by the owner; no code yet (Phase 1). Decisions recorded in §8 |
-| **Date** | 2026-09-29 |
+| **Status** | v0.4 — approved design, reconciled with the approved Foundation Plan (§8.3). No code yet (Foundation Phase 0). Decisions recorded in §8 |
+| **Date** | 2026-09-29 (reconciled 2026-09-30) |
+| **Related documents** | `docs/STELLAR_FOUNDATION_PLAN.md` (v0.3, approved) is **canonical** for phases, rosters, contracts and decisions; `docs/STELLAR_MASTER_ROADMAP.md` is the overview. This document holds the architecture and visual-station detail. Phase numbers below are Foundation Plan phases unless marked as a theme (LD-n) |
 | **Built on** | Tauric Research TradingAgents v0.5.2 (the "upstream core") |
 | **Scope** | An intergalactic trading-station layer on top of TradingAgents: telemetry, hard risk control, an MT5/Vantage **demo** execution layer, and a live visual station |
 | **Out of scope** | Live-money trading. No design here authorises orders on a real-money account. |
@@ -18,7 +19,7 @@
 4. [Event model](#4-event-model)
 5. [UI and visual states](#5-ui-and-visual-states)
 6. [Performance metrics](#6-performance-metrics)
-7. [Implementation phases](#7-implementation-phases)
+7. [Implementation themes](#7-implementation-themes)
 8. [Decisions on the open questions](#8-decisions-on-the-open-questions)
 9. [Appendix: upstream surfaces referenced](#appendix-upstream-surfaces-referenced)
 
@@ -41,8 +42,10 @@
    ambiguous, nothing trades. The visual station can go dark; the vault door stays shut.
 5. **Visuals never lie.** Every animation is derived from a real event. Movement and "life" are
    decoration layered on top of a truthful status badge, never a replacement for it.
-6. **Demo only.** The execution layer refuses to act unless the connected account proves it is a
-   demo account (see §7, Phase 4).
+6. **Paper first, then demo only.** Stellar Agents V1 is functionally complete with paper
+   trading, reached at the Foundation Phase 7 exit; the MT5 / Vantage demo is a separate
+   integration and validation gate after a stable paper V1 (Foundation D-15). The execution layer refuses to act unless the connected account
+   proves it is a demo account (see §7, theme LD-4 / Foundation Phase 8). No live mode exists.
 7. **Model-provider agnostic, tiered by value (§8 Q4).** No Stellar component names a specific LLM
    provider or model. Routine agents use lower-cost, fast models; manager and other high-value
    reasoning roles use stronger models. This extends upstream's existing quick/deep split. The
@@ -63,10 +66,11 @@
 +-------------------------------------+------------------------------------------+
 |  STELLAR LAYER  (new, separate package: stellar/)                              |
 |                                                                                |
-|  runner        wraps TradingAgentsGraph; schedules runs; sets market focus     |
+|  runner        Stellar graph + supervisor; schedules runs; sets market focus   |
+|  research      collectors · validators · research store · macro · specialists |
 |  telemetry     event schema · bus · LangChain handler · state observer · store |
 |  agents        roster: agent ids, groups, home rooms, visual metadata          |
-|  risk          signal validator · risk officer · exposure · circuit breaker    |
+|  risk          risk engine: proposal rules · sizing · exposure · breaker      |
 |  execution     broker interface · paper broker · MT5 bridge client             |
 |  metrics       global · per-agent · contribution · risk · wellbeing            |
 |  station       rooms · state→visual mapping · movement rules                   |
@@ -118,7 +122,10 @@ stellar/                         # separate installable project (own pyproject.t
                                  # langchain_handler.py, state_observer.py
     marketdata/                  # source.py (interface), symbols.py (Stellar ↔ provider ↔ broker
                                  # symbol map), one module per provider; mt5.py later (§8 Q3)
-    risk/                        # validator.py, officer.py, exposure.py, breaker.py, sizing.py
+    research/                    # collectors, validators, research store (Foundation §4.29)
+    analysis/                    # structure, indicators, price action, setups, entry timing,
+                                 # macro and market-specialist assessments (Foundation §4.9–4.12)
+    risk/                        # risk engine: proposal rules, sizing, exposure, breaker (§3.7)
     execution/                   # broker.py (interface), paper.py, mt5_client.py
                                  # (never imports marketdata providers directly; gets quotes
                                  #  through the marketdata interface)
@@ -126,9 +133,11 @@ stellar/                         # separate installable project (own pyproject.t
     station/                     # rooms.py, visual_states.py (shared JSON with the UI)
     api/                         # server.py (REST + WebSocket)
   tests/                         # Stellar's own tests, including upstream contract tests
-stellar_ui/                      # browser front end (Phase 5+)
-mt5_bridge/                      # small service run on the Windows host (Phase 4)
+stellar_ui/                      # browser front end (Foundation Phase 9+)
+mt5_bridge/                      # small service run on the Windows host (Foundation Phase 8)
 docs/STELLAR_LAYER_DESIGN.md     # this document
+docs/STELLAR_FOUNDATION_PLAN.md  # canonical build plan (module paths in its §11)
+docs/STELLAR_MASTER_ROADMAP.md   # overview
 .github/workflows/stellar.yml    # Stellar CI (new file; upstream ci.yml untouched)
 ```
 
@@ -153,7 +162,7 @@ changes it fails loudly in Stellar CI instead of silently breaking the station.
 | C4 | `propagate(ticker, date, asset_type, portfolio)` → `(final_state, rating)` | Simple non-streaming runs (batch jobs, tests) | Low |
 | C5 | `AgentState` field names (`market_report`, `investment_debate_state`, `risk_debate_state`, `trader_investment_plan`, `final_rating`, …) | The state observer diffs successive states to derive events | Medium |
 | C6 | Graph node names (`"Market Analyst"`, `"Bull Researcher"`, `"Portfolio Manager"`, …) and the debate speaker conventions (`current_response` starting with "Bull"/"Bear", `latest_speaker`) | Mapping upstream nodes to Stellar agent ids | Medium: these strings are hard-coded in `graph/setup.py` and `conditional_logic.py` |
-| C7 | `agents/rating.py`: `RATINGS_5_TIER`, `RATING_REVIEW`, `is_review()` | Turning the final rating into a signal; blocking `REVIEW` | Low |
+| C7 | `agents/rating.py`: `RATINGS_5_TIER`, `RATING_REVIEW`, `is_review()` | Reading the final rating as the approval strength of a setup (R-1); blocking `REVIEW` | Low |
 | C8 | `portfolio.PortfolioContext` / `Position` | Passing the demo account's real positions and cash into a run, so agents size against the actual book | Low |
 | C9 | `memory.TradingMemoryLog.load_entries()` (rating, raw return, alpha, holding days) | Decision-quality and contribution metrics | Low–medium (markdown format) |
 | C10 | `DEFAULT_CONFIG` keys (`llm_provider`, `data_vendors`, `max_debate_rounds`, `results_dir`, …) | Configuring runs per market | Low |
@@ -162,7 +171,7 @@ changes it fails loudly in Stellar CI instead of silently breaking the station.
 
 **C2 note.** LangGraph normally attaches the running node's name (`langgraph_node`) to the metadata
 that callbacks receive. Upstream binds the callbacks to the LLM objects in their constructors rather
-than per invocation. A Phase 2 spike must confirm the node name still arrives in that setup. If it
+than per invocation. A Foundation Phase 6 spike must confirm the node name still arrives in that setup. If it
 does not, the state observer (C3/C5) is the fallback source of "who is working". It is coarser but
 always available.
 
@@ -174,57 +183,71 @@ analysts. Instead:
 
 1. **Stellar-owned market-data adapters** (`stellar/marketdata/`, §1.4) supply quotes, OHLCV bars
    and symbol metadata for these instruments.
-2. **Stellar-owned market / technical analysts** (`stellar/agents/analysts/`) call only
-   Stellar tools backed by those adapters. They write the **same report keys** upstream's
-   downstream agents read (`market_report`, and where applicable `news_report`,
-   `sentiment_report`), with `fundamentals_report` left empty, which upstream's agents already
-   treat as "no report".
+2. **Stellar-owned research and technical chain** (Foundation §4.29, §5.1): research roles,
+   source validators, the Causal/Macro Analyst and the market specialists, plus deterministic
+   technical agents and the LLM Technical Analyst, using only Stellar data. They write the **same
+   report keys** upstream's downstream agents read: `market_report` ← Technical Analyst;
+   `news_report` ← Causal/Macro and market-specialist assessments; `sentiment_report` empty in
+   V1; `fundamentals_report` empty (later optionally the NAS100 earnings summary). Empty reports
+   are already treated by upstream's agents as "no report".
 3. **Stellar assembles its own LangGraph graph** for these markets (`stellar/pipeline.py`). It
    uses upstream's `AgentState` and **imports upstream's downstream agents unchanged**: Bull/Bear
    researchers, Research Manager, Trader, the three risk debaters and the Portfolio Manager
    (C12). It reuses upstream's orchestration pattern (analysts in parallel → investment debate →
    trader → risk debate → final rating) and upstream's `ConditionalLogic` for turn-taking.
-4. **Memory is reused** through `TradingMemoryLog` (C9): the pipeline records decisions and
-   writes outcomes through its public methods. Outcomes for these instruments are priced from
-   Stellar's market data, because upstream's settlement fetches prices from its own providers.
+4. **The Stellar Journal is the system of record** (Foundation §4.24). Upstream's
+   `TradingMemoryLog` (C9) is optional and limited to profiles with at most one decision per
+   instrument per day (open decision D-10; default: not used). Outcomes are settled from Stellar's
+   own trades, not from upstream's settlement.
 5. **"Where compatible" is checked, not assumed.** Each reused upstream component is pinned by a
    Stellar contract test that runs it inside the Stellar pipeline with fake LLMs. If an upstream
    release breaks compatibility, Stellar replaces that one component with a Stellar-owned version
    rather than patching upstream.
 
 ```
-Stellar marketdata adapters ──> Stellar market/technical analysts ─┐   (Stellar-owned)
-(optional) upstream-compatible news/sentiment analysts ────────────┤
+Stellar marketdata adapters ──> technical agents (setup) ──────────┐   (Stellar-owned)
+research → validation → Causal/Macro → market specialist ──────────┤
                                                                    v
            upstream Bull ⇄ Bear → Research Manager → Trader →          (upstream code,
            Aggressive → Conservative → Neutral → Portfolio Manager      imported unchanged)
                                                                    v
-                     final_rating → Stellar risk gate → execution        (Stellar-owned)
+   final_rating → Trade Proposal Builder (setup-first) → risk engine → execution   (Stellar-owned)
 ```
 
 Consequences:
 - For these markets, telemetry hooks the **Stellar pipeline** directly (callbacks and its own
   stream), so C3/C4 (`TradingAgentsGraph` run methods) apply only to plain upstream runs, such as
   stocks through the unmodified engine.
-- Whether upstream's News and Sentiment Analysts give useful output for these symbols is
-  evaluated in Phase 3. If not, Stellar-owned news and macro analysts take their place under the
-  same rule.
+- Upstream's News and Sentiment Analysts are not in V1. They may be evaluated after V1 as
+  additional research inputs that pass through the same validation (Foundation §5.3).
 - Upstream's `TradingAgentsGraph` remains fully usable for the markets it already supports.
 
 ### 1.7 Run lifecycle through the layers
 
+For the four markets (canonical agent codes from Foundation §5.1; event names per §4.3):
+
 ```
-Station Controller picks focus (e.g. EURUSD, stock NVDA)
-  -> StellarRun builds config + PortfolioContext (from broker positions)
-  -> TradingAgentsGraph(callbacks=[StellarTelemetryHandler])
-  -> create_run_state()  ... stream_run()  ... record_decision()
-        | callbacks  -> agent.llm_call.*, agent.tool_call.*        (C2)
-        | state diffs -> agent.report_filed, debate.*, signal.*    (C3/C5)
-  -> final_rating  --(C7)--> SignalValidator -> RiskOfficer -> ExposureController -> CircuitBreaker
-        | risk.approved  -> ExecutionPilot -> MT5 bridge -> order.sent / order.filled
-        | risk.rejected  -> shadow-tracked as a paper signal for counterfactual metrics
-  -> all events -> bus -> event store -> WebSocket -> Station UI
+Supervisor (O1) picks focus (e.g. EURUSD) on a setup-timeframe close
+  -> Data Validator (T1) builds a MarketSnapshot           -> snapshot.created
+  -> technical agents T2–T6 assess; Pullback/Setup (T6)   -> analysis.created, setup.state.changed
+  -> no candidate Setup: stop here (no LLM chain this cycle)
+  -> research snapshot (validated items from R*/V*)       -> research.snapshot.created
+  -> Causal/Macro (M1), focus specialist (S*), Technical Analyst (T8) -> analysis.created
+  -> Stellar graph: upstream Bull/Bear, Research Manager, Trader, Risk Debaters, Portfolio Manager
+        | callbacks   -> agent.llm_call.*, agent.tool_call.*          (C2)
+        | state diffs -> debate.*, decision.*                          (C5/C6)
+  -> final_rating --(C7)--> Trade Proposal Builder (P1, setup-first)  -> trade.proposed
+  -> Contradiction Checker (P2) -> Risk Engine (P3)                    -> risk.approved | risk.rejected
+        | approved: order intent; Entry Timing (T7) triggers on the entry timeframe
+        |           -> Execution Checker (P4) -> Paper Execution (E1)  -> order.* / trade.closed
+        |           (MT5 Execution E2 only after the demo gate, Foundation Phase 8)
+        | rejected: shadow-tracked as a paper proposal for counterfactual metrics
+  -> Post-Trade Reviewer (L1), Attribution (L2)                        -> memory.*
+  -> all events -> bus -> event store + journal -> WebSocket -> Station UI
 ```
+
+Plain upstream runs (e.g. a stock through the unmodified engine) still follow
+`TradingAgentsGraph.create_run_state()` → `stream_run()` → `record_decision()` (C3).
 
 ---
 
@@ -254,35 +277,38 @@ area with the lounge, café, billiard room and wellbeing spaces.
 
 ```
                     +-----------------------------------+
-                    |         MAIN COMMAND DECK         |
-                    |  Portfolio Mgr (captain's chair)  |
-                    |  Research Mgr · Trader · Station  |
-                    |  Controller · alert-level lights  |
+                    | MAIN COMMAND DECK                 |
+                    | Portfolio Mgr (captain's chair)   |
+                    | Research Mgr · Trader · Proposal  |
+                    | Builder · Supervisor · alerts     |
                     +-----------------+-----------------+
                                       | central lift
 +---------------------+   +-----------+-----------+   +---------------------+
-| MARKET ANALYSIS     |   |    DEBATE CHAMBER     |   | MACRO & NEWS        |
-| WING                |===|  inner ring: bull vs  |===| OBSERVATORY         |
-| market · fundament. |   |  bear (investment)    |   | news · sentiment ·  |
-| FX desk · crypto    |   |  outer ring: risk     |   | macro · prediction  |
-| desk                |   |  debaters (3 seats)   |   | markets             |
+| MARKET ANALYSIS     |   | DEBATE CHAMBER        |   | MACRO & NEWS        |
+| WING                |===| inner ring: bull vs   |===| OBSERVATORY         |
+| structure, momentum |   | bear (investment)     |   | research roles ·    |
+| price action, setup |   | outer ring: risk      |   | causal / macro      |
+| entry timing; desks |   | debaters (3 seats)    |   | analyst             |
+| XAU EUR JPY NAS100  |   |                       |   |                     |
 +----------+----------+   +-----------+-----------+   +----------+----------+
            |                          | central lift             :
 +----------+----------+   +-----------+-----------+   +----------+----------+
-| MEMORY ARCHIVE      |   |  RISK CONTROL VAULT   |##>|  EXECUTION BAY      |
-| memory log ·        |   |  validator · officer  |   |  launch tubes ->    |
-| reflections ·       |   |  exposure · breaker   |   |  "Vantage Demo      |
-| checkpoints         |   |  (vault door)         |   |   Relay"            |
+| MEMORY ARCHIVE      |   | RISK CONTROL VAULT    |   | EXECUTION BAY       |
+| post-trade review · |   | contradiction check · |##>| execution checker · |
+| attribution ·       |   | risk engine · breaker |   | paper execution;    |
+| journal             |   | (vault door)          |   | MT5 demo relay      |
+|                     |   |                       |   | after V1            |
 +----------+----------+   +-----------+-----------+   +----------+----------+
            |                          |                          :
 +----------+--------------------------+--------------------------+----------+
-|                                DATA CORE                                   |
-|   vendor router · price/indicator caches · telemetry bus · event store     |
-+-------------------------------------+--------------------------------------+
+|                                 DATA CORE                                 |
+|         data validator · research validators · market-data caches         |
+|                   telemetry bus · event store · journal                   |
++-------------------------------------+-------------------------------------+
                                       |
         ========================== HABITAT RING ==========================
-        |   WELLBEING ROOM (med-bay,   |   LOUNGE  ·  CAFÉ  ·  BILLIARD     |
-        |   rest pods, recharge)       |   ROOM (off-duty agents)           |
+        |   WELLBEING ROOM (wellbeing  |   LOUNGE  ·  CAFÉ  ·  BILLIARD     |
+        |   monitor, rest pods)        |   ROOM (off-duty agents)           |
         +------------------------------+------------------------------------+
 
  ===  open corridor        |  corridor / lift
@@ -294,41 +320,59 @@ area with the lounge, café, billiard room and wellbeing spaces.
 
 | Room | Purpose (real system) | Who is there | Key visual elements |
 |---|---|---|---|
-| **Main Command Deck** | Final decisions and orchestration | Portfolio Manager, Research Manager, Trader, Station Controller | Captain's chair; main viewscreen with the focus symbol's chart and the current rating; **station alert lights** (§5.4); run queue; the global metrics strip |
-| **Market Analysis Wing** | Price, technicals, fundamentals, market-specific desks | Market Analyst, Fundamentals Analyst, FX Session Analyst, Crypto Analyst | Holo chart tables that draw each indicator as it is fetched; the fundamentals "filing wall"; the FX desk with a world clock of trading sessions |
-| **Macro & News Observatory** | News, macro, sentiment, prediction markets | News Analyst, Sentiment Analyst | Telescope toward a "news nebula"; scrolling headlines; macro gauges (rates, CPI from FRED); a sentiment dial (band, score, confidence); Polymarket odds panel |
+| **Main Command Deck** | Final decisions, proposals and orchestration | Portfolio Manager (U8), Research Manager (U3), Trader (U4), Trade Proposal Builder (P1), Supervisor (O1) | Captain's chair; main viewscreen with the focus instrument's chart, the current Setup and the rating; **station alert lights** (§5.4); run queue; the global metrics strip |
+| **Market Analysis Wing** | Deterministic technical analysis; instrument desks | Market Session (T2), Market Structure (T3), Technical Indicator (T4), Candle / Price Action (T5), Pullback / Setup (T6), Entry Timing (T7), Technical Analyst (T8); market specialists S1–S4 at the XAU/USD, EUR/USD, USD/JPY and NAS100 desks | Holo chart tables that draw structure levels, indicators and candle features as they are computed; a session world clock; one desk per instrument |
+| **Macro & News Observatory** | Research and macro/causal analysis | Research roles R1–R6 (as active), Causal / Macro Analyst (M1) | Telescope toward a "news nebula"; incoming research items as stars, dimmed when rejected by validation; a driver board for the macro assessment with its coverage |
 | **Debate Chamber** | Investment debate and risk debate | Bull & Bear Researchers (inner ring), Aggressive / Conservative / Neutral Risk Debaters (outer ring) | Two concentric rings of podiums; a spotlight on the current speaker; a round counter (`round n / max`); a tug-of-war balance bar that shifts as arguments land |
-| **Risk Control Vault** | Deterministic risk gate | Signal Validator, Risk Officer, Exposure Controller, Circuit Breaker | The vault door (closed by default); a rule checklist that lights each check pass/fail; exposure bars against limits; the kill-switch lever (glows red when engaged) |
-| **Execution Bay** | Order routing to the demo broker | Execution Pilot, Position Monitor | Launch tubes (orders as shuttles); a docking board of open positions with live P&L; a "DEMO" hull marking always visible; bridge link status |
-| **Data Core** | Data vendors, caches, telemetry | Data Core Keeper | Reactor column that brightens with request volume; one conduit per vendor (yfinance, Alpha Vantage, SEC EDGAR, FRED, Polymarket, MT5 feed), coloured by health; cache-hit sparkle |
-| **Memory Archive** | Memory log, settlement, reflection, checkpoints | Memory Archivist | Crystal shelves, one crystal per past decision, which light up green or red once settled against the benchmark; the reflection scriptorium |
-| **Wellbeing Room** | Operational health: cooldown, retries, rest | Station Medic, Quartermaster; any agent that is resting or overloaded | Rest pods; a vitals board (load, error rate, budget); recharge animation |
-| **Lounge / Café / Billiard Room** | Off-duty space; pure ambience | Café Host (cosmetic); agents not needed for the current run or with nothing to do | Café counter; billiard table; windows onto the galaxy; the "hall of fame" (best-calibrated agents this month) |
+| **Risk Control Vault** | Deterministic risk gate | Contradiction Checker (P2), Risk Engine (P3) with its Vault personas (proposal checks, sizing, exposure, breaker) | The vault door (closed by default); a rule checklist that lights each check pass/fail; exposure bars against limits; the kill-switch lever (glows red when engaged) |
+| **Execution Bay** | Order routing | Execution Checker (P4), Paper Execution Agent (E1); MT5 Execution Agent (E2) only after the demo gate | Launch tubes (orders as shuttles); a docking board of open positions with live P&L; a "PAPER" or "DEMO" hull marking always visible; bridge link status once MT5 exists |
+| **Data Core** | Market data, research validation, telemetry | Data Validator (T1), research validators V1–V4 | Reactor column that brightens with request volume; one conduit per market-data and research source, coloured by health; the telemetry bus and journal |
+| **Memory Archive** | Journal, post-trade review, attribution | Post-Trade Reviewer (L1), Performance / Attribution (L2) | Crystal shelves, one crystal per trade, which light up green or red once settled; the review scriptorium |
+| **Wellbeing Room** | Operational health: cooldown, retries, rest | Operational Wellbeing Monitor (O2), shown as the Station Medic and Quartermaster personas; any agent that is resting or overloaded | Rest pods; a vitals board (load, error rate, budget); recharge animation |
+| **Lounge / Café / Billiard Room** | Off-duty space; pure ambience | Café Host (cosmetic); agents not needed in the current cycle | Café counter; billiard table; windows onto the galaxy; the "hall of fame" (best-calibrated agents, with sample sizes) |
 
 ---
 
 ## 3. Agent system
 
+The canonical rosters (architectural, minimum executable V1, deferred) are in the Foundation
+Plan §5 (R-4). This section gives each role's room, metrics, states and visuals for the station.
+Codes (R1, T5, P3, …) are the Foundation Plan's.
+
 ### 3.1 Agent groups at a glance
 
 | Group | Agents | Nature | Source |
 |---|---|---|---|
-| Analysis | Market, Fundamentals, News, Sentiment, *FX Session*, *Crypto* | LLM | 4 upstream, 2 future Stellar |
-| Strategy / debate | Bull, Bear, Aggressive, Conservative, Neutral | LLM | upstream |
-| Decision | Research Manager, Trader, Portfolio Manager | LLM | upstream |
-| Risk / validation | Signal Validator, Risk Officer, Exposure Controller, Circuit Breaker | **Deterministic code** | Stellar |
-| Execution *(added group)* | Execution Pilot, Position Monitor | Deterministic code | Stellar |
-| System / memory | Station Controller, Data Core Keeper, Memory Archivist | Code (Archivist wraps upstream's LLM Reflector) | Stellar wrapping upstream |
-| Wellbeing | Station Medic, Quartermaster, Café Host | Code; Café Host is cosmetic | Stellar |
+| Research | R1 Central Bank, R2 Economic Data, R3 Market News, R4 Geopolitical, R5 Rates/Bonds, R6 Corporate/Earnings | Deterministic retrieval + LLM extraction | Stellar |
+| Research validation | V1 Source Validator, V2 Freshness Checker, V3 Duplicate Detector, V4 Fact vs Reaction vs Interpretation Classifier | Deterministic (V4: LLM + deterministic checks) | Stellar |
+| Macro analysis | M1 Causal / Macro Analyst | LLM (deep tier) | Stellar |
+| Market specialists | S1 XAU/USD, S2 EUR/USD, S3 USD/JPY, S4 NAS100 | LLM | Stellar |
+| Technical | T1 Data Validator, T2 Market Session, T3 Market Structure, T4 Technical Indicator, T5 Candle / Price Action, T6 Pullback / Setup, T7 Entry Timing, T8 Technical Analyst | Deterministic (T8: LLM) | Stellar |
+| Debate | U1 Bull, U2 Bear, U5–U7 Aggressive / Conservative / Neutral Risk Debaters | LLM | upstream, unchanged |
+| Decision | U3 Research Manager, U4 Trader, U8 Portfolio Manager; P1 Trade Proposal Builder | LLM (P1: deterministic) | upstream (U*), Stellar (P1) |
+| Validation and risk | P2 Contradiction Checker, P3 Risk Engine (Risk Auditor) | **Deterministic code** | Stellar |
+| Execution | P4 Execution Checker, E1 Paper Execution Agent, E2 MT5 Execution Agent | Deterministic code | Stellar |
+| Review | L1 Post-Trade Reviewer, L2 Performance / Attribution | Deterministic (L1 LLM narrative later) | Stellar (may reuse upstream Reflector) |
+| Supervision and wellbeing | O1 Supervisor, O2 Operational Wellbeing Monitor | Deterministic | Stellar |
+| Station personas (visual only) | Station Medic, Quartermaster (personas of O2); Vault personas of P3; Café Host (cosmetic) | No decisions | Stellar UI |
 
-**Decision: execution is its own group.** The brief listed six groups. Execution gets a seventh
-because putting order-sending agents in any other group would blur the line the whole design rests
-on: execution is downstream of, and separate from, risk approval.
+**Decision: execution is its own group.** Putting order-sending agents in any other group would
+blur the line the whole design rests on: execution is downstream of, and separate from, risk
+approval.
 
 **Decision: the upstream "risk analysts" are debaters.** Upstream's Aggressive, Conservative and
 Neutral agents are LLMs arguing positions. They live in the Debate Chamber and are called **Risk
 Debaters** in Stellar. The **Risk Control Vault** holds only deterministic code. An LLM debate is
 not risk control.
+
+**Mapping from the v0.3 roster of this document (R-4):** FX Session Analyst → T2 Market Session;
+Crypto Analyst → out of scope (crypto is not a first market); upstream Market Analyst → T2–T8 for
+the four markets; upstream News / Sentiment Analysts → not in V1 (optional research inputs later);
+upstream Fundamentals Analyst → not used; Signal Validator → P1 schema + P2; Risk Officer, Exposure
+Controller, Circuit Breaker → components of P3, kept as Vault personas; Execution Pilot → E1 / E2;
+Position Monitor → P4 + E1 / E2; Station Controller → O1; Data Core Keeper → T1 + O2 (source
+health); Memory Archivist → L1 + L2; Station Medic, Quartermaster → personas of O2; Café Host →
+cosmetic.
 
 ### 3.2 Common agent state machine
 
@@ -336,91 +380,89 @@ Every agent, LLM or code, uses the same state set so the UI can render any agent
 
 | State | Meaning | Typical trigger |
 |---|---|---|
-| `OFFLINE` | Not part of the station roster right now (disabled in config) | config |
-| `OFF_DUTY` | On the roster but not selected for the current run (e.g. Fundamentals on an FX run) | `run.started` with analyst selection |
-| `IDLE` | Available, waiting for work in its home room | run finished its part / no run |
-| `ASSIGNED` | Has work queued; walking to its work position | `run.started`, dependency satisfied |
+| `OFFLINE` | Not part of the station roster right now (disabled or deferred in config) | config |
+| `OFF_DUTY` | On the roster but not needed now (e.g. a research role between its schedules, or a specialist for an instrument not in focus) | `run.started`, schedules |
+| `IDLE` | Available, waiting for work in its home room | its part finished / no run |
+| `ASSIGNED` | Has work queued; walking to its work position | `agent.task.started`, dependency satisfied |
 | `THINKING` | An LLM call is in flight | `on_chat_model_start` |
-| `FETCHING` | A data tool call is in flight | `on_tool_start` |
+| `FETCHING` | A data or research retrieval is in flight | `on_tool_start`, collector start |
 | `SPEAKING` | Delivering a debate turn | debate turn in progress |
 | `LISTENING` | In a debate, not the current speaker | another participant speaking |
-| `WAITING` | Blocked on another agent (e.g. Bull waits for all analysts) | graph dependency |
-| `REPORTING` | Just filed its output; carrying it to the next room | `agent.report_filed` |
-| `CHECKING` | (code agents) evaluating rules | `risk.check_started` |
-| `DEGRADED` | Working, but retrying / rate-limited / on a fallback path | retries, 429, structured-output fallback |
-| `OVERLOADED` | Load score above threshold | `wellbeing.overload` |
-| `RESTING` | Cooling down in the Wellbeing Room; takes no new work | `wellbeing.rest_started` |
-| `ERROR` | Last action failed | `on_*_error`, vendor error |
+| `WAITING` | Blocked on another agent (e.g. Bull waits for all reports) | graph dependency |
+| `REPORTING` | Just produced its output; carrying it to the next room | `analysis.created`, `agent.task.completed` |
+| `CHECKING` | (code agents) evaluating rules | `risk.check.started`, validation start |
+| `DEGRADED` | Working, but retrying / rate-limited / on a fallback path | `agent.degraded` |
+| `OVERLOADED` | Load score above threshold | `agent.overloaded` |
+| `RESTING` | Cooling down in the Wellbeing Room; takes no new work | `agent.resting` |
+| `ERROR` | Last action failed | `agent.task.failed` |
 
 ```
-OFF_DUTY <-> IDLE -> ASSIGNED -> {THINKING <-> FETCHING} -> REPORTING -> IDLE
+OFF_DUTY <-> IDLE -> ASSIGNED -> {THINKING <-> FETCHING | CHECKING} -> REPORTING -> IDLE
                               \-> WAITING -> ...
             (debate agents)   ASSIGNED -> LISTENING <-> SPEAKING -> REPORTING
   any working state -> DEGRADED -> (recovers) | ERROR | OVERLOADED -> RESTING -> IDLE
 ```
 
-### 3.3 Analysis agents
-
-| Agent (`id`) | Role | Room | Key metrics | Specific states / notes | Displays visually |
-|---|---|---|---|---|---|
-| **Market Analyst** (`market_analyst`; upstream `Market Analyst`) | Price action, technical indicators, verified market snapshot | Market Analysis Wing, chart table | tool calls per run; indicators fetched; tool rounds used vs `max_tool_rounds`; forced wrap-ups; report latency; tokens | `FETCHING` shows the tool name (`get_indicators: rsi`) | A holo chart of the focus symbol; each fetched indicator is drawn onto the chart as it arrives; a rounds meter `7/20` |
-| **Fundamentals Analyst** (`fundamentals_analyst`) | Statements, overview, insider activity | Market Analysis Wing, filing wall | statements fetched; vendor used (SEC EDGAR vs Yahoo); latency; no-data rate | `OFF_DUTY` for FX/crypto runs | Floating balance-sheet, cash-flow and income sheets that fill in; an insider-trade ticker |
-| **News Analyst** (`news_analyst`) | Company and global news, FRED macro, prediction markets | Macro & News Observatory, telescope | articles read; macro series fetched; prediction markets queried; latency | Telescope turns when a new query is issued | A headline stream; macro gauges; a prediction-odds board |
-| **Sentiment Analyst** (`sentiment_analyst`; upstream key `social`) | News, StockTwits and Reddit sentiment (optionally screened by TypeSafe Jev) | Macro & News Observatory, signal deck | posts ingested per source; posts screened out; sentiment band, score and confidence | Has no tools: goes straight `ASSIGNED → THINKING` | A sentiment dial (band from very bearish to very bullish), a confidence ring and a trickle of post "stars" |
-| ***FX Session Analyst*** (`fx_session_analyst`, future) | FX-specific context: trading session, spread regime, rate differentials, economic calendar | Market Analysis Wing, FX desk | spread at analysis time; session; calendar events in window | Only on FX runs; new Stellar agent (§8 Q2) | A world clock with the active session highlighted; a spread gauge; upcoming-events strip |
-| ***Crypto Analyst*** (`crypto_analyst`, future) | Crypto-specific context (upstream already has a crypto asset mode; this adds depth such as funding and on-chain data) | Market Analysis Wing, crypto desk | data sources hit; latency | Only on crypto runs. **Deferred:** crypto is not in the first market set (§8 Q2) | An orbiting-coin display; a funding-rate gauge |
-
-**First markets (§8 Q2): XAU/USD, EUR/USD, USD/JPY and NAS100.** These are FX pairs, a metal and
-an equity index, not single stocks. Upstream's Fundamentals Analyst and SEC data do not apply to
-them, so it is `OFF_DUTY` on these runs. **For these instruments the market / technical analysis
-is done by Stellar-owned analysts** backed by Stellar's market-data adapters, not by upstream's
-Market Analyst (§1.6, §8 D1). They occupy the same chart tables in the Market Analysis Wing and
-use the same states and visuals as the Market Analyst row above. How market-specific context for
-gold and NAS100 is covered (by the FX Session Analyst or by dedicated desks) is decided in Phase 3.
-
-### 3.4 Strategy / debate agents
+### 3.3 Research, validation and macro agents
 
 | Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
 |---|---|---|---|---|---|
-| **Bull Researcher** (`bull_researcher`) | Argues the investment case | Debate Chamber, inner ring, left podium | turns; words per turn; "won" rate (Research Manager sided bullish); conditional correctness (§6.3) | `WAITING` until every analyst has filed; then `SPEAKING` / `LISTENING` | Green spotlight when speaking; speech bubble with an excerpt; tug-of-war bar moves left |
-| **Bear Researcher** (`bear_researcher`) | Argues against | Debate Chamber, inner ring, right podium | same as Bull | same | Red spotlight; bar moves right |
-| **Aggressive Risk Debater** (`risk_aggressive`) | Argues for the high-reward view of the Trader's plan | Debate Chamber, outer ring | turns; agreement with the final rating | Round-robin: Aggressive → Conservative → Neutral | Orange podium light; "upside" arrows |
-| **Conservative Risk Debater** (`risk_conservative`) | Argues for caution | Debate Chamber, outer ring | same | same | Blue podium light; shield icon |
-| **Neutral Risk Debater** (`risk_neutral`) | Balances the two | Debate Chamber, outer ring | same | same | White podium light; balance-scale icon |
+| **R1–R6 research roles** (`research_central_bank`, `research_economic_data`, `research_market_news`, `research_geopolitical`, `research_rates_bonds`, `research_corporate_earnings`) | Collect `ResearchItem`s for their own domain from allowlisted sources (Foundation §4.29.1) | Macro & News Observatory, one console each | items collected; acceptance rate after validation; latency; source errors | `FETCHING` while retrieving; `OFF_DUTY` between schedules; R3–R6 `OFFLINE` until a source is approved | Telescope sweeps; new items arrive as stars |
+| **V1 Source Validator** | Allowlist, trust tier, provenance | Data Core, verification bench | accepted / rejected by reason | `CHECKING` | Items pass through a scanner gate; rejected ones dim |
+| **V2 Freshness Checker** | No look-ahead; freshness window | Data Core | stale / future counts | `CHECKING` | Timestamp ring around each item |
+| **V3 Duplicate Detector** | Exact and near duplicates; keep the primary source | Data Core | duplicate clusters | `CHECKING` | Duplicates merge into one star |
+| **V4 Fact vs Reaction vs Interpretation Classifier** | Labels each claim; numeric FACT cross-check against the calendar | Data Core | label distribution; cross-check failures | `THINKING` then `CHECKING` | Claims tagged F / R / I with distinct icons and colours |
+| **M1 Causal / Macro Analyst** | `MacroAssessment` from validated research only; every driver cites claim ids | Macro & News Observatory, driver board | drivers per assessment; uncited-claim flags; coverage | Reused while the research snapshot is unchanged | Driver board with arrows per asset and a coverage bar |
 
-### 3.5 Decision agents
-
-| Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
-|---|---|---|---|---|---|
-| **Research Manager** (`research_manager`; deep model) | Judges the bull/bear debate; writes the investment plan with a 5-tier recommendation | Command Deck, strategy table | recommendation distribution; agreement with the PM; structured-output fallback rate; latency | Walks from the Command Deck to the Chamber's judge seat for the debate close, then back | A gavel moment; the recommendation badge appears on the main screen |
-| **Trader** (`trader`) | Turns the plan into a proposal: Buy/Hold/Sell with entry, stop-loss and sizing text | Command Deck, trading console | action distribution; share of proposals with a numeric entry and stop; stop hit rate; entry-to-fill drift | Emits `signal.proposed` (draft) | A trade ticket being filled in field by field; the stop and entry drawn on the main chart |
-| **Portfolio Manager** (`portfolio_manager`; deep model) | Weighs the risk debate; issues the **final rating** | Command Deck, captain's chair | rating distribution; `REVIEW` rate; calibration (average alpha per rating tier); latency | `REVIEW` puts it into `DEGRADED` with a "needs human" flag | The final rating stamped on the viewscreen; a `REVIEW` outcome flashes amber and nothing proceeds to the vault |
-
-### 3.6 Risk / validation agents (deterministic)
+### 3.4 Market specialists and technical agents
 
 | Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
 |---|---|---|---|---|---|
-| **Signal Validator** (`signal_validator`) | Structural sanity: rating is not `REVIEW`; Hold produces no order; stop-loss present and on the correct side; entry within X% of the live price (stale-plan guard); the proposal parses | Risk Vault, intake desk | signals checked; rejection reasons histogram | `CHECKING` | The rule checklist lighting each line ✓/✗ |
-| **Risk Officer** (`risk_officer`) | Per-trade limits and **position sizing by formula** (risk % of equity ÷ stop distance) in lots, respecting the broker's minimum lot and step | Risk Vault, main console | approvals and rejections; average risk per trade; sizing clipped by limits | `CHECKING` | A risk gauge "% of equity at risk"; the stamp APPROVED / REJECTED |
-| **Exposure Controller** (`exposure_controller`) | Portfolio-level limits: open positions, per-symbol and per-currency exposure, correlated clusters (e.g. several USD pairs), margin level | Risk Vault, exposure wall | exposure versus limits; correlation-cluster load | `CHECKING` | Stacked exposure bars with limit lines |
-| **Circuit Breaker** (`circuit_breaker`) | Station-wide stops: daily loss limit, max drawdown, consecutive-loss limit, bridge or feed failures, manual kill | Risk Vault, kill-switch lever | trips; time tripped; current headroom to each limit | `ARMED` (normal) / `TRIPPED` (all execution blocked until the **human owner** resets it; any agent may trip it, no agent can reset it — §8 Q6) | A lever that drops and turns the station to RED alert; vault door sealed |
+| **S1–S4 Market Specialists** (XAU/USD, EUR/USD, USD/JPY, NAS100) | `MarketAssessment`: pressure on the instrument, event-risk windows, invalidation conditions, coverage | Market Analysis Wing, instrument desk | latency; coverage; contradiction flags | Only the focus instrument's specialist runs; others `OFF_DUTY` | Desk screen with the instrument's pressure gauge and event windows |
+| **T1 Data Validator** | Builds and validates the `MarketSnapshot` | Data Core | snapshots created / rejected; data gaps | `CHECKING` | Reactor pulse per snapshot; red flash on rejection |
+| **T2 Market Session** | Session, overlaps, time to close, per-instrument calendars | Market Analysis Wing, session clock | — | runs every cycle and entry bar | World clock with the active session highlighted |
+| **T3 Market Structure** (includes higher-timeframe bias) | Trend state and key levels per timeframe | Market Analysis Wing, chart table | levels per timeframe | deterministic | Structure levels drawn on the holo chart |
+| **T4 Technical Indicator** (includes momentum) | Indicator features and momentum assessment | Market Analysis Wing, chart table | features computed; warm-up gaps | deterministic | Indicator lines drawn as computed |
+| **T5 Candle / Price Action** | Candle and price-action features tied to structure levels | Market Analysis Wing, chart table | features detected per timeframe | deterministic; part of the first technical foundation | Candle highlights at levels |
+| **T6 Pullback / Setup** | Detects and manages Setups | Market Analysis Wing | setups by lifecycle state | emits `setup.state.changed` | Setup card: `WATCHING → ARMED → PROPOSED …` |
+| **T7 Entry Timing** | Deterministic entry trigger while a Setup is armed | Market Analysis Wing | triggers; expiries | fastest cadence; no LLM | Countdown on the armed setup; flash on trigger |
+| **T8 Technical Analyst** | Writes `market_report` from typed assessments; cites only snapshot values | Market Analysis Wing | latency; tokens; uncited-number flags | `THINKING` | A report crystal assembled at the chart table |
 
-### 3.7 Execution agents (deterministic)
-
-| Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
-|---|---|---|---|---|---|
-| **Execution Pilot** (`execution_pilot`) | Takes an approved order intent; runs pre-flight (demo check, market open, spread limit, idempotency key); sends to the broker bridge; records acknowledgement or rejection | Execution Bay, launch console | orders sent; broker rejections; ack latency; slippage | `PREFLIGHT`, `LAUNCHING`, `AWAITING_ACK` | A shuttle loaded into a launch tube and launched toward the Vantage Demo Relay |
-| **Position Monitor** (`position_monitor`) | Tracks open positions; stop-loss/take-profit hits; closes on a new opposite signal or at the holding-period end; reconciles with the broker | Execution Bay, docking board | open positions; unrealized P&L; reconciliation mismatches | `RECONCILING` | The docking board: each position a docked ship with a live P&L halo |
-
-### 3.8 System / memory agents
+### 3.5 Debate agents
 
 | Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
 |---|---|---|---|---|---|
-| **Station Controller** (`station_controller`) | Schedules runs; picks the market focus; enforces run concurrency and budgets; owns the station alert level | Command Deck, ops console | queue depth; runs per day; run duration; skipped runs (budget or breaker) | `SCHEDULING` | The run queue; the focus-symbol selector; alert lights |
-| **Data Core Keeper** (`data_core_keeper`) | Watches data vendors, caches and the telemetry bus | Data Core | requests per vendor; error rate (`VendorUnavailableError`, no-data); latency; cache hits | `DEGRADED` when any vendor is failing | Reactor brightness equals request rate; conduits coloured by vendor health |
-| **Memory Archivist** (`memory_archivist`) | Settles pending decisions (upstream `settle_pending`), records outcomes and reflections, manages checkpoints | Memory Archive | pending vs settled decisions; settlement lag; reflections written | Uses upstream's Reflector (an LLM), so it can be `THINKING` | A new crystal shelved per decision; it lights green or red when settled |
+| **Bull Researcher** (U1, `bull_researcher`) | Argues for the setup | Debate Chamber, inner ring, left podium | turns; words per turn; "won" rate (Research Manager sided with it); conditional correctness (§6.3) | `WAITING` until every report is filed; then `SPEAKING` / `LISTENING` | Green spotlight when speaking; speech bubble with an excerpt; tug-of-war bar moves left |
+| **Bear Researcher** (U2, `bear_researcher`) | Argues against | Debate Chamber, inner ring, right podium | same as Bull | same | Red spotlight; bar moves right |
+| **Aggressive Risk Debater** (U5, `risk_aggressive`) | Argues for the high-reward view of the Trader's plan | Debate Chamber, outer ring | turns; agreement with the final rating | Round-robin: Aggressive → Conservative → Neutral | Orange podium light; "upside" arrows |
+| **Conservative Risk Debater** (U6, `risk_conservative`) | Argues for caution | Debate Chamber, outer ring | same | same | Blue podium light; shield icon |
+| **Neutral Risk Debater** (U7, `risk_neutral`) | Balances the two | Debate Chamber, outer ring | same | same | White podium light; balance-scale icon |
 
-### 3.9 Wellbeing agents
+### 3.6 Decision agents
+
+| Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
+|---|---|---|---|---|---|
+| **Research Manager** (U3, `research_manager`; deep tier) | Judges the bull/bear debate; writes the investment plan | Command Deck, strategy table | recommendation distribution; agreement with the PM; structured-output misses; latency | Walks to the Chamber's judge seat for the debate close, then back | A gavel moment; the recommendation badge appears on the main screen |
+| **Trader** (U4, `trader`) | Transaction view on the setup; its entry and stop are **advisory** | Command Deck, trading console | share of plans with numeric levels; disagreement with P1's deterministic levels | emits `decision.trader_plan.created` | A trade ticket filled in field by field, drawn as dashed "advisory" lines |
+| **Portfolio Manager** (U8, `portfolio_manager`; deep tier) | Final typed rating = **approval strength for the setup** (setup-first, R-1) | Command Deck, captain's chair | rating distribution; `REVIEW` rate; calibration per tier | `REVIEW` puts it into `DEGRADED` with a "needs owner" flag | The rating stamped on the viewscreen; `REVIEW` flashes amber and nothing proceeds |
+| **Trade Proposal Builder** (P1, `trade_proposal_builder`) | Setup + rating → typed `TradeProposal` with deterministic levels | Command Deck | proposals built; proposals not built (Hold / Underweight / Sell / REVIEW) | `CHECKING`; emits `trade.proposed` | A proposal card carried down the lift to the Vault |
+
+### 3.7 Validation and risk agents (deterministic)
+
+| Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
+|---|---|---|---|---|---|
+| **Contradiction Checker** (P2, `contradiction_checker`) | Uncited numbers, Trader levels vs P1 levels, rating vs setup direction, stale plans | Risk Vault, intake desk | contradictions by type | `CHECKING` | The intake checklist lighting each line ✓/✗ |
+| **Risk Engine** (P3, `risk_engine`; "Risk Auditor") | Every hard rule (Foundation §8): proposal rules, **sizing by formula**, portfolio exposure, cooldowns, news restriction, breaker | Risk Vault | approvals and rejections by rule; average risk per trade; headroom to each limit; breaker trips | `CHECKING`; breaker `ARMED` / `TRIPPED`. Any rule or agent may trip the breaker; **only the owner resets it, with the local owner command**; the UI shows state only (R-5, Q6) | Vault personas: intake officer, sizing console with a "% of equity at risk" gauge, exposure wall with limit lines, and the kill-switch lever that drops and turns the station RED |
+
+### 3.8 Execution agents (deterministic)
+
+| Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
+|---|---|---|---|---|---|
+| **Execution Checker** (P4, `execution_checker`) | Pre-flight (mode, market open, spread, quote age, idempotency) and reconciliation | Execution Bay, launch console | pre-flight failures by reason; reconciliation mismatches | `PREFLIGHT`, `RECONCILING` | Launch checklist; mismatch alarm |
+| **Paper Execution Agent** (E1, `paper_execution`) | Submits order intents to the Paper Broker; tracks fills and closes | Execution Bay | orders; fills; slippage; open positions | `LAUNCHING`, `AWAITING_FILL` | Shuttles launched toward the "Paper Range"; docking board of positions with live P&L |
+| **MT5 Execution Agent** (E2, `mt5_execution`) | Same, through the MT5 bridge, demo accounts only | Execution Bay | as E1 plus ack latency and broker rejects | exists only from the demo gate (Foundation Phase 8) | Shuttles toward the "Vantage Demo Relay" |
+
+### 3.9 Review, supervision and wellbeing agents
 
 **Decision: "wellbeing" is operational health made visible, not an emotional simulation.** Every
 wellbeing signal maps to something real: latency, retries, rate limits, error rates, token and cost
@@ -429,9 +471,11 @@ change a trading decision**.
 
 | Agent | Role | Room | Key metrics | Specific states / notes | Displays visually |
 |---|---|---|---|---|---|
-| **Station Medic** (`station_medic`) | Computes each agent's load score (§6.5); sends overloaded agents to rest (real effect: a provider/agent cooldown and backoff before the next run); clears them when healthy | Wellbeing Room | load per agent; rests prescribed; mean time to recover | Walks to an agent in `ERROR` or `OVERLOADED` | A med-bot hovering over the patient; the vitals board |
-| **Quartermaster** (`quartermaster`) | Token, cost and API-quota budgets per day and per run; warns and rations | Wellbeing Room, supply desk | spend vs budget; tokens by model; quota headroom per vendor | `RATIONING` when above 80% of budget | Fuel-cell gauges per provider |
-| **Café Host** (`cafe_host`) | **Cosmetic only.** Serves drinks and moves around the lounge. No metrics and no influence on anything | Lounge / Café | none | none | Ambient life; greets agents coming off duty |
+| **Post-Trade Reviewer** (L1, `post_trade_reviewer`) | Typed `TradeReview` per closed trade; LLM narrative mode later | Memory Archive | reviews written | deterministic in V1 | A crystal shelved per trade |
+| **Performance / Attribution** (L2, `attribution`) | Settlement, metrics, attribution (§6) | Memory Archive | settled trades; sample sizes | statistical attribution after minimum samples | Crystals light green or red when settled |
+| **Supervisor** (O1, `supervisor`) | Scheduling, market focus, run lifecycle; pauses on budget or breaker | Command Deck, ops console | queue depth; runs per day; skipped runs | `SCHEDULING` | Run queue; focus selector; alert lights |
+| **Operational Wellbeing Monitor** (O2, `wellbeing_monitor`) | Load score (§6.5), errors, rate limits, budgets; pauses runs; prescribes rests | Wellbeing Room | load per agent; rests; spend vs budget | Visualised as two personas: **Station Medic** (walks to agents in `ERROR` / `OVERLOADED`) and **Quartermaster** (budget gauges) | Med-bot over the patient; vitals board; fuel-cell gauges per provider |
+| **Café Host** (`cafe_host`) | **Cosmetic only.** No metrics and no influence on anything | Lounge / Café | none | none | Ambient life; greets agents coming off duty |
 
 ---
 
@@ -454,7 +498,7 @@ change a trading decision**.
 {
   "event_id": "01J8Z6Q3T6V4Y1M2N3P4Q5R6S7",
   "schema_version": "1.0",
-  "type": "agent.state_changed",
+  "type": "agent.state.changed",
   "ts": "2026-09-29T14:03:12.481Z",
   "seq": 1842,
   "run_id": "run_2026-09-29_EURUSD_a1b2c3",
@@ -462,8 +506,8 @@ change a trading decision**.
   "source": "upstream.callback | upstream.state | stellar.risk | stellar.execution | mt5.bridge | stellar.system",
   "agent_id": "market_analyst",
   "room": "market_wing",
-  "symbol": "EURUSD",
-  "correlation_id": "sig_7f3a",
+  "instrument": "EURUSD",
+  "correlation_id": "prop_7f3a",
   "payload": { }
 }
 ```
@@ -472,19 +516,28 @@ change a trading decision**.
 |---|---|
 | `event_id` | A time-sortable unique id (ULID); used for de-duplication |
 | `seq` | Monotonic per station; the UI detects gaps and asks for a resync |
-| `run_id` | One TradingAgents run; `null` for station-level events |
-| `correlation_id` | Threads a signal through risk, order, fill and close (`sig_*`, then `ord_*`, `pos_*`) |
+| `run_id` | One decision-cycle run; `null` for station-level events |
+| `correlation_id` | Threads a proposal through risk, order, fill and close (`prop_*`, then `ord_*`, `trade_*`; Foundation §9.2) |
 | `agent_id` / `room` | Optional; present when the event concerns an agent or room |
 
 ### 4.3 Event catalogue
 
-#### Station and run
+**Naming convention (canonical, R-3):** `<domain>.<entity>.<past-tense verb>`, or
+`<domain>.<past-tense verb>` when the entity is the domain itself (e.g. `risk.approved`). The
+Foundation Plan §10.1 set is the V1 minimum; the rest of this catalogue follows the same
+convention and is implemented when needed. Payload fields are unchanged from v0.3 of this document,
+except that `symbol` is now `instrument` and `signal_id` is now `proposal_id` (setup-first, R-1).
+The old → new name mapping is in §4.6.
+
+#### Station, system and run
 
 | Type | Payload (key fields) |
 |---|---|
-| `station.heartbeat` | `alert_level`, `active_runs`, `queue_depth` |
-| `station.alert_level_changed` | `from`, `to`, `reason` |
-| `run.started` | `symbol`, `asset_type`, `trade_date`, `analysts[]`, `llm_provider`, `deep_model`, `quick_model`, `max_debate_rounds`, `max_risk_rounds` |
+| `station.heartbeat.emitted` | `alert_level`, `active_runs`, `queue_depth` |
+| `station.alert_level.changed` | `from`, `to`, `reason` |
+| `system.paused` / `system.resumed` | `reason` |
+| `budget.warning` | `scope` (provider / day / run), `used`, `budget` |
+| `run.started` | `instrument`, `profile`, `setup_id`, `llm_tiers`, `max_debate_rounds`, `max_risk_rounds` |
 | `run.resumed` | `from_checkpoint_step` |
 | `run.completed` | `duration_ms`, `final_rating`, `llm_calls`, `tool_calls`, `tokens_in`, `tokens_out` |
 | `run.failed` | `error_class`, `message_excerpt`, `last_agent_id` |
@@ -493,128 +546,168 @@ change a trading decision**.
 
 | Type | Payload |
 |---|---|
-| `agent.state_changed` | `from`, `to`, `reason` (e.g. `llm_call`, `tool_call`, `dependency_wait`) |
+| `agent.task.started` / `agent.task.completed` | task kind, input / output ids, duration, tokens (LLM) |
+| `agent.task.failed` | `error_class`, `message_excerpt` |
+| `agent.state.changed` | `from`, `to`, `reason` (e.g. `llm_call`, `tool_call`, `dependency_wait`) |
 | `agent.moved` | `from_room`, `to_room`, `reason` (emitted by the station layer from state changes; see §5) |
 | `agent.llm_call.started` | `model`, `call_id` |
-| `agent.llm_call.finished` | `call_id`, `latency_ms`, `tokens_in`, `tokens_out`, `structured` (true/false), `retries` |
+| `agent.llm_call.completed` | `call_id`, `latency_ms`, `tokens_in`, `tokens_out`, `structured` (true/false), `retries` |
 | `agent.tool_call.started` | `tool`, `args_excerpt`, `call_id` |
-| `agent.tool_call.finished` | `call_id`, `tool`, `vendor`, `ok`, `latency_ms`, `error_class` |
-| `agent.report_filed` | `report_key`, `chars`, `excerpt`, `sha256` |
-| `agent.wrap_up_forced` | `tool_rounds_used`, `max_tool_rounds` |
-| `agent.error` | `error_class`, `message_excerpt` |
+| `agent.tool_call.completed` | `call_id`, `tool`, `source`, `ok`, `latency_ms`, `error_class` |
+| `agent.wrap_up.forced` | `tool_rounds_used`, `max_tool_rounds` |
 
-#### Market focus
+#### Market data, research and analysis
 
 | Type | Payload |
 |---|---|
-| `market.focus_changed` | `symbol`, `asset_type`, `reason` (`schedule`, `manual`, `signal_followup`) |
-| `market.session_changed` | `session` (Sydney / Tokyo / London / New York), `overlaps[]` (FX) |
-| `market.quote` | `bid`, `ask`, `spread` (**throttled**, e.g. at most 1/sec per symbol, from the MT5 bridge) |
-| `market.data_stale` | `symbol`, `vendor`, `age_s` |
+| `market.focus.changed` | `instrument`, `profile`, `reason` (`schedule`, `manual`, `setup_followup`) |
+| `market.session.changed` | `session`, `overlaps[]` |
+| `market.quote.received` | `bid`, `ask`, `spread` (**throttled**, e.g. at most 1/sec per instrument) |
+| `market.data.stale_detected` | `instrument`, `source`, `age_s` |
+| `snapshot.created` / `snapshot.rejected` | snapshot id, quality flags / reason |
+| `research.item.collected` | item id, role, source id, `published_at` |
+| `research.item.accepted` / `research.item.rejected` | item id, validator, reason, claim labels |
+| `research.snapshot.created` | research snapshot id, item count, coverage |
+| `analysis.created` | analysis id, kind (macro, market, structure, momentum, price action, session, report), `chars`, `excerpt`, `sha256`, coverage |
+| `setup.state.changed` | setup id, `from`, `to`, rule |
 
-#### Debate
+#### Debate and decision
 
 | Type | Payload |
 |---|---|
 | `debate.started` | `debate` (`investment` / `risk`), `participants[]`, `max_rounds` |
-| `debate.turn` | `debate`, `speaker`, `round`, `turn_index`, `excerpt` |
-| `debate.ended` | `debate`, `rounds`, `turns`, `verdict` (Research Manager's recommendation / Portfolio Manager's rating) |
+| `debate.turn.completed` | `debate`, `speaker`, `round`, `turn_index`, `excerpt` |
+| `debate.completed` | `debate`, `rounds`, `turns`, `verdict` (Research Manager's recommendation / Portfolio Manager's rating) |
+| `decision.research_plan.created` | `recommendation` (5-tier) |
+| `decision.trader_plan.created` | `action`, advisory `entry`, advisory `stop_loss`, `sizing_text` (parsed from the Trader's text; advisory only) |
+| `decision.final.created` | `rating`, `is_review`, `price_target`, `time_horizon` |
+| `trade.proposed` | `proposal_id`, `setup_id`, `instrument`, `direction`, `source_rating`, `size_factor`, levels, `contradictions[]` (replaces v0.3's `signal.intent_created`; setup-first, R-1) |
 
-#### Signal and decision
-
-| Type | Payload |
-|---|---|
-| `decision.research_plan` | `recommendation` (5-tier) |
-| `signal.proposed` | `signal_id`, `symbol`, `trader_action`, `entry`, `stop_loss`, `sizing_text`, `source` (`trader`) |
-| `decision.final` | `signal_id`, `rating`, `is_review`, `price_target`, `time_horizon` |
-| `signal.intent_created` | `signal_id`, `direction` (long / short / reduce / close / none), `size_factor` (from the rating mapping, §7 Phase 3) |
-
-#### Risk
+#### Risk and circuit breaker
 
 | Type | Payload |
 |---|---|
-| `risk.check_started` | `signal_id`, `checks[]` |
-| `risk.check_result` | `signal_id`, `rule`, `passed`, `value`, `limit` |
-| `risk.approved` | `signal_id`, `order_intent` {`symbol`, `side`, `volume_lots`, `sl`, `tp`}, `risk_pct_equity` |
-| `risk.rejected` | `signal_id`, `reasons[]` (rule ids), `shadow_tracked: true` |
-| `risk.limit_warning` | `rule`, `value`, `limit`, `headroom_pct` |
-| `risk.breaker_tripped` | `rule`, `value`, `limit` |
-| `risk.breaker_reset` | `by` (always the human owner; a reset from any other source is refused and logged as `risk.breaker_reset_refused`) |
+| `risk.check.started` | `proposal_id`, `checks[]` |
+| `risk.check.completed` | `proposal_id`, `rule`, `passed`, `value`, `limit` |
+| `risk.approved` | `proposal_id`, `decision_id`, `order_intent` {`instrument`, `side`, `volume_lots`, `sl`, `tp`}, `risk_pct_equity` |
+| `risk.rejected` | `proposal_id`, `decision_id`, `reasons[]` (rule ids), `shadow_tracked: true` |
+| `risk.limit.approached` | `rule`, `value`, `limit`, `headroom_pct` |
+| `circuit_breaker.tripped` | `rule`, `value`, `limit` |
+| `circuit_breaker.reset` | `by` (always the owner, via the local owner command), `reason` |
+| `circuit_breaker.reset_refused` | `source`, `reason` (any reset attempt not made through the owner command) |
 
-#### Orders and positions
+#### Orders, trades and account
 
 | Type | Payload |
 |---|---|
-| `order.created` | `order_id`, `signal_id`, `idempotency_key`, `symbol`, `side`, `volume`, `sl`, `tp` |
-| `order.preflight_failed` | `order_id`, `reason` (`not_demo`, `market_closed`, `spread_too_wide`, `bridge_down`) |
+| `order.created` | `order_id`, `intent_id`, `idempotency_key`, `instrument`, `side`, `volume`, `sl`, `tp`, `mode` (`PAPER` / `DEMO`) |
+| `order.preflight.failed` | `order_id`, `reason` (`not_demo`, `market_closed`, `spread_too_wide`, `stale_quote`, `bridge_down`) |
 | `order.sent` | `order_id`, `sent_at` |
-| `order.acknowledged` | `order_id`, `broker_ticket` |
+| `order.acknowledged` | `order_id`, `broker_ticket` (MT5 only) |
 | `order.rejected` | `order_id`, `broker_retcode`, `reason` |
-| `order.filled` | `order_id`, `fill_price`, `filled_volume`, `slippage_pips` |
+| `order.filled` | `order_id`, `fill_price`, `filled_volume`, `slippage` |
 | `order.partially_filled` | `order_id`, `filled_volume`, `remaining` |
-| `position.opened` | `position_id`, `symbol`, `side`, `volume`, `open_price` |
+| `position.opened` | `position_id`, `instrument`, `side`, `volume`, `open_price` |
 | `position.updated` | `position_id`, `unrealized_pnl`, `price` (**throttled**) |
-| `position.closed` | `position_id`, `close_price`, `realized_pnl`, `r_multiple`, `reason` (`stop_loss`, `take_profit`, `signal_exit`, `time_exit`, `breaker`, `manual`) |
-| `account.snapshot` | `balance`, `equity`, `margin_level`, `open_positions`, `is_demo` (periodic) |
+| `trade.closed` | `trade_id`, `position_id`, `close_price`, `realized_pnl`, `r_multiple`, `reason` (`stop_loss`, `take_profit`, `signal_exit`, `time_exit`, `breaker`, `manual`) |
+| `account.snapshot.created` | `balance`, `equity`, `margin_level`, `open_positions`, `mode` (periodic) |
 
-#### Memory
+#### Review and memory
 
 | Type | Payload |
 |---|---|
-| `memory.decision_stored` | `symbol`, `trade_date`, `rating` |
-| `memory.outcome_settled` | `symbol`, `trade_date`, `rating`, `raw_return`, `alpha_return`, `holding_days` |
-| `memory.reflection_written` | `symbol`, `trade_date`, `excerpt` |
+| `memory.review.created` | `trade_id`, `review_id`, `r_multiple`, `exit_reason`, coverage |
+| `memory.outcome.settled` | `trade_id`, `settlement_id`, `realized_pnl`, `r_multiple`, `holding_time` |
+| `memory.decision.stored` | `instrument`, `trade_date`, `rating` (only if the optional upstream memory log is used, D-10) |
+| `memory.reflection.written` | `trade_id`, `excerpt` (LLM narrative mode, later) |
 
 #### Wellbeing and workload
 
 | Type | Payload |
 |---|---|
-| `wellbeing.load_updated` | `agent_id`, `load` (0–1), `components` {latency, retries, errors, token_rate, wrap_ups} |
-| `wellbeing.overload` | `agent_id`, `load`, `cause` |
-| `wellbeing.rest_started` | `agent_id`, `cooldown_s`, `reason` |
-| `wellbeing.rest_ended` | `agent_id` |
-| `wellbeing.degraded` | `agent_id` or `provider`, `cause` (`rate_limited`, `retrying`, `freetext_fallback`) |
-| `wellbeing.budget_warning` | `scope` (provider / day / run), `used`, `budget` |
+| `wellbeing.load.updated` | `agent_id`, `load` (0–1), `components` {latency, retries, errors, token_rate, wrap_ups} |
+| `agent.overloaded` | `agent_id`, `load`, `cause` |
+| `agent.resting` | `agent_id`, `cooldown_s`, `reason` |
+| `agent.rest.ended` | `agent_id` |
+| `agent.degraded` | `agent_id` or `provider`, `cause` (`rate_limited`, `retrying`, `freetext_fallback`) |
 
 ### 4.4 Where events come from
 
 | Event(s) | Derived from | Upstream surface |
 |---|---|---|
-| `agent.llm_call.*`, `agent.state_changed → THINKING` | LangChain `on_chat_model_start` / `on_llm_end` (+ `langgraph_node` metadata) | C2 |
+| `agent.llm_call.*`, `agent.state.changed → THINKING` | LangChain `on_chat_model_start` / `on_llm_end` (+ `langgraph_node` metadata) | C2 |
 | `agent.tool_call.*`, `→ FETCHING` | `on_tool_start` / `on_tool_end` / `on_tool_error` | C2 |
-| `agent.report_filed` | `stream_run()` yields an analyst's report dict when its sub-graph finishes | C3 |
-| `debate.started/turn/ended` (investment) | Diff of `investment_debate_state.count` and `current_response` prefix; end when `investment_plan` appears | C3, C5, C6 |
-| `debate.*` (risk) | Diff of `risk_debate_state.count` / `latest_speaker`; end when `final_trade_decision` appears | C3, C5, C6 |
-| `signal.proposed` | `trader_investment_plan` appears | C5 (see note) |
-| `decision.final` | `final_rating` and `final_trade_decision` | C5, C7 |
-| `risk.*`, `order.*`, `position.*`, `account.*` | Stellar risk and execution modules; MT5 bridge | Stellar only |
-| `memory.*` | Wrapping `record_decision()` and `settle_pending()`; reading `TradingMemoryLog` | C3, C9 |
-| `wellbeing.*` | Stellar metrics over the events above | Stellar only |
+| `snapshot.*`, `research.*`, `analysis.created`, `setup.state.changed` | Stellar data, research and analysis modules | Stellar only |
+| `debate.*` (investment) | Diff of `investment_debate_state.count` and `current_response` prefix; completed when `investment_plan` appears | C5, C6 |
+| `debate.*` (risk) | Diff of `risk_debate_state.count` / `latest_speaker`; completed when `final_trade_decision` appears | C5, C6 |
+| `decision.research_plan.created` | `investment_plan` appears | C5 |
+| `decision.trader_plan.created` | `trader_investment_plan` appears | C5 (see note) |
+| `decision.final.created` | `final_rating` and `final_trade_decision` | C5, C7 |
+| `trade.proposed` | Trade Proposal Builder (P1) | Stellar only |
+| `risk.*`, `circuit_breaker.*`, `order.*`, `position.*`, `trade.closed`, `account.*` | Stellar risk and execution modules; MT5 bridge after the demo gate | Stellar only |
+| `memory.*` | Post-Trade Reviewer, Attribution, Stellar Journal (upstream memory log only if D-10 allows) | Stellar (C9 optional) |
+| `wellbeing.*`, `agent.overloaded`, `agent.resting`, `agent.degraded`, `budget.warning` | Operational Wellbeing Monitor over the events above | Stellar only |
 
-**Note on `signal.proposed`.** Upstream keeps the Trader's output as **rendered markdown** in state;
-the typed `TraderProposal` object is not kept. Stellar parses the known rendered layout (Action /
-Entry Price / Stop Loss / Position Sizing). If parsing fails, the numeric fields are `null` and the
-Signal Validator rejects on "missing stop". This keeps it fail-closed. It is also a candidate for a
-small, generic upstream contribution (keeping the structured proposal in state).
+**Note on the Trader's levels.** Upstream keeps the Trader's output as **rendered markdown** in
+state; the typed `TraderProposal` object is not kept. Stellar parses the known rendered layout
+(Action / Entry Price / Stop Loss / Position Sizing) into **advisory** values only. Order levels
+come from the deterministic Trade Proposal Builder; the Contradiction Checker flags disagreement.
+If parsing fails, the advisory values are `null`, which cannot cause a trade (fail closed).
 
 ### 4.5 Transport and storage
 
 ```
-producers (callback handler, state observer, risk, execution, bridge client, metrics)
+producers (callback handler, state observer, research, analysis, risk, execution, bridge client, metrics)
    -> in-process EventBus (thread-safe; upstream runs analysts in parallel)
-   -> EventStore: append-only (SQLite table, or JSONL per day) + periodic state snapshots
+   -> EventStore: append-only (SQLite, with the Stellar Journal) + periodic state snapshots
    -> WebSocket broadcaster -> Station UI
    -> Metrics aggregator (rolling windows) -> REST /metrics
 ```
 
-- **Backpressure.** High-rate types (`market.quote`, `position.updated`, `wellbeing.load_updated`)
+- **Backpressure.** High-rate types (`market.quote.received`, `position.updated`, `wellbeing.load.updated`)
   are throttled and coalesced. Decision, risk and order events are **never** dropped.
 - **Resync.** The UI connects, fetches `GET /snapshot` (current station state plus last `seq`), then
   subscribes from `seq+1`. On a gap it refetches the snapshot.
-- **Replay.** `GET /runs/{run_id}/events` feeds the UI's replay mode (Phase 5).
+- **Replay.** `GET /runs/{run_id}/events` feeds the UI's replay mode (Foundation Phase 9).
 - **Telemetry must not break trading.** Exceptions inside producers are caught and logged. A
   telemetry failure must never fail a run or an order. The reverse is not true: if the **risk** or
   **execution** events cannot be persisted, execution halts (audit trail is mandatory for orders).
+
+### 4.6 Event names: v0.3 → canonical (R-3)
+
+| v0.3 name | Canonical name |
+|---|---|
+| `station.heartbeat` | `station.heartbeat.emitted` |
+| `station.alert_level_changed` | `station.alert_level.changed` |
+| `agent.state_changed` | `agent.state.changed` |
+| `agent.llm_call.finished` / `agent.tool_call.finished` | `agent.llm_call.completed` / `agent.tool_call.completed` |
+| `agent.report_filed` | `analysis.created` (kind `report`) |
+| `agent.wrap_up_forced` | `agent.wrap_up.forced` |
+| `agent.error` | `agent.task.failed` |
+| `market.focus_changed` / `market.session_changed` | `market.focus.changed` / `market.session.changed` |
+| `market.quote` | `market.quote.received` |
+| `market.data_stale` | `market.data.stale_detected` |
+| `debate.turn` / `debate.ended` | `debate.turn.completed` / `debate.completed` |
+| `decision.research_plan` | `decision.research_plan.created` |
+| `signal.proposed` (Trader draft) | `decision.trader_plan.created` (advisory) |
+| `decision.final` | `decision.final.created` |
+| `signal.intent_created` | superseded by `trade.proposed` (R-1) |
+| `risk.check_started` / `risk.check_result` | `risk.check.started` / `risk.check.completed` |
+| `risk.limit_warning` | `risk.limit.approached` |
+| `risk.breaker_tripped` / `risk.breaker_reset` / `risk.breaker_reset_refused` | `circuit_breaker.tripped` / `circuit_breaker.reset` / `circuit_breaker.reset_refused` |
+| `order.preflight_failed` | `order.preflight.failed` |
+| `position.closed` | `trade.closed` |
+| `account.snapshot` | `account.snapshot.created` |
+| `memory.decision_stored` / `memory.outcome_settled` / `memory.reflection_written` | `memory.decision.stored` / `memory.outcome.settled` / `memory.reflection.written` |
+| `wellbeing.load_updated` | `wellbeing.load.updated` |
+| `wellbeing.overload` / `wellbeing.rest_started` / `wellbeing.rest_ended` | `agent.overloaded` / `agent.resting` / `agent.rest.ended` |
+| `wellbeing.degraded` / `wellbeing.budget_warning` | `agent.degraded` / `budget.warning` |
+| (new in the Foundation Plan) | `agent.task.started`, `agent.task.completed`, `system.paused`, `system.resumed`, `snapshot.created`, `snapshot.rejected`, `research.item.*`, `research.snapshot.created`, `setup.state.changed`, `trade.proposed`, `memory.review.created` |
+
+Unchanged: `run.*`, `agent.moved`, `agent.llm_call.started`, `agent.tool_call.started`,
+`debate.started`, `risk.approved`, `risk.rejected`, `order.created`, `order.sent`,
+`order.acknowledged`, `order.rejected`, `order.filled`, `order.partially_filled`,
+`position.opened`, `position.updated`.
 
 ---
 
@@ -627,18 +720,23 @@ when active). Most analysts work in their home room; decision and debate agents 
 
 | Agent | Home | Work positions |
 |---|---|---|
-| Analysts | their wing / observatory | own desk; a beam to the Data Core while `FETCHING` |
+| Research roles R1–R6 | Macro & News Observatory | own console; a beam to the Data Core while `FETCHING` |
+| Research validators V1–V4 | Data Core | verification bench |
+| Causal / Macro Analyst M1 | Macro & News Observatory | driver board |
+| Market specialists S1–S4 | Market Analysis Wing | own instrument desk |
+| Technical agents T2–T8 | Market Analysis Wing | chart table, session clock; a beam to the Data Core while fetching |
+| Data Validator T1 | Data Core | reactor console |
 | Bull / Bear | Debate Chamber (inner ring) | podiums |
 | Risk Debaters | Debate Chamber (outer ring) | podiums |
 | Research Manager | Command Deck | Chamber judge seat (investment debate close) |
 | Trader | Command Deck | trading console |
 | Portfolio Manager | Command Deck | captain's chair; Chamber judge seat (risk debate close) |
-| Vault agents | Risk Control Vault | intake desk, console, exposure wall, lever |
-| Execution agents | Execution Bay | launch console, docking board |
-| Station Controller | Command Deck | ops console |
-| Data Core Keeper | Data Core | reactor console |
-| Memory Archivist | Memory Archive | shelves; Command Deck to collect a finished decision |
-| Medic / Quartermaster | Wellbeing Room | anywhere an agent is in `ERROR` / `OVERLOADED` |
+| Trade Proposal Builder | Command Deck | proposal console; the lift to the Vault |
+| Contradiction Checker, Risk Engine (and its personas) | Risk Control Vault | intake desk, sizing console, exposure wall, lever |
+| Execution Checker, Paper / MT5 Execution Agents | Execution Bay | launch console, docking board |
+| Supervisor | Command Deck | ops console |
+| Post-Trade Reviewer, Attribution | Memory Archive | shelves; Execution Bay to collect a closed trade |
+| Operational Wellbeing Monitor (Medic / Quartermaster personas) | Wellbeing Room | anywhere an agent is in `ERROR` / `OVERLOADED` |
 | Café Host | Lounge | lounge only |
 
 ### 5.2 Status → visual mapping
@@ -658,11 +756,11 @@ follows and may take a second or two; truth never waits for animation.
 | `LISTENING` | debate seat | seated, head turned to the speaker | 👂 dim |
 | `WAITING` | work position or the waiting bench | seated; hourglass | ⌛ grey |
 | `REPORTING` | walking to the next room | carries a glowing data crystal (the report) and hands it over | ◆ gold |
-| `CHECKING` | vault stations | scanner sweep over the signal | ⌕ violet |
+| `CHECKING` | vault stations and validation benches | scanner sweep over the proposal or item | ⌕ violet |
 | `DEGRADED` | stays at work | hologram flicker; slower animation | ⚠ amber |
-| `OVERLOADED` | stays, then escorted by the Medic to the Wellbeing Room | steam / sparks; then walks | ♨ orange |
+| `OVERLOADED` | stays, then escorted by the Medic persona (O2) to the Wellbeing Room | steam / sparks; then walks | ♨ orange |
 | `RESTING` | Wellbeing Room rest pod | lying in a pod; recharge bar | ☾ soft blue + countdown |
-| `ERROR` | stays in place | red beacon; the Medic walks over | ✖ red |
+| `ERROR` | stays in place | red beacon; the Medic persona (O2) walks over | ✖ red |
 
 ### 5.3 Movement rules
 
@@ -672,8 +770,8 @@ follows and may take a second or two; truth never waits for animation.
    is reachable **only** from the Vault node.
 3. **Teleport when late.** If an avatar is still walking when its next state arrives, it snaps to
    the new position so the view never shows stale activity.
-4. **Parallel analysts are visible as parallel.** Upstream runs analysts concurrently; all four are
-   shown working at the same time.
+4. **Parallel work is visible as parallel.** Agents that run concurrently (e.g. research roles,
+   technical agents) are shown working at the same time.
 5. **Deterministic life.** Idle behaviour in the Lounge (who plays billiards with whom, café
    visits) uses a seeded random generator keyed on `run_id` and time, so replays look identical.
 6. **Reduced-motion mode** replaces walking with fades and keeps all badges.
@@ -684,17 +782,18 @@ follows and may take a second or two; truth never waits for animation.
 |---|---|---|
 | **GREEN** | No run active; all systems healthy | Soft ambient lighting |
 | **BLUE** | A run is active | Blue accent lights; Command Deck viewscreen live |
-| **AMBER** | Any vendor or provider degraded; a risk limit above 80%; a `REVIEW` decision; the bridge reconnecting | Amber strips; affected room outlined |
-| **RED** | Circuit breaker tripped; demo check failed; broker reconciliation mismatch | Red lighting; vault door sealed; Execution Bay locked; a banner requiring the owner's reset |
+| **AMBER** | Any data, research or LLM source degraded; a risk limit above 80%; a `REVIEW` decision; the bridge reconnecting | Amber strips; affected room outlined |
+| **RED** | Circuit breaker tripped; demo check failed; reconciliation mismatch | Red lighting; vault door sealed; Execution Bay locked; a banner stating that only the owner can reset the breaker, with the local owner command (the UI cannot reset it; R-5) |
 
 ### 5.5 Key UI panels (beyond the map)
 
-- **Top strip:** alert level, demo equity, day P&L, open positions, today's runs and LLM spend.
+- **Top strip:** alert level, execution mode (`PAPER`, later `DEMO`), equity, day P&L, open
+  positions, today's runs and LLM spend.
 - **Room panel** (click a room): its agents, their states and room-specific displays (§2.3).
 - **Agent card** (click an avatar): role, current state, recent events, key metrics (§6.2) and
   contribution (§6.3), each with a sample size.
-- **Signal timeline:** one row per `signal_id`: proposed → validated → approved/rejected → sent →
-  filled → closed, with timestamps.
+- **Proposal timeline:** one row per `proposal_id`: setup → proposed → approved/rejected → sent →
+  filled → closed → reviewed, with timestamps.
 - **Event log:** a filterable raw stream.
 - **Replay scrubber:** jump anywhere in a past run.
 
@@ -702,8 +801,11 @@ follows and may take a second or two; truth never waits for animation.
 
 ## 6. Performance metrics
 
-All metrics are computed from the event store and upstream's memory log, over rolling windows
-(today, 7 days, 30 days, all time). **Every displayed metric carries its sample size**, and
+All metrics are computed from the event store and the Stellar Journal, over rolling windows
+(today, 7 days, 30 days, all time). For the four markets, outcomes come from Stellar's own settled
+trades and reviews, not from upstream's memory-log alpha against SPY, which is not meaningful for
+these instruments (Foundation L10, U17); "alpha" below means the return measure chosen for
+settlement. **Every displayed metric carries its sample size**, and
 rankings are hidden below a minimum sample size (default N ≥ 30 settled decisions), because small
 samples produce confident-looking noise.
 
@@ -713,18 +815,18 @@ samples produce confident-looking noise.
 |---|---|---|
 | Runs completed / failed | Count per window | `run.*` |
 | Run duration p50 / p95 | `run.completed.duration_ms` | events |
-| Rating distribution | Share of Buy / Overweight / Hold / Underweight / Sell / REVIEW | `decision.final` |
-| REVIEW rate | REVIEW ÷ runs | `decision.final` |
-| Directional hit rate | Share of settled Buy/Overweight with raw return > 0, and Sell/Underweight with raw return < 0 | memory log |
-| Mean alpha by rating | Average alpha vs benchmark per tier (should be monotonic: Buy > Overweight > Hold > …) | memory log |
-| Demo equity, balance, day P&L | Latest `account.snapshot` | bridge |
-| Realized P&L, win rate, profit factor, average R multiple, expectancy | Over closed positions | `position.closed` |
-| Max drawdown (equity, peak-to-trough) | From the equity series | `account.snapshot` |
+| Rating distribution | Share of Buy / Overweight / Hold / Underweight / Sell / REVIEW | `decision.final.created` |
+| REVIEW rate | REVIEW ÷ runs | `decision.final.created` |
+| Setup hit rate by approval tier | Share of taken setups with positive realized result, per PM rating tier (setup-first, R-1) | journal |
+| Mean outcome by approval tier | Average R multiple per tier (should be monotonic: Buy > Overweight > …) | journal |
+| Equity, balance, day P&L (paper; demo after the demo gate) | Latest `account.snapshot.created` | Paper Broker / bridge |
+| Realized P&L, win rate, profit factor, average R multiple, expectancy | Over closed trades | `trade.closed` |
+| Max drawdown (equity, peak-to-trough) | From the equity series | `account.snapshot.created` |
 | Sharpe / Sortino (daily) | From daily equity returns; shown only with ≥ 60 trading days | derived |
-| Signal-to-trade funnel | proposed → approved → filled | risk / order events |
+| Setup-to-trade funnel | setups → proposed → approved → filled | setup / risk / order events |
 | LLM calls, tokens, estimated cost | Per day and per run | callback events |
 | Vendor error rate | Failed ÷ total tool calls per vendor | tool events |
-| Uptime | Heartbeat coverage | `station.heartbeat` |
+| Uptime | Heartbeat coverage | `station.heartbeat.emitted` |
 
 ### 6.2 Per-agent metrics
 
@@ -732,14 +834,14 @@ samples produce confident-looking noise.
 |---|---|
 | Runs participated in; time in each state | all |
 | LLM calls, tokens in/out, estimated cost, p50/p95 latency | LLM agents |
-| Structured-output fallback rate (free text used instead of the typed schema) | Research Manager, Trader, Portfolio Manager, Sentiment Analyst |
-| Tool calls, tool failures, vendor mix | analysts |
-| Tool rounds used vs `max_tool_rounds`; forced wrap-ups | analysts with tools |
-| Report length; empty or "no data" reports | analysts |
+| Structured-output fallback rate (free text used instead of the typed schema) | Research Manager, Trader, Portfolio Manager; Stellar LLM agents (a structured miss is a failed step for them) |
+| Tool calls, tool failures, source mix | research and technical agents |
+| Tool rounds used vs `max_tool_rounds`; forced wrap-ups | LLM agents with tools |
+| Report length; empty or "no data" reports; coverage | analysis and research agents |
 | Debate turns, words per turn | debaters |
-| Checks run, rejections by rule | vault agents |
-| Orders sent, broker rejects, ack latency, slippage | Execution Pilot |
-| Reconciliation mismatches | Position Monitor |
+| Checks run, rejections by rule | Contradiction Checker, Risk Engine, research validators |
+| Orders sent, rejects, ack latency, slippage | Paper / MT5 Execution Agents |
+| Pre-flight failures, reconciliation mismatches | Execution Checker |
 | Errors, retries, rests prescribed | all |
 
 ### 6.3 Contribution metrics
@@ -749,14 +851,14 @@ several **complementary, clearly labelled** measures and never a single "agent s
 
 | Metric | For | How it is computed | Caveat |
 |---|---|---|---|
-| **Stance accuracy** | analysts | Each report's directional stance (bullish / neutral / bearish), versus the settled raw return. The Sentiment Analyst already emits a typed band. Other analysts need a cheap Stellar-side **stance extractor** (a small LLM call or a rules pass over the report) | The extractor is itself a model; it is validated against a hand-labelled sample first |
+| **Stance accuracy** | macro, specialist and technical agents | Each typed assessment's directional stance versus the settled outcome. Typed assessments (Foundation §4.29, §9) carry direction; free-text reports would need a **stance extractor**, validated against a hand-labelled sample first | Direction in a typed field is still a model output; judged only with sample sizes |
 | **Agreement with final** | all LLM agents | Share of runs where the agent's stance matched the final rating's direction | Agreement is not correctness; shown next to accuracy, never alone |
 | **Debate win rate** | Bull / Bear | Share of runs where the Research Manager's recommendation took their side | Measures persuasiveness, not truth |
 | **Conditional correctness** | Bull / Bear, risk debaters | When their side won, how often the outcome agreed | Needs many samples |
-| **Rating calibration** | Research Manager, Portfolio Manager | Mean alpha per rating tier; a monotonicity check; Brier-style score on direction | The core decision-quality measure |
-| **Trader execution quality** | Trader | Stop-hit rate; entry-to-fill drift; maximum adverse / favourable excursion vs the proposed stop | Depends on market regime |
-| **Risk value added** | vault agents | Rejected signals are **shadow-tracked** as paper trades. Avoided loss = losses of rejected signals; missed gain = gains of rejected signals. Net = avoided − missed | Counterfactual; fills are idealised |
-| **Ablation delta** | analysts | Periodic `run_backtest` on a fixed grid with one analyst removed; compare calibration and hit rate | Expensive; run monthly, offline |
+| **Rating calibration** | Research Manager, Portfolio Manager | Mean outcome per rating tier (setup approval strength); a monotonicity check; Brier-style score on direction | The core decision-quality measure |
+| **Trader advisory quality** | Trader | How its advisory entry and stop compared with P1's deterministic levels and with the realized path (MAE / MFE) | Depends on market regime |
+| **Risk value added** | Risk Engine, Contradiction Checker | Rejected proposals are **shadow-tracked** as paper trades. Avoided loss = losses of rejected proposals; missed gain = gains of rejected proposals. Net = avoided − missed | Counterfactual; fills are idealised |
+| **Ablation delta** | research and analysis agents | Periodic runs of the Stellar simulator (Foundation §4.17) on a fixed grid with one role removed; compare calibration and hit rate | Expensive; run monthly, offline |
 
 ### 6.4 Risk metrics
 
@@ -786,99 +888,127 @@ limit is configured.
 
 | Metric | Definition |
 |---|---|
-| **Load score** (0–1) per agent | A weighted blend of: latency relative to its own baseline, retry rate, error rate, token rate relative to its budget, and forced wrap-ups. Initial weights 0.30 / 0.25 / 0.20 / 0.15 / 0.10, tuned in Phase 2 |
-| Overload threshold | load ≥ 0.8 for two consecutive calls → `wellbeing.overload` |
+| **Load score** (0–1) per agent | A weighted blend of: latency relative to its own baseline, retry rate, error rate, token rate relative to its budget, and forced wrap-ups. Initial weights 0.30 / 0.25 / 0.20 / 0.15 / 0.10, tuned in Foundation Phase 6 |
+| Overload threshold | load ≥ 0.8 for two consecutive calls → `agent.overloaded` |
 | Rest (cooldown) | Real effect: new runs needing that agent or provider are delayed with backoff (e.g. 60 s → 5 min); visual effect: rest pod |
 | Fatigue (cosmetic smoothing) | An exponentially decaying sum of recent working time; drives only animation such as slower walking. **Never** gates work |
 | Rate-limit hits (429) per provider | from errors and retries |
 | Budget usage | tokens and estimated cost vs daily budget per provider |
 | Utilisation | share of time in working states per agent |
-| Queue depth / wait time | for the Station Controller |
+| Queue depth / wait time | for the Supervisor |
 
 ---
 
-## 7. Implementation phases
+## 7. Implementation themes
 
-Each phase ends with a **gate**: its exit criteria must hold before the next phase starts. Phases 2
-and 3 can overlap; **Phase 4 must not start before Phase 3's gate passes**.
+**Canonical phase numbers, entry and exit criteria are in the Foundation Plan §11 (R-2).** This
+section keeps the design content of this document's original six phases as **themes** (LD-1 to
+LD-6). Each theme and bullet names the Foundation phase that implements it. Where a gate here and a
+Foundation gate differ, the Foundation gate governs.
 
-### Phase 1 — Documentation and design *(this document)*
+| Theme | Foundation phase(s) |
+|---|---|
+| LD-1 Documentation and design | Phase 0 |
+| LD-2 Telemetry layer | Phase 1 (core: envelope, bus, journal, registry, contract tests); Phase 6 (LLM callback telemetry); Phase 7 (metrics) |
+| LD-3 Risk hardening | Phase 3 (risk engine), Phase 4 (paper broker), Phase 5 (deterministic technical foundation); market data in Phase 2; Stellar pipeline in Phase 6 |
+| LD-4 MT5 / Vantage demo | Phase 8 — a separate integration and validation gate **after** paper V1 (D-15) |
+| LD-5 Visual station v1 | Phase 9 |
+| LD-6 Visual station v2 | Phase 10 |
+
+### Theme LD-1 — Documentation and design *(Foundation Phase 0)*
 
 - Map the upstream repository (done).
-- Write this design; review and resolve the open questions (§8).
+- Write this design and the Foundation Plan; resolve the open questions (§8, done) and reconcile
+  the two documents (§8.3, done).
 - Set up the upstream sync workflow: an `upstream` remote pointing at `TauricResearch/TradingAgents`;
   merge (not rebase) upstream releases; after each merge, run upstream's tests and Stellar's
   contract tests.
 
-**Gate:** design approved; open questions resolved (§8, done). The final Windows host for MT5 is
-deliberately **not** chosen in this phase (§8 Q1); it is chosen at the start of Phase 4.
+The final Windows host for MT5 is deliberately **not** chosen here (§8 Q1, Foundation D-17); it is
+chosen at the start of Foundation Phase 8.
 
-### Phase 2 — Telemetry layer
+### Theme LD-2 — Telemetry layer *(Foundation Phases 1, 6, 7)*
 
-- Create `stellar/` as a separate project; add `.github/workflows/stellar.yml`.
-- Implement the event envelope and catalogue (pydantic models), the bus and the SQLite/JSONL store.
-- **Spike:** confirm `langgraph_node` reaches callbacks bound in the LLM constructors (§1.5 C2).
-- `StellarTelemetryHandler` (LangChain callbacks) and `StateObserver` (diffs `stream_run()` output).
-- `StellarRun`: mirrors `cli/run.py`'s path (`create_run_state` → `stream_run` → `record_decision`
-  → checkpoint handling) and emits events.
-- Contract tests pinning C1–C11 (node names, state keys, rating constants, `stream_run` shape).
-- A text "station log" CLI (`stellar watch`) that prints events live, to validate before any
-  graphics exist.
-- Metrics v0: global and per-agent operational metrics; wellbeing load score.
+- *(Phase 1)* Create `stellar/` as a separate project; add `.github/workflows/stellar.yml`.
+- *(Phase 1)* Implement the event envelope and catalogue (pydantic models), the bus and the SQLite
+  store with the journal.
+- *(Phase 1)* Contract tests pinning the upstream surfaces Stellar uses (Foundation Phase 1 list:
+  node names, state keys, rating constants and the other reused surfaces).
+- *(Phase 6)* **Spike:** confirm `langgraph_node` reaches callbacks bound in the LLM constructors
+  (§1.5 C2).
+- *(Phase 6)* `StellarTelemetryHandler` (LangChain callbacks) and a state observer that diffs the
+  Stellar graph's stream.
+- *(Phase 1 onward)* A text "station log" CLI (`stellar watch`) that prints events live, to
+  validate before any graphics exist.
+- *(Phase 7)* Metrics: global and per-agent operational metrics; wellbeing load score.
 - Tests use fake LLMs and fake tools in the style of upstream's end-to-end tests. No network.
 
-**Gate:** a full run produces a complete, ordered event stream; replaying it rebuilds the same
-final state summary; upstream's tests still pass untouched; telemetry failure injected in tests does
-not fail the run.
+**Gate (summary):** a full run produces a complete, ordered event stream; replaying it rebuilds the
+same final state summary; upstream's tests still pass untouched; telemetry failure injected in
+tests does not fail the run.
 
-### Phase 3 — Risk hardening
+### Theme LD-3 — Risk hardening *(Foundation Phases 2–6)*
 
-- **Rating → intent mapping** (deterministic, configurable):
+- *(Phase 6)* **Rating → action mapping: setup-first (canonical, R-1).** Deterministic technical
+  agents produce a directional Setup; the research chain, debate and Portfolio Manager judge that
+  setup, and the PM's typed rating is its **approval strength**:
 
-  | Final rating | Flat book | Existing long | Existing short |
-  |---|---|---|---|
-  | Buy | open long, size ×1.0 | hold / top up to target | close short; optional long |
-  | Overweight | open long, size ×0.5 | hold | reduce short |
-  | Hold | no order | no change | no change |
-  | Underweight | open short ×0.5 (FX) / no order (long-only markets) | reduce long | hold |
-  | Sell | open short ×1.0 (FX) / no order (long-only markets) | close long | hold / top up |
-  | **REVIEW** | **no order; human flag** | no change | no change |
+  | Final rating | Action on the Setup |
+  |---|---|
+  | Buy | Take the setup (Trade Proposal Builder builds a `TradeProposal`) |
+  | Overweight | Take with the size factor of Foundation decision D-9 (safe default until decided: **no trade**) |
+  | Hold | Do not take |
+  | Underweight | Reject the setup |
+  | Sell | Reject the setup |
+  | **REVIEW** | **No trade; owner flag** |
 
-- **Signal Validator:** schema and sanity rules (stop present and on the correct side; entry
-  within a tolerance of the live price; plan not older than N hours; duplicate-signal cooldown).
-- **Risk Officer:** sizing by formula only. The Trader's free-text `position_sizing` is displayed,
-  never used. Round down to the broker's lot step; reject below the minimum lot.
-- **Exposure Controller** and **Circuit Breaker** with the limits in §6.4. All limits are
-  configuration; none is hard-coded or treated as final (§8 Q5). Threshold values are calibrated
-  with backtests and paper trading here, and confirmed on the demo account in Phase 4.
-- **Breaker reset belongs to the human owner only (§8 Q6).** Any agent or rule may trip the breaker.
-  No agent, scheduler, retry path or API call made by the system can reset it or re-enable
-  trading. Reset is a separate, owner-only action with confirmation, and it is recorded as an
-  event. Tests prove that every non-owner reset path is refused.
-- **Stellar market-data abstraction (§8 Q3):** a `MarketDataSource` interface (quotes, OHLCV
-  bars, symbol metadata) and a Stellar-owned symbol map for XAU/USD, EUR/USD, USD/JPY and NAS100
-  (§8 Q2). It has one initial implementation backed by an existing provider (chosen here) and is
-  shaped so MT5 can implement it later without changes elsewhere. It lives in
-  `stellar/marketdata/`, apart from `stellar/execution/`.
-- **Stellar market pipeline (§1.6, §8 D1):** Stellar-owned market / technical analysts that
-  use only the Stellar market-data adapters, assembled into a Stellar-owned graph that imports
-  upstream's debate, research, trader and manager agents unchanged. Upstream's data-provider code
-  is not patched, extended or registered into. Contract tests pin each reused upstream component.
-  Phase 3 also decides whether upstream's News and Sentiment Analysts are useful for these symbols,
-  or whether Stellar-owned replacements are needed.
-- A **paper broker** that implements the same broker interface as MT5 and simulates fills from
-  quotes supplied by the market-data abstraction. All of Phase 3 runs against it.
-- Shadow tracking of rejected signals (for §6.3 "risk value added").
-- Property-based and table tests: every rule can reject; the gate fails closed on missing data;
-  no path exists from `decision.final` to `order.created` that skips the gate.
+  Direction always comes from the deterministic Setup, never from reading "Sell" as "open a short"
+  (upstream's prompts define Sell as exiting or avoiding a position; Foundation L8). This
+  replaces the v0.3 flat-book / long / short table.
+- *(Phases 3, 5, 6)* **Proposal checks:** schema validation of the `TradeProposal` (P1) and the
+  Contradiction Checker (P2): stop present and on the correct side; entry within a tolerance of the
+  live price; plan not stale; Trader's advisory levels compared with P1's deterministic levels.
+- *(Phase 3)* **Risk Engine sizing:** by formula only. The Trader's free-text `position_sizing` is
+  displayed, never used. Round down to the broker's lot step; reject below the minimum lot.
+- *(Phase 3)* **Exposure limits and the circuit breaker** in the Risk Engine, with the limits in
+  §6.4. All limits are configuration; none is hard-coded or treated as final (§8 Q5). Threshold
+  values are proposed from simulation evidence (Foundation Phase 7) and confirmed on the demo account
+  at the demo gate.
+- *(Phase 3)* **Breaker reset belongs to the owner only (§8 Q6, R-5).** Any agent or rule may trip
+  the breaker. No agent, scheduler, retry path, API call or UI element can reset it or re-enable
+  trading. In V1 the reset is a **local owner command** on the Mac with typed confirmation and a
+  reason, recorded as `circuit_breaker.reset`; the station UI shows breaker state only. A UI reset
+  may be designed later, only together with authentication. Tests prove that every non-owner reset
+  path is refused.
+- *(Phase 2)* **Stellar market-data abstraction (§8 Q3):** a `MarketDataSource` interface (quotes,
+  OHLCV bars, symbol metadata) and a Stellar-owned symbol map for XAU/USD, EUR/USD, USD/JPY and
+  NAS100 (§8 Q2). A file importer for owner-supplied data first, and a historical provider once one
+  is chosen (Foundation D-1); shaped so MT5 can implement it later without changes elsewhere. It
+  lives in `stellar/marketdata/`, apart from `stellar/execution/`.
+- *(Phases 5–6)* **Stellar market pipeline (§1.6, §8 D1):** Stellar-owned technical agents
+  (Phase 5) and research chain (Phase 6) using only Stellar data, assembled into a Stellar-owned
+  graph that imports upstream's debate, research-manager, trader and manager agents unchanged.
+  Upstream's data-provider code is not patched, extended or registered into. Contract tests pin each
+  reused upstream component. Upstream's News and Sentiment Analysts are not in V1.
+- *(Phase 4)* A **Paper Broker** that implements the same broker interface as MT5 and simulates
+  fills from quotes supplied by the market-data abstraction. All work before the demo gate runs
+  against it.
+- *(Phase 7)* Shadow tracking of rejected proposals (for §6.3 "risk value added").
+- *(Phase 3)* Property-based and table tests: every rule can reject; the gate fails closed on
+  missing data; no path exists from `decision.final.created` to `order.created` that skips the
+  Risk Engine.
 
-**Gate:** 100% rule coverage in tests; a fault-injection suite (missing quote, missing stop,
-bridge down, NaN equity, REVIEW) yields zero orders; a multi-week paper-trading soak with no
-unexplained orders.
+**Gate (summary):** 100% rule coverage in tests; a fault-injection suite (missing quote, missing
+stop, broker down, NaN equity, REVIEW) yields zero orders; paper operation with no unexplained
+orders. Foundation Phases 3–7 hold the canonical gates.
 
-### Phase 4 — MT5 / Vantage demo layer
+### Theme LD-4 — MT5 / Vantage demo *(Foundation Phase 8: a separate gate after paper V1)*
 
-- **Host (§8 Q1).** In v1 the Stellar core runs on the owner's **Mac**. The official
+**Scope (Foundation D-15):** Stellar Agents V1 is functionally complete with paper trading. This
+theme is a separate integration and validation gate that starts only after the paper V1 foundation
+is stable. Neither V1 nor this gate implies profitability.
+
+- **Host (§8 Q1).** In V1 the Stellar core runs on the owner's **Mac**. The official
   `MetaTrader5` Python package runs only on Windows and talks to a locally running MT5 terminal.
   So `mt5_bridge/` is a dedicated bridge service on a **separate Windows machine or Windows VPS**,
   where the terminal is logged into a **Vantage demo account**. The final Windows host is chosen at
@@ -890,42 +1020,44 @@ unexplained orders.
   closes. No generic "execute anything" endpoint.
 - **Demo guard, checked in the bridge and again in Stellar before every order:** the account's
   trade mode must report *demo*; the login must be on a configured allowlist; the server name must
-  match the configured demo server. Any mismatch → `order.preflight_failed(not_demo)` and the
+  match the configured demo server. Any mismatch → `order.preflight.failed` (`not_demo`) and the
   breaker trips.
-- **Symbol mapping:** Stellar's symbol map (Phase 3) gains the broker column for XAU/USD,
+- **Symbol mapping:** Stellar's symbol map (Foundation Phase 2) gains the broker column for XAU/USD,
   EUR/USD, USD/JPY and NAS100 (§8 Q2). Vantage may use suffixes or its own index name for NAS100;
   confirm this against the demo server's symbol list. Contract size, lot step, minimum volume and
   digits come from the broker, never hard-coded.
 - **MT5 as a data source (§8 Q3):** MT5 may be added as an implementation of the
-  `MarketDataSource` interface (bars and quotes). It is a separate component from the execution
-  client, even though both talk to the same bridge. Analysts for these markets are `market` +
-  `news` (+ the future FX Session Analyst); fundamentals and SEC data do not apply.
-- **Cadence:** TradingAgents is a daily, date-based system (one `trade_date`, a 5-day holding
-  period by default), and a full run costs many LLM calls and minutes of time. Stellar therefore
-  trades at a **daily or multi-day cadence** (for example one run per symbol per day, after a
-  chosen session close), not intraday.
-- **Reconciliation:** the Position Monitor compares the broker's positions with Stellar's ledger on
-  a timer; any mismatch trips the breaker.
+  `MarketDataSource` interface (bars and quotes). It is a separate component from the MT5
+  Execution Agent (E2), even though both talk to the same bridge. The analysis chain for these
+  markets is the Foundation roster (research chain, market specialists, technical agents);
+  fundamentals and SEC data do not apply.
+- **Cadence:** set by the configured timeframe profile (Foundation §7). The LLM chain runs at most
+  at the profile's setup cadence, and only when a Setup exists; faster entry timing is
+  deterministic. No profile is chosen yet (Foundation D-7); the owner's D1/H4 → H1/M15 → M5/M1
+  interest is a hypothesis to test.
+- **Reconciliation:** the Execution Checker (P4) compares the broker's positions with Stellar's
+  ledger on a timer; any mismatch trips the breaker.
 - **Secrets:** broker credentials live only on the bridge host (the terminal's own login); Stellar
   holds a bridge token in its environment, never in config files, events or logs.
 
 **Gate:** two or more weeks on the demo account with complete reconciliation, zero demo-guard
-bypasses, and every order traceable from `decision.final` to `position.closed` in the event store.
+bypasses, and every order traceable from `decision.final.created` to `trade.closed` in the event
+store.
 
-### Phase 5 — Visual station v1
+### Theme LD-5 — Visual station v1 *(Foundation Phase 9)*
 
 - Front end in `stellar_ui/`: a station view in the §2 art direction (§8 Q7), a **semi-realistic,
   stylized sci-fi interior, not pixel art**, plus HTML panels. The rendering technology (for example
   a WebGL renderer with pre-rendered or 3D-modelled rooms) is chosen at the start of this phase to
   fit that look. The back end is in `stellar/api/` (REST + WebSocket).
-- **Single-user and local only (§8 Q8).** The API and UI bind to `localhost` on the owner's Mac.
-  There are no user accounts, no multi-user authentication and no remote or public access in v1.
-  To avoid ruling out a future remote-viewing mode, the UI only consumes the event stream and
-  snapshots, and the API keeps read-only viewing endpoints separate from owner actions such as a
-  breaker reset. Remote viewing itself is not built.
+- **Single-user, local and read-only (§8 Q8, R-5).** The API and UI bind to `localhost` on the
+  owner's Mac. There are no user accounts, no multi-user authentication and no remote or public
+  access in V1. The UI only consumes the event stream and snapshots; it has **no write actions**,
+  including no breaker reset. Remote viewing is not built, and nothing here prevents adding it
+  later.
 - All ten rooms from §2 as static art; agents as avatars with **status badges** (§5.2).
 - Agents **fade/teleport** between rooms (no pathfinding yet).
-- Room panels, agent cards, the signal timeline, the event log and the top metrics strip.
+- Room panels, agent cards, the proposal timeline, the event log and the top metrics strip.
 - **Replay mode** for past runs.
 - Alert levels (§5.4) driving station lighting.
 - Accessibility: icons plus colour, reduced motion, keyboard navigation, readable at laptop width.
@@ -933,13 +1065,14 @@ bypasses, and every order traceable from `decision.final` to `position.closed` i
 **Gate:** someone watching a live run can say, at any moment, which agents are working, what the
 decision is and whether anything is blocked; this matches the event log exactly.
 
-### Phase 6 — Visual station v2 (movement and life)
+### Theme LD-6 — Visual station v2: movement and life *(Foundation Phase 10)*
 
 - Pathfinding along corridors; walk animations; data-crystal hand-offs; debate staging with
   spotlights and the tug-of-war bar.
 - Shuttle launches from the Execution Bay; the docking board of positions.
-- Habitat life: lounge and café routines, billiards between off-duty agents, the Café Host.
-  All seeded and deterministic (§5.3 rule 5).
+- Habitat life: lounge and café routines, billiards between off-duty agents, the Café Host; the
+  Station Medic and Quartermaster personas of the Operational Wellbeing Monitor; the Vault
+  personas of the Risk Engine. All seeded and deterministic (§5.3 rule 5).
 - Day/night lighting tied to FX sessions; optional ambient sound.
 - Time-lapse replay of a whole day; the "hall of fame" (calibration leaders, with sample sizes).
 - Performance budget: 60 fps with the full roster on a mid-range laptop; animation never delays
@@ -952,25 +1085,53 @@ disabling the UI entirely does not change trading behaviour.
 
 ## 8. Decisions on the open questions
 
-The owner answered the Phase 1 open questions on 2026-09-29. Each decision is applied in the
+### 8.1 Owner answers to the open questions
+
+The owner answered the LD-1 (Foundation Phase 0) open questions on 2026-09-29. Each decision is applied in the
 sections listed.
 
 | # | Question | Decision | Applied in |
 |---|---|---|---|
-| Q1 | Where does the MT5 terminal run? | Stellar runs on the owner's **Mac** for now. MT5 execution will later run on a **separate Windows machine or Windows VPS** through a dedicated bridge service. **The final Windows host is not chosen yet.** | §7 Phase 1 gate, Phase 4 (Host) |
-| Q2 | Which markets first? | **XAU/USD, EUR/USD, USD/JPY, NAS100.** | §3.3, §6.4, §7 Phase 3 and Phase 4 (Symbol mapping) |
-| Q3 | Where does FX analysis data come from? | A **Stellar-owned market-data abstraction**, not a direct dependency on upstream's stock-oriented providers. It is designed so **MT5 can become a future live/demo data source**. The **data layer stays separate from the execution layer.** | §1.1 principle 8, §1.4, §3.3, §7 Phase 3 and Phase 4 |
+| Q1 | Where does the MT5 terminal run? | Stellar runs on the owner's **Mac** for now. MT5 execution will later run on a **separate Windows machine or Windows VPS** through a dedicated bridge service. **The final Windows host is not chosen yet.** | §7 LD-1, LD-4 (Host) |
+| Q2 | Which markets first? | **XAU/USD, EUR/USD, USD/JPY, NAS100.** | §3.4, §6.4, §7 LD-3 and LD-4 (Symbol mapping) |
+| Q3 | Where does FX analysis data come from? | A **Stellar-owned market-data abstraction**, not a direct dependency on upstream's stock-oriented providers. It is designed so **MT5 can become a future live/demo data source**. The **data layer stays separate from the execution layer.** | §1.1 principle 8, §1.4, §1.6, §7 LD-3 and LD-4 |
 | Q4 | LLM provider, models and daily budget? | **Model-provider agnostic.** Lower-cost, fast models for routine agents; stronger models reserved for higher-value reasoning and manager roles. **Exact models and the daily budget stay configurable** until call volume and cost are benchmarked. | §1.1 principle 7 |
-| Q5 | Initial risk limits? | **No final risk numbers are hard-coded.** Build configurable, deterministic risk controls; validate thresholds in backtests and demo first. | §6.4, §7 Phase 3 |
-| Q6 | Who can reset the circuit breaker? | **Only the human owner.** Agents may trigger a stop but can **never reactivate trading** themselves. | §3.6, §4.3 (Risk), §5.4, §7 Phase 3 |
-| Q7 | Art direction? | A **futuristic spaceship / trading-station interior. Not pixel art.** A semi-realistic, stylized sci-fi look with large screens, command rooms, corridors, analysis stations, risk control, execution bay, lounge, café, billiard room and wellbeing areas. | §2.1, §7 Phase 5 |
-| Q8 | Multi-user or remote access? | **V1 is single-user only.** No multi-user authentication and no remote or public access. The design must not prevent a future remote-viewing mode, but it is **not built now**. | §7 Phase 5 |
+| Q5 | Initial risk limits? | **No final risk numbers are hard-coded.** Build configurable, deterministic risk controls; validate thresholds in backtests and demo first. | §6.4, §7 LD-3 |
+| Q6 | Who can reset the circuit breaker? | **Only the human owner.** Agents may trigger a stop but can **never reactivate trading** themselves. | §3.7, §4.3 (Risk and circuit breaker), §5.4, §7 LD-3 |
+| Q7 | Art direction? | A **futuristic spaceship / trading-station interior. Not pixel art.** A semi-realistic, stylized sci-fi look with large screens, command rooms, corridors, analysis stations, risk control, execution bay, lounge, café, billiard room and wellbeing areas. | §2.1, §7 LD-5 |
+| Q8 | Multi-user or remote access? | **V1 is single-user only.** No multi-user authentication and no remote or public access. The design must not prevent a future remote-viewing mode, but it is **not built now**. | §7 LD-5 |
+
+### 8.2 Further architectural decision
 
 The owner approved the design, together with one further architectural decision:
 
 | # | Topic | Decision | Applied in |
 |---|---|---|---|
-| D1 | Data and analysts for the first four markets | For XAU/USD, EUR/USD, USD/JPY and NAS100, **do not patch or modify upstream TradingAgents data-provider code.** Use **Stellar-owned market-data adapters** and **Stellar-owned market/technical analysts**. **Reuse upstream components downstream where compatible**: debate and research, trader, managers, memory and orchestration concepts. **Upstream repository code stays untouched.** | §1.4, §1.5 (C12), §1.6, §3.3, §7 Phase 3 |
+| D1 | Data and analysts for the first four markets | For XAU/USD, EUR/USD, USD/JPY and NAS100, **do not patch or modify upstream TradingAgents data-provider code.** Use **Stellar-owned market-data adapters** and **Stellar-owned market/technical analysts**. **Reuse upstream components downstream where compatible**: debate and research, trader, managers, memory and orchestration concepts. **Upstream repository code stays untouched.** | §1.4, §1.5 (C12), §1.6, §3.4, §7 LD-3 |
+
+### 8.3 Reconciliation with the Foundation Plan (2026-09-30)
+
+The owner approved `docs/STELLAR_FOUNDATION_PLAN.md` v0.3, including its §13.1 reconciliation
+decisions as canonical (Foundation D-16) and the V1 scope decision (Foundation D-15). This
+document was then updated, documentation only, so the two agree. No new architecture was added
+here beyond the approved Foundation Plan.
+
+| Ref | Canonical decision | Applied in this document |
+|---|---|---|
+| R-1 | **Setup-first rating mapping:** the PM's rating is the approval strength of a deterministic Setup; Buy → take; Overweight → per D-9 (default no trade); Hold / Underweight / Sell → do not take; REVIEW → no trade, owner flag | §1.5 (C7), §1.6, §1.7, §3.6, §4.3 (`trade.proposed`), §6.1, §6.3, §7 LD-3 (replaces the v0.3 flat-book / long / short table) |
+| R-2 | **Foundation phase numbering** for implementation; this document's phases become themes LD-1 to LD-6 mapped to Foundation phases | Header, §1.1, §1.4, §1.5 (C2 note), §4.5, §6.5, §7 (all themes), §8.1 |
+| R-3 | **Event names** `<domain>.<entity>.<past-tense verb>`; Foundation §10.1 is the V1 minimum | §3.2, §4.2, §4.3, §4.4, §4.5, new §4.6 (old → new map), §5, §6, §7 |
+| R-4 | **Foundation rosters;** v0.3 agents mapped to new roles or visual personas | §1.2, §1.4, §1.7, §2.2, §2.3, §3 (rewritten), §5.1, §5.2, §6.2, §7 |
+| R-5 | **Breaker reset:** owner only, via a local owner command in V1; the UI shows state only; a UI reset only later with authentication | §3.7, §4.3 (`circuit_breaker.*`), §5.4 (RED), §7 LD-3, LD-5 |
+| R-6 | **Research chain** (research → validation → macro/causal → market specialists) | §1.2, §1.4, §1.6, §1.7, §2.2, §2.3, §3.3, §3.4 |
+| D-15 | **V1 = paper**; the MT5 / Vantage demo is a separate gate after a stable paper V1; no profitability implied | §1.1 principle 6, §1.7, §3.8, §5.5, §6.1, §7 LD-4 |
+
+Consequential edits, made only where this document contradicted the approved Foundation Plan:
+the Stellar Journal as system of record, with the upstream memory log optional (Foundation U16,
+D-10; §1.6, §4.3, §4.4); settlement from Stellar's own trades rather than upstream's alpha against
+SPY (Foundation U17, L10; §6); ablation on the Stellar simulator rather than upstream's backtest
+(Foundation U27; §6.3); cadence set by configurable timeframe profiles with no profile chosen
+(Foundation §7, D-7; §7 LD-4); and a file importer first for market data (Foundation D-1; §7 LD-3).
 
 ---
 
@@ -989,7 +1150,7 @@ The owner approved the design, together with one further architectural decision:
 | `tradingagents/portfolio.py` | `PortfolioContext` and `Position` for passing real holdings |
 | `tradingagents/memory/log.py`, `memory/settlement.py` | Decision records and outcome (raw and alpha return) |
 | `tradingagents/backtest.py` | Grid evaluation for ablation and calibration |
-| `tradingagents/dataflows/router.py`, `symbols.py` | Vendor chains; symbol normalisation (stocks and crypto; FX to be assessed) |
+| `tradingagents/dataflows/router.py`, `symbols.py` | Vendor chains; symbol normalisation (maps FX/CFD symbols to Yahoo proxies; not used for the four markets, Foundation L2) |
 | `tradingagents/default_config.py` | Config keys and `TRADINGAGENTS_*` overrides |
 | `cli/run.py`, `cli/display.py`, `cli/stats_handler.py` | Reference implementation of a streaming run, per-agent status and token counting |
 | `tests/test_layering.py` | Precedent for enforcing layering rules with a test |
