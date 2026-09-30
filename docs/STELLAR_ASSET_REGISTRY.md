@@ -47,7 +47,7 @@
 | 2.3 | **Topology is untouchable:** the 2.5D conversion keeps the approved geometry exactly (Topology §2–§7). Art may round a hub rim or rotate an R room; it never adds, moves or hides a door, and never opens a gap |
 | 2.4 | **Art shape vs walk shape:** round rims and radially rotated R rooms are drawn smooth, while the walk tiles stay stepped underneath (A4). Furniture inside an R room follows that room's own axis |
 | 2.5 | **Modular footprints** in whole tiles, in the room's own axis. Walls sit on tile edges. Curved rim walls (`WAL-002`) are drawn over the rasterised rim edge |
-| 2.6 | **Cutaway:** camera-facing walls use `WAL-008`, so interiors are always visible. Doors in cutaway walls render as floor thresholds |
+| 2.6 | **Cutaway:** camera-facing walls use `WAL-008`, so interiors are always visible. A door in a cutaway wall keeps a **visible door frame, a threshold and a structural opening**; it must never read as a random gap in the floor (Visual Bible C4) |
 | 2.7 | **Four orientations** for rotatable furniture (eight for R-room furniture, which follows the room axis); **eight facings** for characters |
 | 2.8 | **Depth layers:** floor → decals → low props → bodies / mid props → tall props / screens → walls → ceiling. The depth key is x + y plus the layer (A21); it is decided in the renderer spike |
 | 2.9 | **State is never colour alone:** every rendered state pairs colour with an icon, text or shape |

@@ -866,6 +866,8 @@ you can read at a glance.
 
 - Warm off-white composite wall panels with soft seams; brushed titanium trim; dark smoked glass for
   displays; matte deep-navy floors.
+- Secondary: dark graphite for consoles, technical areas and accents. The vessel is never fully
+  dark (Visual Bible C1).
 - **Risk Control Room (L10):** gunmetal, darker and colder, with visible hull ribs and restricted
   markings; no armoured bulkhead, blast door or airlock (security is logical).
 - **Habitat:** light wood-like laminates, fabric, plants, warm light.
@@ -873,6 +875,8 @@ you can read at a glance.
 ### 14.3 Lighting
 
 - Soft indirect cove lighting along curved ceilings; pools of light over consoles.
+- Environment light may be cyan / blue, but **lighting alone never communicates a data state**:
+  data colours follow the Screen Registry (Visual Bible C7).
 - Station alert level tints the cove lighting (GREEN neutral-white, BLUE cool accent, AMBER warm
   strips, RED deep red pulses), always paired with a banner and icon.
 - Windows show space, distant stars and a slowly turning planet; optional day/night tint tied to FX
