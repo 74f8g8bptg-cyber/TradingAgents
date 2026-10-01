@@ -167,7 +167,7 @@ Subscribe with `life.on(type, fn)` (or `"*"`). Each event is `{ type, t, ambient
 
 ## I. Future sound integration points
 
-No audio is played anywhere. A future sound layer subscribes to the bus. `StellarLife.SOUND_HOOKS` suggests one cue per event:
+Sound V1 now subscribes to this bus (`docs/STELLAR_SOUND_SYSTEM_V1.md`). The Life engine itself still plays no audio. `StellarLife.SOUND_HOOKS` suggests one cue per event:
 
 | Event | Cue |
 |---|---|
@@ -232,5 +232,4 @@ Also tested:
 - Traffic right-of-way and soft separation in corridors (plan §16).
 - An animated door leaf.
 - Real telemetry driving `WORKING`, plus the `agent.resting` recovery pods.
-- Sound.
 - A day / night clock (the clock abstraction is `step(dtMs)` and `t`; work and rest periods can be layered on it).

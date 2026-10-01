@@ -76,6 +76,41 @@ const cases = [
     if (shotDir) await tab.screenshot({ path: path.join(shotDir, `${name}.png`) });
     console.log(`ok  ${name} (${state.items} scene items)`);
   }
+  // sound: off by default; Sound (a user gesture) builds the procedural engine; a storm stays inside the voice budget,
+  // every one-shot is released, loops are a fixed set, disabling stops them all; the canvas is untouched by sound
+  {
+    await tab.goto("file://" + page + "?life=0&x=1215&y=696&z=2.6");
+    await tab.waitForTimeout(300);
+    const before = await tab.evaluate(() => ({ on: !!window.__stellar.sound(), btn: document.querySelector("#t-sound").classList.contains("on") }));
+    if (before.on || before.btn) errors.push("sound must be off until the user enables it");
+    await tab.click("#t-sound");
+    await tab.waitForTimeout(400);
+    const st = await tab.evaluate(async () => {
+      const s = window.__stellar.sound(), d = window.__stellar.director();
+      const r = { state: s.state, loops: s.loopCount, mixer: document.querySelector("#mixer").style.display };
+      await new Promise((ok) => setTimeout(ok, 1500)); r.amb = s.level();
+      for (let i = 0; i < 3000; i++) d.onEvent({ type: "DOOR_OPEN", t: i, door: "DR-CMD-HAB" });
+      for (let i = 0; i < 3000; i++) d.onEvent({ type: "AGENT_SIT", t: i, actor: "CHR-043", room: "H-HAB" });
+      await new Promise((ok) => setTimeout(ok, 400)); r.gated = s.created;
+      s.apply({ beds: {}, plays: Array.from({ length: 100 }, (_, i) => ({ cue: "door.open.standard", group: "DOORS", gain: 0.05, pan: 0, rate: 1, variant: i % 3 })) });
+      r.peak = s.active; r.created = s.created;
+      await new Promise((ok) => setTimeout(ok, 4000)); r.after = s.active; r.loops2 = s.loopCount;
+      const t0 = performance.now(); let n = 0; await new Promise((ok) => { (function f() { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else ok(); })(); }); r.fps = n / 2;
+      window.__stellar.setSound(false); r.off = s.state; r.loops3 = s.loopCount;
+      return r;
+    });
+    if (st.state !== "running" && st.state !== "suspended") errors.push(`sound engine not created (${st.state})`);
+    if (st.mixer !== "flex") errors.push("mixer not shown with sound on");
+    if (!(st.amb.rms > 0.0005 && st.amb.peak < 0.9)) errors.push(`station ambience not audible or clipping (rms ${st.amb.rms}, peak ${st.amb.peak})`);
+    if (!(st.loops > 10)) errors.push(`ambience loops missing (${st.loops})`);
+    if (st.loops2 !== st.loops) errors.push(`ambience loops grew (${st.loops} -> ${st.loops2})`);
+    if (st.peak > 14 || st.peak < 10) errors.push(`voice budget not enforced (${st.peak})`);
+    if (!(st.created > 0)) errors.push("no sound was synthesised for the door storm");
+    if (st.after > 3) errors.push(`one-shots not released (${st.after} still active)`);
+    if (st.off !== "off" || st.loops3 !== 0) errors.push("disabling sound must stop every loop");
+    if (st.fps < 30) errors.push(`sound costs frame rate (${st.fps} fps)`);
+    console.log(`ok  sound (ambience rms ${st.amb.rms.toFixed(4)} peak ${st.amb.peak.toFixed(3)}, ${st.loops} loops, storm gated to ${st.gated} voices, 100-voice burst capped at ${st.peak}, ${st.after} left after 4 s, ${st.fps} fps)`);
+  }
   await browser.close();
   if (errors.length) {
     console.error("FAILED:\n  " + errors.join("\n  "));

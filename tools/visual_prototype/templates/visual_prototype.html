@@ -45,6 +45,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
 #insp .x{position:absolute;right:8px;top:6px;border:none;font-size:16px}
 #legend{right:240px;top:16px;padding:8px 10px;font-size:11px;color:var(--muted);display:none;width:220px}
 #legend div{display:flex;gap:6px;align-items:center;margin:2px 0}
+#mixer label{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted)}#mixer input{width:58px;accent-color:var(--accent)}
 @media (max-width:900px){#rooms{top:auto;bottom:16px;max-height:40vh;width:180px}#banner{display:none}#insp{right:16px;bottom:auto;top:200px}#mini{display:none}}
 </style>
 </head>
@@ -72,6 +73,11 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
     <button id="t-theme" title="Panel theme">Theme</button>
     <button id="t-vocab" title="Stellar visual vocabulary: every construction family on its own">Vocabulary</button>
     <button id="t-life" title="Ambient life (cosmetic): idle agents move between their workstation, their room and the Habitat; the resident dog roams H-HAB and R4. Seeded and replayable; no task is ever implied">Life</button>
+    <button id="t-sound" title="Enable sound: station and room ambience, doors, footsteps, seats, the fountain, the cinema and the dog, all driven by Life events (procedural; no audio files). Off until you press it (browser autoplay rules)">Sound</button>
+  </div>
+  <div class="row" id="mixer" style="display:none">
+    <label>Master<input type="range" min="0" max="100" data-cat="MASTER"></label><label>Ambience<input type="range" min="0" max="100" data-cat="AMBIENCE"></label>
+    <label>Effects<input type="range" min="0" max="100" data-cat="EFFECTS"></label><label>Music<input type="range" min="0" max="100" data-cat="MUSIC"></label>
   </div>
 </div>
 <div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · <span id="banner-life">agents at home anchors</span></div>
@@ -402,6 +408,7 @@ function rackForm(b){const bb=[b[0]+4,b[1]+1,b[2]-0.5,b[3]-1];return{h:13,draw()
 // comes from geometry.py; display identities and content from the registries.
 /*VOCABULARY*/
 /*LIFE*/
+/*SOUND*/
 const CAL_WING=new Set(["L1","L2","L3","L4","L6","L7","L9","L10"]);const CAL_CORR=new Set(["COR-N","COR-S"]);
 const CAL_ROOMS=new Set(["H-CMD","H-LAB","H-HAB",...CAL_WING]);
 const tileRoom=new Map();for(const [c,r,n] of D.tiles)tileRoom.set(c+","+r,n);
@@ -1196,14 +1203,26 @@ function lifeItems(){const out=new Map();if(!LIFE_ON||!life||!scene.cells)return
     for(let gx=Math.floor(x0/CS);gx<=Math.floor(x1/CS);gx++)for(let gy=Math.floor(y0/CS);gy<=Math.floor(y1/CS);gy++)for(const i of scene.cells.get(gx+"|"+gy)||[]){if(i<=ins)continue;const S=scene.items[i],sb=S.sb;if(sb[2]<x0||x1<sb[0]||sb[3]<y0||y1<sb[1])continue;if(behind(S,it)||(!behind(it,S)&&S.key<=it.key))ins=i}
     if(!out.has(ins))out.set(ins,[]);out.get(ins).push(it)}
   for(const L of out.values())L.sort((p,q)=>p.key-q.key);return out}
-function setLife(on){LIFE_ON=on;if(on&&!life)lifeSetup();$("#t-life").classList.toggle("on",on);$("#banner-life").textContent=on?"ambient life (cosmetic, seeded): idle agents and the resident dog":"agents at home anchors";buildScene();dirty=true}
+function setLife(on){LIFE_ON=on;if(on&&!life){lifeSetup();if(typeof soundAttach==="function")soundAttach()}$("#t-life").classList.toggle("on",on);$("#banner-life").textContent=on?"ambient life (cosmetic, seeded): idle agents and the resident dog":"agents at home anchors";buildScene();dirty=true}
+// ---------------------------------------------------------------- SOUND LAYER (docs/STELLAR_SOUND_SYSTEM_V1.md)
+// Life emits events and knows nothing about audio; the Director (pure) listens on the Life bus and turns events and Life
+// state into sound requests and ambience levels; the Engine (Web Audio) synthesises them. Off until the user presses
+// Sound (browser autoplay rules). The Director ticks every 100 ms of real time, never per rendered frame.
+let SOUND_ON=false,sound=null,director=null,soundUnsub=null,soundAcc=0,soundLast=null;
+function soundAttach(){if(soundUnsub){soundUnsub();soundUnsub=null}if(SOUND_ON&&life&&director)soundUnsub=life.on("*",ev=>director.onEvent(ev))}
+function setSound(on){SOUND_ON=on;$("#t-sound").classList.toggle("on",on);$("#mixer").style.display=on?"flex":"none";
+  if(on){if(!sound)sound=StellarSound.createEngine();if(!director)director=StellarSound.createDirector({D,world:life?life.world:StellarLife.buildWorld(D),seed:new URLSearchParams(location.search).get("seed")||"stellar"});sound.enable();
+    document.querySelectorAll("#mixer input").forEach(i=>{i.value=Math.round(sound.volume(i.dataset.cat)*100)})}
+  else if(sound)sound.disable();soundLast=null;soundAttach()}
+function soundTick(t){if(!SOUND_ON||!sound||!director)return;if(soundLast===null){soundLast=t;return}soundAcc+=t-soundLast;soundLast=t;if(soundAcc<StellarSound.TICK)return;const dt=Math.min(soundAcc,1000);soundAcc=0;
+  const w=V.inv(cam.cx,cam.cy);const lf=life&&LIFE_ON?{snapshot:life.snapshot(),cinema:life.cinema}:{snapshot:[],cinema:"EMPTY"};sound.apply(director.tick(dt,{x:w[0],y:w[1],z:cam.z},lf))}
 // ---------------------------------------------------------------- boot
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+"px";cv.style.height=H+"px";dirty=true}
 addEventListener("resize",resize);resize();
 const q=new URLSearchParams(location.search);
 V=VIEWS[VIEWS[q.get("view")]?q.get("view"):"isoR"];viewButtons();
 for(const k of ["grid","anchors","preview"])if(q.get(k)==="1")toggle(k,"#t-"+k);if(q.get("labels")==="0")toggle("labels","#t-labels");
-LIFE_ON=q.get("life")!=="0";if(LIFE_ON)lifeSetup();$("#t-life").classList.toggle("on",LIFE_ON);if(LIFE_ON)$("#banner-life").textContent="ambient life (cosmetic, seeded): idle agents and the resident dog";$("#t-life").onclick=()=>setLife(!LIFE_ON);
+LIFE_ON=q.get("life")!=="0";if(LIFE_ON)lifeSetup();$("#t-life").classList.toggle("on",LIFE_ON);if(LIFE_ON)$("#banner-life").textContent="ambient life (cosmetic, seeded): idle agents and the resident dog";$("#t-life").onclick=()=>setLife(!LIFE_ON);$("#t-sound").onclick=()=>setSound(!SOUND_ON);document.querySelectorAll("#mixer input").forEach(i=>i.oninput=()=>sound&&sound.setVolume(i.dataset.cat,i.value/100));
 buildScene();
 {const p=V.P(+(q.get("x")||700),+(q.get("y")||600));cam.cx=p[0];cam.cy=p[1];cam.z=+(q.get("z")||2)}
 if(q.get("focus")){const f=q.get("focus");focusRoom(f);if(anim){anim(performance.now()+1e6)}if(q.get("z"))setZoom(+q.get("z"))}
@@ -1213,9 +1232,9 @@ updateZoomUI();
 let lastSec=-1;
 function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec!==lastSec){lastSec=sec;dirty=true}
   if(LIFE_ON&&life&&!lifeFrozen&&!VOCAB_MODE){if(lifeLast!==null){life.step((t-lifeLast)*LIFE_SPEED);dirty=true}lifeLast=t}else lifeLast=null;
-  if(dirty)draw();requestAnimationFrame(loop)}
+  soundTick(t);if(dirty)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems};
+window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems,sound:()=>sound,director:()=>director,setSound};
 </script>
 </body>
 </html>

@@ -20,6 +20,8 @@ These are **design tools, not production code**. Nothing here is imported by `st
 | `templates/geometry_preview.html`, `templates/visual_prototype.html` | The page templates (renderer code). The data is injected at `/*DATA*/null` |
 | `templates/stellar_vocabulary.js` | The reusable **Stellar Visual Vocabulary** (`docs/STELLAR_VISUAL_VOCABULARY_V1.md`): construction grammar, materials, screens, and the workstation, console, equipment, chair, table, wall, floor and small-prop families. `render.py` inlines it into the prototype at `/*VOCABULARY*/`. Rooms compose these families; they do not redefine them. The page's **Vocabulary** button (`?vocab=1`) renders every family on its own |
 | `templates/stellar_life.js` | The **life layer** (`docs/STELLAR_LIFE_SYSTEM_V1.md`): ambient activity, navigation on the geometry model, doors, cinema session, resident dog and the event hooks. Pure and seeded; `render.py` inlines it at `/*LIFE*/`. The page's **Life** button (`?life=0` for the static baseline, `?lifeT=SECONDS` to freeze a simulated time, `?seed=`, `?speed=`) |
+| `templates/stellar_sound.js` | The **sound layer** (`docs/STELLAR_SOUND_SYSTEM_V1.md`): a pure, seeded Director (Life events and state → sound requests and ambience levels) and a procedural Web Audio Engine (no audio files). `render.py` inlines it at `/*SOUND*/`. Off until the page's **Sound** button is pressed |
+| `sound_test.js` | Deterministic sound-Director tests (Node only): event coverage, unknown events, the dog and reserved-room restrictions, budget, smooth room transitions, R3 isolation, cinema and R1 states, a Life soak, determinism |
 | `life_test.js` | Deterministic life-layer tests (Node only): work, corridors, H-HAB, R1–R4, the dog rule, reserved rooms, furniture, doors, caps, determinism |
 | `smoke_test.js` | Optional browser smoke test (Node + Playwright) |
 
@@ -50,6 +52,9 @@ NODE_PATH="$(npm root -g)" node tools/visual_prototype/smoke_test.js [screenshot
 
 # Life layer: deterministic scenario and soak tests (Node only, no browser)
 node tools/visual_prototype/life_test.js
+
+# Sound layer: deterministic Director tests (Node only, no browser or audio device)
+node tools/visual_prototype/sound_test.js
 ```
 
 It opens the committed page in every camera view, on the key room focuses and in the vocabulary catalogue. It fails on any page error, and it confirms that the default camera is Iso · right.

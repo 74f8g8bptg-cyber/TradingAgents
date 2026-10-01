@@ -12,6 +12,9 @@ VOCABULARY_FILE = "stellar_vocabulary.js"
 # The life layer (ambient activity, navigation, doors, event hooks) is a pure module inlined at this marker
 LIFE = "/*LIFE*/"
 LIFE_FILE = "stellar_life.js"
+# The sound layer (director + procedural Web Audio engine) is inlined at this marker
+SOUND = "/*SOUND*/"
+SOUND_FILE = "stellar_sound.js"
 
 
 def _fill(template_name, data):
@@ -24,6 +27,10 @@ def _fill(template_name, data):
         )
     if LIFE in html:
         html = html.replace(LIFE, (TEMPLATES / LIFE_FILE).read_text(encoding="utf-8").rstrip("\n"))
+    if SOUND in html:
+        html = html.replace(
+            SOUND, (TEMPLATES / SOUND_FILE).read_text(encoding="utf-8").rstrip("\n")
+        )
     return html.replace(PLACEHOLDER, json.dumps(data, separators=(",", ":")))
 
 

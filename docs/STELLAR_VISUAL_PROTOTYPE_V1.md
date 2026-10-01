@@ -46,6 +46,7 @@ StarNet was used as a spatial and technical reference only. No StarNet art, spri
 | Anchors | Debug: every anchor; names from 3× |
 | Hover / click | Tooltip and inspector for agents, displays, furniture and doors (IDs, sources, registry status) |
 | Life | **Ambient life** (`docs/STELLAR_LIFE_SYSTEM_V1.md`), on by default. Idle agents move between their workstation, their own room and the Habitat (H-HAB, R1–R4), and the resident dog roams H-HAB and R4. It is seeded and replayable, and no task is ever implied: the badges keep "idle". `?life=0` shows the static baseline, `?lifeT=SECONDS` freezes a simulated time, and `?seed=` and `?speed=` are also available |
+| Sound | **Off until pressed** (browser autoplay rules). Station and room ambience, doors, footsteps, seats, the fountain, the cinema and the dog, all driven by Life events and procedurally synthesised (no audio files). A compact Master / Ambience / Effects / Music mixer appears while it is on (`docs/STELLAR_SOUND_SYSTEM_V1.md`) |
 | State preview | **Design sample only**: producer-backed agents take their working pose, their console pool light (`LGT-002`) and their first role-state word. A banner marks it as *not telemetry*. Off by default |
 
 ## 3. What is implemented (first visual pass)
@@ -135,6 +136,7 @@ StarNet was used as a spatial and technical reference only. No StarNet art, spri
 | Self-contained: no external URL, image or StarNet reference | pass |
 | Stellar tests / ruff | 891 passed / all checks passed |
 | Life layer: `node tools/visual_prototype/life_test.js` (work, corridors, H-HAB, R1–R4, the dog rule, reserved rooms, furniture, doors, caps, determinism) | pass |
+| Sound layer: `node tools/visual_prototype/sound_test.js`, plus the browser `sound` case (engine, voice budget, release, loops, output level) | pass |
 | Rebuild test: `python tools/visual_prototype/build.py --check` rebuilds both pages from the pipeline and compares them byte for byte | pass |
 
 The build and validation pipeline lives in [`tools/visual_prototype/`](../tools/visual_prototype/README.md), separate from production code.
