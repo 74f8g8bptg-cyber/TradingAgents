@@ -125,7 +125,7 @@ order, L10 as the only approval authority, no UI-driven order, and a journaled r
   - `DR-S-CMD` at about **8 o'clock**, to `COR-S` (lower corridor);
   - `DR-CMD-HAB` at **3 o'clock**, to `H-HAB` (the two hub rims touch here).
 - **Closed contact:** L10's north-east corner touches the rim at about 7–8 o'clock. The wall there is solid (Topology v2 §7): no door, no opening, no furniture that suggests one.
-- **Cutaway rule** (Visual Bible C4): the camera-facing rim (south / south-east arc) is cut away. Any door there keeps a visible frame, threshold and structural opening.
+- **Cutaway rule** (Visual Bible C4): the camera-facing rim is cut away. With the frozen default camera **Iso · right** (from the north-east; Visual Prototype V1 §0) that is the **north / north-east arc** (it was the south / south-east arc for the earlier camera). Any door there keeps a visible frame, threshold and structural opening.
 
 ### 4.2 Schematic (not to scale; clock sectors)
 

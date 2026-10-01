@@ -31,8 +31,9 @@
   - `DR-N-LAB` at about **2 o'clock**, leading to `COR-N` (the upper corridor, toward L1–L5);
   - `DR-S-LAB` at about **4 o'clock**, leading to `COR-S` (the lower corridor, toward L6–L10).
 - **No other openings.**
-- **Cutaway** (Visual Bible C4): the camera-facing (south / south-east) arc is cut away. `DR-S-LAB`,
-  if it falls in that arc, keeps a visible frame, threshold and structural opening.
+- **Cutaway** (Visual Bible C4): the camera-facing arc is cut away. With the frozen default camera **Iso · right**
+  (from the north-east; Visual Prototype V1 §0) that is the **north / north-east** arc, which includes `DR-N-LAB`; it keeps
+  a visible frame, threshold and structural opening (it was the south / south-east arc and `DR-S-LAB` for the earlier camera).
 
 ### 2.2 Schematic (not to scale; clock sectors)
 

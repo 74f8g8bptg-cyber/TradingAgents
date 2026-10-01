@@ -327,7 +327,7 @@ Registry v2 assignments. Reserved rooms follow VB-6 (Part D).
 | # | Decision | Status |
 |---|---|---|
 | VB-1 | Resolve C1–C7 | **Closed** (Part C) |
-| VB-2 | Exact camera elevation (about 45° horizontal is set) | **Open** |
+| VB-2 | Exact camera elevation (about 45° horizontal is set) | **Open** (elevation only). The camera **direction** is frozen: **Iso · right**, from the north-east (Visual Prototype V1 §0) |
 | VB-3 | Exact tile scale | **Open** (Topology v2 TP-1) |
 | VB-4 | Exact colour values: uniforms, lighting, door indicators, tested under the alert tints and colour-blind simulation | **Open** |
 | VB-5 | Door indicator rules | **Closed**: normal / restricted (icon + marking, optional amber) / blocked (red + icon + text, only from real system states: today `circuit_breaker.tripped`) |

@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Status** | V1, **approved by the owner**; CD-1…CD-8 decided, CD-9 / CD-10 open (§13, §14). Visual design specification only: no code, no images, no assets, no audio, no runtime change, no trading logic |
+| **Status** | V1, **approved by the owner**; CD-1…CD-8 and CD-11 decided, CD-9 / CD-10 open (§13, §14). Visual design specification only: no code, no images, no assets, no audio, no runtime change, no trading logic |
 | **Spaces** | `COR-N` (upper corridor) and `COR-S` (lower corridor), both ACTIVE transit spaces (Room Registry v2 §5; Floor Plan rev C §7) |
 | **Source of truth** | Geometry and doors: `STELLAR_MASTER_FLOOR_PLAN_V1.md` rev C §6–§8, `STELLAR_STATION_TOPOLOGY.md` v2 §3, §7–§8. Function: `STELLAR_ROOM_REGISTRY.md` v2 (corridor rows). Movement rules: `STELLAR_CHARACTER_REGISTRY.md` §3. Objects: `STELLAR_ASSET_REGISTRY.md` v2. Screens: `STELLAR_SCREEN_REGISTRY.md` v2 §2.2, §5.13. Look: `STELLAR_VISUAL_BIBLE_V1.md`. Movements: every approved `STELLAR_ROOM_DESIGN_*_V1.md` sheet. Engine: `stellar/src/stellar/telemetry/catalogue.py` and the producers named in §6. StarNet: `STARNET_REUSE_AUDIT.md`, `STELLAR_STARNET_VISUAL_ADAPTATION.md` |
 | **Not changed here** | Corridor positions, widths, doors, topology, closed walls, the access model, the screen list and the movement rules of the Character Registry. Positions are **provisional** (the tile scale is open, TP-1 / VB-3) |
@@ -171,8 +171,8 @@ Direction is along the corridor (W = toward `H-LAB`, E = toward `H-CMD`).
 
 | Repeater | Placement | Content | What it receives today |
 |---|---|---|---|
-| `DSP-CRN-01` (`SCR-011`) | `COR-N` **north** wall, midway between `DR-L2` and `DR-L3` (≈ x 670), clear of both door niches | Station alert **word + icon** (steady; CD-4) | The **derived** station alert level (Screen Registry §2.2); no event of its own |
-| `DSP-CRS-01` (`SCR-011`) | `COR-S` **north** wall, midway between `DR-L6` and `DR-L7` (≈ x 612), clear of both door niches | same | same |
+| `DSP-CRN-01` (`SCR-011`) | `COR-N` **south** wall, midway between `DR-L4` and `DR-L5` (≈ x 613), clear of both door niches (moved from the north wall by CD-11) | Station alert **word + icon** (steady; CD-4) | The **derived** station alert level (Screen Registry §2.2); no event of its own |
+| `DSP-CRS-01` (`SCR-011`) | `COR-S` **south** wall, midway between `DR-L9` and `DR-L10` (≈ x 676), clear of both door niches (moved from the north wall by CD-11) | same | same |
 
 **Engine facts:**
 - `station.alert_level.changed` has **no producer**; the level is **derived** from real inputs:
@@ -198,7 +198,7 @@ Direction is along the corridor (W = toward `H-LAB`, E = toward `H-CMD`).
 | Element | Specification |
 |---|---|
 | Floor | **Deep navy** corridor floor with a guide inlay (`FLR-005`, laid as `COR-008` segments); the inlay marks the two lanes with a thin **titanium** line; the floor guide strip (`LGT-004`) runs along the inlay and guides toward **both** corridor ends (CD-7); it never implies a single hub direction |
-| Walls | **Warm off-white structural panels** (`WAL-001`) with **titanium** base and cove trims; **graphite** door niches (`COR-007`); the camera-facing **south** wall is cut away (`WAL-008`), and its doors keep frame, threshold and opening (Visual Bible C4). No screens or signs on a cut-away wall |
+| Walls | **Warm off-white structural panels** (`WAL-001`) with **titanium** base and cove trims; **graphite** door niches (`COR-007`); the camera-facing wall is cut away (`WAL-008`): the **north** wall under the frozen default camera **Iso · right** (Visual Prototype V1 §0; it was the south wall for the earlier camera), and its doors keep frame, threshold and opening (Visual Bible C4). No screens or signs on a cut-away wall |
 | Hull gaps | Solid infill (`WAL-009`) between room doors where the hull shows; never a passage |
 | Ceiling | A flat ceiling with the continuous cove light (`LGT-001`); not drawn over the floor in the cutaway |
 | Lighting | Even, bright, neutral white; the derived alert tint only with the repeater's word and icon. No flicker, no dark sections |
@@ -251,6 +251,7 @@ Direction is along the corridor (W = toward `H-LAB`, E = toward `H-CMD`).
 | CD-8 | Repeater positions (§10) | **Closed:** as proposed |
 | CD-9 | Exact dimensions | **Open** (after the global tile scale, VB-3 / TP-1) |
 | CD-10 | Exact colour values | **Open** (visual production, VB-4) |
+| CD-11 | Repeater walls under the frozen Iso · right camera | **Closed (owner):** `DSP-CRN-01` and `DSP-CRS-01` move to the corridors' **south** walls, clear of the door niches, for readability from the frozen camera and so that no important display sits on a cut-away wall. Same IDs, content and function |
 
 ## 15. Consistency requirements
 
@@ -260,5 +261,5 @@ Direction is along the corridor (W = toward `H-LAB`, E = toward `H-CMD`).
 - Carried props appear only between their triggering event and their drop (§7).
 - No agent stops, waits or meets in a corridor; door approaches and corridor ends stay clear.
 - Repeaters show only the derived level or NO TELEMETRY, with word + icon, never colour alone.
-- Nothing is placed on the cut-away south walls.
+- Nothing is placed on the cut-away walls. Under the frozen **Iso · right** camera these are the corridors' **north** walls; the two repeaters sit on the south walls (CD-11).
 - Any future room sheet adding a walk must add its row to §6.
