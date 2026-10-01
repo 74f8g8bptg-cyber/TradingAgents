@@ -534,6 +534,43 @@ SV.eq.dome=(cx,cy,R)=>{cyl(cx,cy,R+2,0,0.8,"#2a2c31","#1d1f23",{n:32});ell(cx,cy
 // EQ-projector (SCR-006 column): a bolted base, a chamfered column with a service hatch and lamp pips, an emitter head (constant)
 SV.eq.projector=(fr,o={})=>{plinth(fr,-4.2,4.2,-4.2,4.2,0.8);prismX(frameCham(fr,-3,3,-3,3,0.8),0.8,12,CAL.gunHi,CAL.gun);for(const k of ["front","e1","e2","back"]){const [a,b,n]=faces(fr,-3,3,-3,3)[k];onFace(a,b,n,0.8,12,(W,H)=>{dHatch(0.8,H*0.45,W-1.6,H*0.4);dLampPips(W/2-0.3,1.2,3,1.3);dWear(W,H,k.length)})}
   cyl(fr.cx,fr.cy,2.6,12,13.6,"#575a61","#3a3d43",{n:12});const p=V.P(fr.cx,fr.cy,13.7);ctx.fillStyle="rgba(120,230,250,.6)";ctx.beginPath();ctx.ellipse(p[0],p[1],1.8*V.kx,1.8*V.ky,0,0,TAU);ctx.fill()};
+// ================================================================ WING families (department rooms)
+// TBL-chart: a rectangular tactical table (the octagonal table's construction on a rectangle): plinth, chamfered rim of segments
+// with inset button panels and grilles, corner blocks with brass caps, bezel lip, neutral grid glass (decorative, no data)
+SV.table.chart=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,H=o.h||7.6;plinth(fr,-hL+2,hL-2,-hD+2,hD-2,1.2);prismX(frameCham(fr,-hL+3.5,hL-3.5,-hD+3.5,hD-3.5,1.2),1.2,3.4,CAL.gunHi,CAL.gunLo);
+  const rim=frameCham(fr,-hL,hL,-hD,hD,2.4);prismX(rim,3.4,H,"#575a61",CAL.gun);
+  for(const k of ["front","back","e1","e2"]){const ff=k==="e1"||k==="e2"?faces(fr,-hL,hL,-hD+2.4,hD-2.4)[k]:faces(fr,-hL+2.4,hL-2.4,-hD,hD)[k];onFace(ff[0],ff[1],ff[2],3.4,H,(W,HH)=>{const n2=Math.max(1,Math.floor(W/8));for(let i=0;i<n2;i++){const x=i*W/n2;dRecess(x+0.8,0.5,W/n2*0.45,HH-1,"#1d1f23");dButtons(x+1.2,0.9,2,2,0.85,i);dGrille(x+W/n2*0.55,0.8,W/n2*0.35,HH-1.6)}ctx.fillStyle=CAL.brass;ctx.fillRect(0,HH-0.5,W,0.3);dWear(W,HH,n2)})}
+  for(const [s0,d0] of [[-hL,-hD],[hL-3,-hD],[-hL,hD-3],[hL-3,hD-3]]){prismX(frameCham(fr,s0,s0+3,d0,d0+3,0.8),3.4,H+0.8,"#6a6e76","#3a3d43",{lw:0.35,shadow:false});onTop(fr,s0+1,s0+2,d0+1,d0+2,H+0.82,(W,Dd)=>{ctx.fillStyle=CAL.brassHi;ctx.fillRect(0,0,W,Dd)})}
+  const t=H-0.3;const glass=frameCham(fr,-hL+2.2,hL-2.2,-hD+2.2,hD-2.2,1.4);ctx.fillStyle="#141517";ctx.fill(poly2(frameCham(fr,-hL+1.4,hL-1.4,-hD+1.4,hD-1.4,1.8),H+0.02));ctx.fillStyle="#071319";ctx.fill(poly2(glass,t+0.3));
+  ctx.save();ctx.clip(poly2(glass,t+0.3));for(let k=-hL;k<=hL;k+=3)line3([fr.cx+fr.a[0]*k-fr.f[0]*hD,fr.cy+fr.a[1]*k-fr.f[1]*hD,t+0.3],[fr.cx+fr.a[0]*k+fr.f[0]*hD,fr.cy+fr.a[1]*k+fr.f[1]*hD,t+0.3],"rgba(110,225,245,.2)",0.2);
+  for(let k=-hD;k<=hD;k+=3)line3([fr.cx-fr.a[0]*hL+fr.f[0]*k,fr.cy-fr.a[1]*hL+fr.f[1]*k,t+0.3],[fr.cx+fr.a[0]*hL+fr.f[0]*k,fr.cy+fr.a[1]*hL+fr.f[1]*k,t+0.3],"rgba(110,225,245,.2)",0.2);
+  const s2=V.P(fr.cx,fr.cy,t);const g=ctx.createRadialGradient(s2[0],s2[1],0,s2[0],s2[1],V.kx*hL);g.addColorStop(0,"rgba(60,200,225,.32)");g.addColorStop(1,"rgba(15,80,100,.1)");ctx.fillStyle=g;ctx.fillRect(s2[0]-60,s2[1]-60,120,120);ctx.restore();ctx.strokeStyle=CAL.out;ctx.lineWidth=0.45;ctx.stroke(poly2(glass,t+0.3))};
+// TBL-stage: a low evidence stage: stepped plinth with a hatched apron, a bezel frame, a dark glass deck (no data), corner lamp posts
+SV.table.stage=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2;prismX(frameCham(fr,-hL,hL,-hD,hD,2),0,1.2,"#2a2c31","#1d1f23",{lw:0.4});prismX(frameCham(fr,-hL+2,hL-2,-hD+2,hD-2,1.6),1.2,3.2,CAL.gunHi,CAL.gun);
+  for(const k of ["front","back","e1","e2"]){const [a,b,n]=faces(fr,-hL+2,hL-2,-hD+2,hD-2)[k];onFace(a,b,n,1.2,3.2,(W,HH)=>{for(let x=0;x<W;x+=1.6){ctx.fillStyle=Math.floor(x/1.6)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(x,0.4,1.6,HH-0.8)}})}
+  ctx.fillStyle="#08141a";ctx.fill(poly2(frameCham(fr,-hL+3.2,hL-3.2,-hD+3.2,hD-3.2,1.2),3.25));ctx.strokeStyle="rgba(130,225,245,.35)";ctx.lineWidth=0.3;ctx.stroke(poly2(frameCham(fr,-hL+4.2,hL-4.2,-hD+4.2,hD-4.2,1),3.27));
+  for(const [s0,d0] of [[-hL+0.6,-hD+0.6],[hL-1.6,-hD+0.6],[-hL+0.6,hD-1.6],[hL-1.6,hD-1.6]]){const p=[fr.cx+fr.a[0]*(s0+0.5)+fr.f[0]*(d0+0.5),fr.cy+fr.a[1]*(s0+0.5)+fr.f[1]*(d0+0.5)];cyl(p[0],p[1],0.6,1.2,7,"#575a61","#3a3d43",{n:8});const q=V.P(p[0],p[1],7.1);ctx.fillStyle="#f6ead2";ctx.fillRect(q[0]-0.5,q[1]-0.35,1,0.7)}};
+// TBL-work: a work table: two pedestal legs on a plinth, a slab with a brass edge, a recessed task surface with paper stacks and
+// one small dark status screen on a stand (no data)
+SV.table.work=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2;for(const sg of [-1,1]){const s0=sg<0?-hL+1:hL-4;prismX(frameRect(fr,s0,s0+3,-hD+1,hD-1),0,7,CAL.gun,CAL.gun);const [a,b,n]=faces(fr,s0,s0+3,-hD+1,hD-1).front;onFace(a,b,n,0,7,(W,HH)=>{dVents(0.5,0.8,W-1,HH*0.4,3);dSlotLamp(0.6,HH*0.7,W-1.2)})}
+  prismX(frameCham(fr,-hL,hL,-hD,hD,1),7,8,CAL.gunHi,CAL.gunLo);{const [a,b,n]=faces(fr,-hL+1,hL-1,-hD,hD).front;onFace(a,b,n,7,8,(W,HH)=>{ctx.fillStyle=CAL.brass;ctx.fillRect(0,HH*0.3,W,HH*0.4)})}
+  onTop(fr,-hL+1,hL-1,-hD+1,hD-1,8.02,(W,Dd)=>{dRecess(0.3,0.3,W-0.6,Dd-0.6,"#202227");for(let k=0;k<3;k++){ctx.fillStyle=k%2?"#d8d2c2":"#c9c2b0";ctx.fillRect(1+k*0.4,1+k*0.3,W*0.28,Dd*0.5)}ctx.fillStyle="#c9a24a";ctx.fillRect(W*0.42,Dd*0.35,W*0.18,Dd*0.4)});
+  const sx=fr.cx+fr.a[0]*hL*0.55-fr.f[0]*hD*0.3,sy=fr.cy+fr.a[1]*hL*0.55-fr.f[1]*hD*0.3;cyl(sx,sy,0.5,8,10.5,null,"#4a4d54",{n:6});const sf={cx:sx,cy:sy,a:fr.a,f:fr.f};prismX(frameRect(sf,-3,3,-0.5,0.5),10.5,14.5,"#45484f","#2a2c31",{lw:0.35,shadow:false});
+  const [a,b,n]=faces(sf,-3,3,-0.5,0.5).front;onFace(a,b,n,10.5,14.5,(W,HH)=>dScreenModule(1.2,0.9,W-2.4,HH-1.8,false,null,"status"))};
+// EQ-reactor: a tall column hero (L4): bolted plinth, stepped base, a ribbed body with a glass band whose light is constant
+// (the registered pulse is driven by snapshot events, never invented), top cap with brass collar
+SV.eq.reactor=(x,y,o={})=>{const H=o.h||30;cyl(x,y,5.6,0,1,"#2a2c31","#1d1f23",{n:16});ell(x,y,5,1.02,null,"#8a7448",0.4);cyl(x,y,4.6,1,3.4,"#45484f",CAL.gun,{n:16});cyl(x,y,3.6,3.4,H-4,null,CAL.gun,{n:16});
+  for(const h of [6,9,22,25])cyl(x,y,3.9,h,h+0.8,"#4a4d54","#3a3d43",{n:16});ctx.globalAlpha=0.6;cyl(x,y,3.7,11,20,null,"#3fb7cc",{n:16});ctx.globalAlpha=1;line3([x-2.6,y,11.2],[x-2.6,y,19.8],"rgba(200,250,255,.6)",0.5);
+  cyl(x,y,4.2,H-4,H-1.6,"#575a61","#3a3d43",{n:16});cyl(x,y,2.6,H-1.6,H,"#6a6e76","#45484f",{n:12});ell(x,y,4.2,H-1.58,null,CAL.brass,0.4)};
+// EQ-podium: a debate podium / lectern on a plinth: chamfered body with a lit slot, a slanted top with a small dark screen
+SV.eq.podium=(fr,o={})=>{plinth(fr,-4,4,-3.4,3.4,0.8);prismX(frameCham(fr,-3.2,3.2,-2.6,2.6,0.6),0.8,9.6,CAL.gunHi,CAL.gun);const [a,b,n]=faces(fr,-3.2,3.2,-2.6,2.6).front;
+  onFace(a,b,n,0.8,9.6,(W,HH)=>{dRecess(0.8,0.8,W-1.6,HH*0.5,"#24262a");dSlotLamp(W/2-1.2,HH*0.68,2.4);dRivets(0,0,W,HH);dWear(W,HH,o.seed||1)});
+  prismX(frameCham(fr,-3.6,3.6,-3,3,0.6),9.6,10.6,"#575a61",CAL.gunLo,{mat:false});onTop(fr,-2.8,2.8,-2.2,2.2,10.62,(W,Dd)=>{dScreenModule(0.6,0.6,W-1.2,Dd-1.6,false,null,"status");dButtons(0.6,Dd-0.9,3,1,0.8,o.seed||0)})};
+// EQ-tube: a launch tube on a heavy base: bolted base with hazard bands, glass tube with lit rings, a top cap housing
+SV.eq.tube=(fr,o={})=>{const hL=fr.L/2;plinth(fr,-hL,hL,-5,5,1);prismX(frameCham(fr,-hL+0.8,hL-0.8,-4.4,4.4,1),1,4,CAL.gunHi,CAL.gun);const [a,b,n]=faces(fr,-hL+0.8,hL-0.8,-4.4,4.4).front;
+  onFace(a,b,n,1,4,(W,HH)=>{for(let x=0;x<W;x+=1.6){ctx.fillStyle=Math.floor(x/1.6)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(x,0.5,1.6,HH-1)}});
+  ctx.globalAlpha=0.38;cyl(fr.cx,fr.cy,3.8,4,24,"#cfeaf3","#a9d4e3",{n:16});ctx.globalAlpha=1;for(const h of [8,14,20])cyl(fr.cx,fr.cy,4,h,h+0.6,"#4a4d54","#3a3d43",{n:16});
+  cyl(fr.cx,fr.cy,4.6,24,27,"#575a61","#3a3d43",{n:16});ell(fr.cx,fr.cy,4.6,27.02,null,CAL.amber,0.5)};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -565,6 +602,12 @@ const SV_CATALOGUE=[
   {name:"EQ-optics",w:12,d:12,draw:(fr)=>SV.eq.optics(fr.cx,fr.cy)},
   {name:"EQ-tank",w:28,d:12,draw:(fr)=>SV.eq.tank({...fr,L:22,D:8})},
   {name:"EQ-dome (hero)",w:40,d:40,draw:(fr)=>SV.eq.dome(fr.cx,fr.cy,16)},
+  {name:"TBL-chart",w:44,d:52,draw:(fr)=>SV.table.chart({...fr,L:34,D:46})},
+  {name:"TBL-stage",w:40,d:40,draw:(fr)=>SV.table.stage({...fr,L:34,D:34})},
+  {name:"TBL-work",w:28,d:12,draw:(fr)=>SV.table.work({...fr,L:22,D:9})},
+  {name:"EQ-reactor",w:14,d:14,draw:(fr)=>SV.eq.reactor(fr.cx,fr.cy)},
+  {name:"EQ-podium",w:12,d:12,draw:(fr)=>SV.eq.podium({...fr})},
+  {name:"EQ-tube",w:14,d:14,draw:(fr)=>SV.eq.tube({...fr,L:10})},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

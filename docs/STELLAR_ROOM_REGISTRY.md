@@ -156,6 +156,7 @@ changes this file only.
 | Size / shape | M, tall; door in the south wall (`COR-N`) |
 | Zones | `specialists.metals`, `specialists.fx`, `specialists.indices` (three desk bays behind `WAL-005` glass partitions), `specialists.entry` (by the door) |
 | Mandatory furniture | `CON-009` family desk × 3, `SEA-002` × 3, `WAL-005` partitions, `PLT-003` desk plants |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck; `SEA-002` × 3 at the desk anchors (mandatory, previously missing) |
 | Mandatory screens | `DSP-SPC-01` Metals, `-02` FX, `-03` Indices, `-04` macro-context repeater |
 | Anchors | `specialists.desk_metals`, `specialists.desk_fx`, `specialists.desk_indices` (each reserved to its specialist) · `specialists.visitor` |
 | Usual agents | `CHR-022` Metals desk, `CHR-023` FX desk, `CHR-025` Indices desk (family desk representations; runtime agents S1–S4) |
@@ -170,6 +171,7 @@ changes this file only.
 | Size / shape | M, tall; door in the south wall (`COR-N`) |
 | Zones | `technical.table` (centre), `technical.stations` (along the walls), `technical.entry` |
 | Mandatory furniture | `TBL-002` holo chart table, `CON-002` standing consoles × 6, `CON-010` session-clock pedestal |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-TEC-01`…`DSP-TEC-07` |
 | Anchors | `technical.station_t3`…`station_t8` · `technical.session_clock` (T2) · `technical.table_1`, `table_2` |
 | Usual agents | `CHR-026`–`CHR-032`. T2 (`CHR-026`), T7 (`CHR-031`) and T8 (`CHR-032`) have **no producer** today: shown `idle` |
@@ -183,6 +185,7 @@ changes this file only.
 | Size / shape | M, tall; door in the south wall (`COR-N`), about 1 corridor length from `H-CMD` |
 | Zones | `debate.floor` (podiums facing the evidence stage), `debate.bench` (judge end, opposite the door), `debate.entry` |
 | Mandatory furniture | `CON-011` podium × 5, `TBL-007` evidence stage, `CON-023` judge lectern, `SEA-003` judge seat, `LGT-007` podium spotlights |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-DEB-01`…`DSP-DEB-06` |
 | Anchors | `debate.podium_bull`, `debate.podium_bear`, `debate.podium_risk_1`…`_3` (each reserved to its debater) · `debate.judge_seat` (Research Manager; the PM when judging) · `debate.visitor` |
 | Usual agents | `CHR-006`–`CHR-010`; visits by `CHR-002` and `CHR-001` |
@@ -195,6 +198,7 @@ changes this file only.
 | Purpose | Market-data snapshots and validation (T1), plus system health: journal and event-stream health, runtime health, reconciliation |
 | Size / shape | S, short; door in the north wall (`COR-N`), opposite L1 / L2 |
 | Mandatory furniture | `EQP-001` reactor column (hero; pulses **only** per `snapshot.created`), `CON-018` reactor console, `SRV-001` / `SRV-002` racks, `CON-027` reconciliation console (look-only; carries `DSP-DCR-05`; read from `datacore.visitor`, no work anchor; L4 sheet DK-4) |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-DCR-01`…`DSP-DCR-06` |
 | Anchors | `datacore.reactor_console` (R: `data_validator`) · `datacore.rack_check` · `datacore.visitor` |
 | Usual agents | `CHR-035` Data Validator |
@@ -207,6 +211,7 @@ changes this file only.
 | Purpose | Closed trades, the run replay index (read-only), post-trade reviews, comparable setups. **No producer today** for post-trade reviews (`memory.review.created`), settlement (`memory.outcome.settled`), comparable setups (`memory.decision.stored`) or reflections (`memory.reflection.written`): those panels read NOT AVAILABLE (L6 sheet DM-5) |
 | Size / shape | S, short; door in the south wall (`COR-S`) |
 | Mandatory furniture | `CON-019` archive terminal, `STO-004` crystal archive shelf, `TBL-005` work table |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-MEM-01`…`DSP-MEM-04` |
 | Anchors | `archive.terminal` (Post-Trade Reviewer) · `archive.shelf` · `archive.table_1` |
 | Usual agents | `CHR-033` (no producer: files real Record Crystals only) |
@@ -218,6 +223,7 @@ changes this file only.
 | Purpose | Runtime metrics, execution metrics, recorded outcomes and account totals, attribution, workload and review metrics, with sample-size honesty. **No producer today** for attribution (`memory.outcome.settled`), per-agent workload or review metrics: those read NOT AVAILABLE (L7 sheet DP-5, DP-6). Environment: `PAPER` only; never mixed with DEMO / LIVE (DP-7) |
 | Size / shape | S, short; door in the south wall (`COR-S`) |
 | Mandatory furniture | `CON-020` metrics terminal, `TBL-005` work table |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-PRF-01`…`DSP-PRF-05` |
 | Anchors | `perflab.terminal` (Attribution) · `perflab.table_1` |
 | Usual agents | `CHR-034` |
@@ -231,6 +237,7 @@ changes this file only.
 | Access | Restricted (Topology §9): `MP-EXEC` crew; the Supervisor to the entry zone only. Static `SGN-006` marking on `DOR-008` |
 | Zones | `execbay.entry` (inside the door), `execbay.floor` (restricted) |
 | Mandatory furniture | `CON-016` pre-flight console, `CON-017` launch console, `EQP-002` launch tube, `EQP-003` docking board, `FLR-008` launch-deck marking |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-EXB-01`…`DSP-EXB-05` |
 | Anchors | `execbay.preflight` (R: `execution_checker`) · `execbay.launch` (R: `paper_execution`) · `execbay.entry` |
 | Usual agents | `CHR-038`, `CHR-039`. `CHR-040` (MT5) is deferred and not rendered |
@@ -245,6 +252,7 @@ changes this file only.
 | Access model | **Logical, not geometric** (owner decision Q10; no secure lift and no airlock). Three zones: `risk.intake` (inside the door: the courier drops the proposal here), `risk.core` (P2 / P3 only), `risk.outbox` (by the door: the Paper Execution Agent collects an **approved** order here). Restricted anchors hold the consoles. The door carries `DOR-008` with a static `SGN-006` marking, plus the telemetry-driven door panel `DSP-RSK-09` |
 | Workflow rules (visual) | A proposal card appears only after `trade.proposed`. An order capsule appears in `risk.outbox` only after `risk.approved` **and** `order.created`. While the breaker is `TRIPPED`, the outbox stays dark and the door panel says **BREAKER TRIPPED**. The UI can never trigger any of these |
 | Mandatory furniture | `CON-012` intake counter, `CON-029` outbox counter, `CON-013` rule-checklist console, `CON-014` sizing console, `CON-015` breaker panel, `CON-001` contradiction desk, `FLR-003` grating floor, `LGT-005` cold panel light |
+| Calibration additions (wing V1, in review) | Built with the Stellar Visual Vocabulary (`docs/STELLAR_WING_CALIBRATION_V1.md`): approved items rebuilt, a perimeter of wall equipment (`SRV-005`, `STO-001`, `STO-005`, `STO-006`; decorative, no anchors), bulkhead walls, `SV.door` doors, `SV.floor` deck |
 | Mandatory screens | `DSP-RSK-01`…`DSP-RSK-09` |
 | Anchors | `risk.intake_drop` (courier) · `risk.intake_desk` (R: `contradiction_checker`) · `risk.rule_console` (R: `risk_engine`) · `risk.sizing_console` (R: `risk_engine`) · `risk.breaker_panel` (R: `risk_engine`) · `risk.outbox_pickup` (R: `paper_execution`) · `risk.entry_wait` (Supervisor / Medic approach point) |
 | Usual agents | `CHR-036` P2, `CHR-037` P3; visits: `CHR-005` (intake only), `CHR-039` (outbox only), `CHR-003`, `CHR-041` (entry only) |

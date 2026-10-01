@@ -237,7 +237,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SRV-002` | Journal archive rack | L4, L6 | blocks | Y | kept |
 | `SRV-003` | Data conduit trunk | **only inside non-walkable gap space**; must read as solid, never as a passage | solid | opt | re-scoped (was a vertical deck conduit) |
 | `SRV-004` | Overhead cable tray | ceilings | none | opt | kept |
-| `SRV-005` | Relay stack (decorative hardware tower; constant hardware lights, **never status or data**) | `H-CMD` operations clusters (calibration V2) perimeter racks between bank groups (calibration V5) and rack pairs in the equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (1 × 1) | Y | **new** |
+| `SRV-005` | Relay stack (decorative hardware tower; constant hardware lights, **never status or data**) | `H-CMD` operations clusters (calibration V2) perimeter racks between bank groups (calibration V5) and rack pairs in the equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1); L1–L4, L6, L7, L9, L10 wall equipment (wing calibration V1) | blocks (1 × 1) | Y | **new** |
 
 ### `WAL` — Walls and structure
 
@@ -275,12 +275,12 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 
 | ID | Name | Where | Nav | V1 |
 |---|---|---|---|---|
-| `STO-001` | Wall locker | L9, L10, `H-LAB`, `H-CMD` (rim, flanking the doors; calibration V1) | wall / blocks | opt |
+| `STO-001` | Wall locker | L6, L9, L10, `H-LAB`, `H-CMD` (rim, flanking the doors; calibration V1) | wall / blocks | opt |
 | `STO-002` | Crate stack | L4 | blocks | opt |
 | `STO-003` | Shelf / cue rack | `H-HAB` | blocks | Y |
 | `STO-004` | Crystal archive shelf | L6 | blocks | Y |
-| `STO-005` | Equipment bay cabinet (low, vented) | `H-CMD` operations clusters (calibration V2), perimeter rhythm and equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (2 × 1; 1 × 2 when side-facing) | Y |
-| `STO-006` | Service cabinet (1 × 1; hazard-marked door, vents) | `H-CMD` second row behind the rim bank (calibration V3), perimeter rhythm and the south command group (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (1 × 1) | Y |
+| `STO-005` | Equipment bay cabinet (low, vented) | `H-CMD` operations clusters (calibration V2), perimeter rhythm and equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1); L1–L4, L6, L7, L9, L10 wall equipment (wing calibration V1) | blocks (2 × 1; 1 × 2 when side-facing) | Y |
+| `STO-006` | Service cabinet (1 × 1; hazard-marked door, vents) | `H-CMD` second row behind the rim bank (calibration V3), perimeter rhythm and the south command group (calibration V5.1); `H-LAB` (H-LAB calibration V1); L1–L4, L6, L7, L9, L10 wall equipment (wing calibration V1) | blocks (1 × 1) | Y |
 | `STO-007` | Sample cart (open-shelf trolley on casters, sample vials, printout stacks; decorative) | `H-LAB` validation group (calibration V1) | blocks (1 × 1) | Y |
 
 ### `PLT` — Plants

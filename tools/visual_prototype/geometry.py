@@ -944,6 +944,88 @@ def build_geometry():
                 lab_mark.update(a_ + b_)
     if lab_big:
         F("H-LAB", "FLR-010", lab_big, "FLR-010 large floor grates (paired)", kind="floor")
+    # ---- wing calibration (Stellar Visual Vocabulary; docs/STELLAR_WING_CALIBRATION_V1.md): the eight department rooms
+    # get a perimeter of wall equipment whose rhythm follows the room's function. Approved items above are unchanged.
+    # Kept clear: 2 tiles around every door lane, every anchor and its four neighbours, floor markings, and any tile
+    # whose blocking would cut a walkable tile off. Tall items never stand directly south of an anchor
+    WING_RHYTHM = {
+        "L1": ("B", "G", "S", "G", "R", "G", "G"),
+        "L2": ("R", "G", "S", "G", "G"),
+        "L3": ("S", "G", "G", "R", "G", "G"),
+        "L4": ("R", "R", "G", "R", "B", "G"),
+        "L6": ("L", "L", "G", "B", "G"),
+        "L7": ("B", "G", "S", "G", "R", "G"),
+        "L9": ("L", "G", "S", "G", "G"),
+        "L10": ("L", "S", "G", "G", "R", "G"),
+    }
+    for a in [
+        a for a in anchors if a["room"] == "L1" and "desk" in a["name"]
+    ]:  # SEA-002 x 3 (mandatory, L1 sheet)
+        F("L1", "SEA-002", [a["tile"]], f"SEA-002 chair {a['name'].split('.')[1]}", kind="seat")
+    lane_tiles = {tuple(t) for d in door_info.values() for ch in d["lanes"] for t in ch}
+    for wroom, rhythm in WING_RHYTHM.items():
+        rts = {t for t, n in region.items() if n == wroom}
+        taken = {t for f in furn for t in f["tiles"]}
+        anc = [a["tile"] for a in anchors if a["room"] == wroom]
+        keep = {
+            (a[0] + dc, a[1] + dr)
+            for a in anc
+            for dc, dr in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))
+        }
+        keep |= {(a[0], a[1] + 1) for a in anc}
+        keep |= {
+            (t[0] + dc, t[1] + dr) for t in lane_tiles for dc in range(-2, 3) for dr in range(-2, 3)
+        }
+        edge = [
+            t
+            for t in rts
+            if any(
+                (t[0] + dc, t[1] + dr) not in rts for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            )
+            and t not in taken
+            and t not in keep
+        ]
+        mx = sum(t[0] for t in rts) / len(rts)
+        my = sum(t[1] for t in rts) / len(rts)
+        edge.sort(key=lambda t: math.atan2(t[1] - my, t[0] - mx))
+
+        def w_reach(extra, wroom=wroom, rts=rts):
+            blk = {t for f in furn if f["kind"] == "block" for t in f["tiles"]} | set(extra)
+            open_ = [t for t in rts if t not in blk]
+            seen, todo = {open_[0]}, [open_[0]]
+            while todo:
+                c0, r0 = todo.pop()
+                for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    u = (c0 + dc, r0 + dr)
+                    if u in rts and u not in blk and u not in seen:
+                        seen.add(u)
+                        todo.append(u)
+            return len(seen) == len(open_)
+
+        done = set()
+        k = 0
+        for i, t in enumerate(edge):
+            if t in done:
+                continue
+            step = rhythm[k % len(rhythm)]
+            k += 1
+            if step == "G":
+                continue
+            nxt = next(
+                (u for u in edge[i + 1 : i + 2] if abs(u[0] - t[0]) + abs(u[1] - t[1]) == 1), None
+            )
+            asset, tiles, tall = {
+                "R": ("SRV-005", [t], True),
+                "S": ("STO-006", [t], False),
+                "L": ("STO-001", [t], True),
+                "B": ("STO-005", [t, nxt] if nxt and nxt not in done else [t], False),
+            }[step]
+            if asset == "STO-005" and len(tiles) == 1:
+                asset = "STO-006"
+            if any(u in done for u in tiles) or not w_reach(tiles):
+                continue
+            F(wroom, asset, tiles, f"{asset} {wroom} perimeter {len(furn)}", tall=tall)
+            done.update(tiles)
     # H-HAB (circle, 30 tiles across)
     hc, hr = math.floor(1377 / T), math.floor(692 / T)
     F("H-HAB", "PLT-005", absrect(hc - 1, hr - 1, 3, 3), "PLT-005 central tree", tall=True)

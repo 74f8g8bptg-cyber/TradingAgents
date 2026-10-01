@@ -190,6 +190,7 @@ function buildScene(){
     let col=kind==="niche"?COL.niche:kind==="reserved"?COL.resWall:COL.wall;
     if(own==="L10"&&kind==="panel"&&(((x1+y1)/T)%2===0))col=COL.gunmetal;
     if(own&&own.startsWith("COR")&&(((x1+y1)/T)%3===0))col="#d7d2c6";
+    if(calWallOwner(w,own,kind)){add({kind:"wall",b,h,draw(){calWallSegment(w,b,h)}});continue}
     add({kind:"wall",b,h,draw(){box(b,0,h,kind==="reserved"?"#4a505b":COL.wallTop,col,{seam:"rgba(0,0,0,.18)"});
       if(h>=16&&kind!=="reserved"){ // cove light LGT-001 + titanium base trim on the room-side face
         const fs=y1===y2?(n[1]>0?"N":"S"):(n[0]>0?"W":"E");const face=y1===y2?[x1,y1,x2,y1]:[x1,y1,x1,y2];
@@ -298,20 +299,28 @@ function addDoorFrame(add,d,p1,p2,reg,q1,q2){
   }})}
 // ---------------------------------------------------------------- furniture builders (Stellar forms; room-sheet materials)
 // ---- calibration-room doors (SV.door): one assembly per opening, built into the rim with bulkhead returns
-function calDoorZone(d){if(!D.hubs)return null;const room=[d.A,d.B].find(r=>CAL_ROOMS.has(r));if(!room||!d.frames.length)return null;const f=d.frames[0];const c=hubById[room];
+function calDoorZone(d){if(!D.hubs)return null;const room=[d.A,d.B].find(r=>CAL_ROOMS.has(r)&&hubById[r]);if(!room)return calWingDoorZone(d);if(!d.frames.length)return null;const f=d.frames[0];const c=hubById[room];
   const W=Math.hypot(f.p2[0]-f.p1[0],f.p2[1]-f.p1[1]);const u=[(f.p2[0]-f.p1[0])/W,(f.p2[1]-f.p1[1])/W];const m=[(f.p1[0]+f.p2[0])/2,(f.p1[1]+f.p2[1])/2];let n=[-u[1],u[0]];if(n[0]*(c.x-m[0])+n[1]*(c.y-m[1])<0)n=[-n[0],-n[1]];
   const type=d.restricted?"restricted":d.kind==="DOR-009"?"hub":"standard";const sp=SV.door.SPEC[type];
-  return{d,type,sp,m,u,n,W,fr:{cx:m[0],cy:m[1],a:u,f:n,L:W},plate:(d.A===room?d.B:d.A),closed:d.status!=="open"}}
+  return{d,type,sp,m,u,n,W,hub:true,fr:{cx:m[0],cy:m[1],a:u,f:n,L:W},plate:(d.A===room?d.B:d.A),closed:d.status!=="open"}}
+// wing doors (department room <-> corridor): one SV.door assembly spanning the wall thickness (both frame records), restricted
+// styling only where the layout marks the door restricted, a closed leaf on reserved doors
+function calWingDoorZone(d){if(!d.frames.length||![d.A,d.B].some(r=>CAL_WING.has(r)||CAL_CORR.has(r)||/^L[58]$/.test(r)))return null;
+  const pts=d.frames.flatMap(f=>[f.p1,f.p2]);const m=[pts.reduce((a,p)=>a+p[0],0)/pts.length,pts.reduce((a,p)=>a+p[1],0)/pts.length];const f0=d.frames[0];
+  const W=Math.hypot(f0.p2[0]-f0.p1[0],f0.p2[1]-f0.p1[1]);const u=[(f0.p2[0]-f0.p1[0])/W,(f0.p2[1]-f0.p1[1])/W];const room=CAL_CORR.has(d.A)?d.B:d.A;const [rx,ry]=roomCentre(room);
+  let n=[-u[1],u[0]];if(n[0]*(rx-m[0])+n[1]*(ry-m[1])<0)n=[-n[0],-n[1]];const depth=d.frames.length===2?Math.abs((d.frames[1].p1[0]-f0.p1[0])*n[0]+(d.frames[1].p1[1]-f0.p1[1])*n[1]):0;
+  const type=d.restricted?"restricted":"standard";const sp=SV.door.SPEC[type];return{d,type,sp,m,u,n,W,hub:false,D:Math.max(sp.depth,depth+4),fr:{cx:m[0],cy:m[1],a:u,f:n,L:W},plate:room,closed:d.status!=="open"}}
 let _calDZ=null;const calDoorZones=()=>_calDZ||(_calDZ=D.doors.map(calDoorZone).filter(Boolean));
-function calInDoorZone(p){return calDoorZones().some(z=>{const r=[p[0]-z.m[0],p[1]-z.m[1]];const al=Math.abs(r[0]*z.u[0]+r[1]*z.u[1]),dn=r[0]*z.n[0]+r[1]*z.n[1];return al<=z.W/2+z.sp.jw+0.5&&dn>=-z.sp.depth/2-14&&dn<=z.sp.depth/2+10})}
+function calInDoorZone(p){return calDoorZones().some(z=>{if(!z.hub)return false;const r=[p[0]-z.m[0],p[1]-z.m[1]];const al=Math.abs(r[0]*z.u[0]+r[1]*z.u[1]),dn=r[0]*z.n[0]+r[1]*z.n[1];return al<=z.W/2+z.sp.jw+0.5&&dn>=-z.sp.depth/2-14&&dn<=z.sp.depth/2+10})}
 // kept rim endpoints (inner face) of a hub, with the same skip rules as the rim pass
 function rimKeptEnds(hb){const gaps=(D.hubGaps[hb.id]||[]);const other=hubList.filter(o=>o!==hb);const N=Math.round(hb.R*TAU/14);const out=[];
   for(let i=0;i<N;i++){const a0=i/N*TAU-Math.PI,a1=(i+1)/N*TAU-Math.PI,am=(a0+a1)/2;const pm=[hb.x+hb.R*Math.cos(am),hb.y+hb.R*Math.sin(am)];
     if(other.some(o=>insideHub(o,pm[0],pm[1])))continue;if(gaps.some(g=>{const ac=Math.atan2(Math.sin(g.a0)+Math.sin(g.a1),Math.cos(g.a0)+Math.cos(g.a1));const half=Math.abs(wrapA(g.a1-g.a0))/2;return Math.abs(wrapA(am-ac))<half+0.012}))continue;
     if(calInDoorZone(pm))continue;for(const a of [a0,a1])out.push([hb.x+(hb.R+1.5)*Math.cos(a),hb.y+(hb.R+1.5)*Math.sin(a)])}return out}
 function addCalDoor(add,z){const {fr,type,sp,m,u,n,W}=z;const ext=W/2+sp.jw;const dD=sp.depth/2;
-  const corners=[[-ext,-dD-1],[ext,-dD-1],[ext,dD+1],[-ext,dD+1]].map(([s,d])=>[m[0]+u[0]*s+n[0]*d,m[1]+u[1]*s+n[1]*d]);
-  add({kind:"door",b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed})}});
+  const dz=(z.D||sp.depth)/2;const corners=[[-ext,-dz-1],[ext,-dz-1],[ext,dz+1],[-ext,dz+1]].map(([s,d])=>[m[0]+u[0]*s+n[0]*d,m[1]+u[1]*s+n[1]*d]);
+  add({kind:"door",b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed,D:z.D})}});
+  if(!z.hub)return;
   // bulkhead returns: close the wall from each jamb back to the nearest kept rim end (no white stubs, no second frame)
   const ends=hubList.filter(h=>Math.hypot(h.x-m[0],h.y-m[1])<h.R+40).flatMap(rimKeptEnds);
   for(const sg of [-1,1]){const C=[m[0]+u[0]*sg*(ext-0.4),m[1]+u[1]*sg*(ext-0.4)];let best=null,bd=46;for(const e of ends){const dd=Math.hypot(e[0]-C[0],e[1]-C[1]);if(dd<bd){bd=dd;best=e}}
@@ -380,7 +389,9 @@ function rackForm(b){const bb=[b[0]+4,b[1]+1,b[2]-0.5,b[3]-1];return{h:13,draw()
 // which family each registered asset uses, the perimeter and wall rhythm, the deck plan and the local light. Geometry
 // comes from geometry.py; display identities and content from the registries.
 /*VOCABULARY*/
-const CAL_ROOMS=new Set(["H-CMD","H-LAB"]);
+const CAL_WING=new Set(["L1","L2","L3","L4","L6","L7","L9","L10"]);const CAL_CORR=new Set(["COR-N","COR-S"]);
+const CAL_ROOMS=new Set(["H-CMD","H-LAB",...CAL_WING]);
+const tileRoom=new Map();for(const [c,r,n] of D.tiles)tileRoom.set(c+","+r,n);
 const CAL_DAIS_R=67,CAL_DAIS_H=1.2;
 function calBaseH(x,y){const c=hubById["H-CMD"];return Math.hypot(x-c.x,y-c.y)<=CAL_DAIS_R?CAL_DAIS_H:0}
 function roomCentre(room){const h=hubById[room];if(h)return[h.x,h.y];const b=D.bbox[room];return b?[(b[0]+b[2]+1)/2*T,(b[1]+b[3]+1)/2*T]:[0,0]}
@@ -388,9 +399,11 @@ function deskFrame(f,b,fs){const op={N:[0,-1],S:[0,1],W:[-1,0],E:[1,0]}[fs];cons
   return{cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:op,L:(horiz?b[2]-b[0]:b[3]-b[1])-0.8,D:(horiz?b[3]-b[1]:b[2]-b[0])}}
 const calConsoleDisplay={};for(const d of D.displays)if(d.place[0]==="console")calConsoleDisplay[d.place[1]]=d;
 // role workstations: WS-standard (CON-003/004/005), WS-heavy (CON-022, the south axis counterpart of the command table)
-function calWorkstation(f,b){const fs=frontSide(f,inset(b,1.2))||"S";const fr=deskFrame(f,b,fs);const an=(servesMap[f.label]||[])[0];const ag=an&&agentAt.get(an.name);
+const CAL_WS_VARIANT={"CON-022":"heavy","CON-008":"heavy","CON-018":"heavy","CON-006":"compact","CON-002":"compact","CON-027":"compact","CON-012":"compact","CON-029":"compact","CON-023":"compact","CON-019":"compact","CON-020":"compact"};
+function fsToward(f,b){const [cx,cy]=roomCentre(f.room);const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const vert=b[3]-b[1]>b[2]-b[0];return vert?(cx<x?"W":"E"):(cy<y?"N":"S")}
+function calWorkstation(f,b){const fs=frontSide(f,inset(b,1.2))||fsToward(f,b);const fr=deskFrame(f,b,fs);const an=(servesMap[f.label]||[])[0];const ag=an&&agentAt.get(an.name);
   const plate=ag?`${ag.code} · ${ag.name.replace(/\s*\(.*\)/,"").split(" ").pop().toUpperCase()}`:null;const d=calConsoleDisplay[f.label];const lit=ag&&!ag.noProducer;
-  const content=d?((w,h)=>screenContent(d,w,h,cam.z)):null;const variant=/CON-022|CON-008/.test(f.asset)?"heavy":f.asset==="CON-006"?"compact":"standard";
+  const content=d?((w,h)=>screenContent(d,w,h,cam.z)):null;const variant=CAL_WS_VARIANT[f.asset]||"standard";
   return{h:22,draw(){SV.ws.build(fr,{variant,lit,plate,content,seed:hash(f.label)%7})}}}
 function calSecondary(f,b){const [cx,cy]=roomCentre(f.room);const vert=b[3]-b[1]>b[2]-b[0];const fr=deskFrame(f,b,vert?((b[0]+b[2])/2<cx?"E":"W"):((b[1]+b[3])/2<cy?"S":"N"));return{h:16,draw(){SV.ws.build(fr,{variant:"compact",seed:hash(f.label)%7})}}}
 function rimFrame(f,D2){const c=hubById[f.room];const xs=f.tiles.map(t=>t[0]*T+6),ys=f.tiles.map(t=>t[1]*T+6);const mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;
@@ -402,13 +415,20 @@ function calBank(f){const fr=rimFrame(f);const n=f.tiles.length;const sd=hash(f.
     prismX(frameRect(fr,s-1.2,s+1.2,-fr.D/2,fr.D/2-1.6),16.6,17.3,"#4a4d54",CAL.gunLo,{lw:0.3,hi:false,mat:false});
     const r=frameRect(fr,s-1,s+1,-fr.D/2+0.1,fr.D/2-1.8);onFace(r[3],r[2],fr.f,0,16.6,(W,H)=>{ctx.fillStyle="#1b1c1f";ctx.fillRect(W/2-0.7,1.4,1.4,H*0.42);dLampCol(W/2-0.4,1.9,5,1.2);
       ctx.fillStyle=CAL.brass;for(const v of [H*0.62,H*0.8]){ctx.beginPath();ctx.arc(W/2,v,0.3,0,TAU);ctx.fill()}ctx.fillRect(0,H-1.2,W,0.4);dWear(W,H,7)})}}}}
-function calLocker(f){const fr=rimFrame(f,9);fr.L=10.5;fr.D=7;return{h:21,draw(){SV.eq.locker(fr,{seed:hash(f.label)%7})}}}
+function calWallFrame(f,D2){const xs=f.tiles.map(t=>t[0]),ys=f.tiles.map(t=>t[1]);let n=[0,0];
+  for(const [c,r] of f.tiles)for(const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]])if(tileRoom.get((c+dc)+","+(r+dr))!==f.room&&!f.tiles.some(q=>q[0]===c+dc&&q[1]===r+dr)){n[0]-=dc;n[1]-=dr}
+  if(!n[0]&&!n[1]){const [rx,ry]=roomCentre(f.room);n=[rx-(xs[0]*T+6),ry-(ys[0]*T+6)]}const ax=Math.abs(n[0])>=Math.abs(n[1]);const fv=ax?[Math.sign(n[0]),0]:[0,Math.sign(n[1])];
+  const L=(ax?(Math.max(...ys)-Math.min(...ys)+1):(Math.max(...xs)-Math.min(...xs)+1))*T-1.6;const Dd=D2||8;
+  const cx=(Math.min(...xs)+Math.max(...xs)+1)/2*T-fv[0]*(T/2-Dd/2-0.6),cy=(Math.min(...ys)+Math.max(...ys)+1)/2*T-fv[1]*(T/2-Dd/2-0.6);return{cx,cy,a:ax?[0,1]:[1,0],f:fv,L,D:Dd}}
+const calFrameFor=(f,D2)=>hubById[f.room]?rimFrame(f,D2):calWallFrame(f,D2);
+function calLocker(f){const fr=calFrameFor(f,9);fr.L=10.5;fr.D=7;return{h:21,draw(){SV.eq.locker(fr,{seed:hash(f.label)%7})}}}
 // STO-005 equipment bays: free-standing (along their long axis, facing the room centre) or ring-mounted in the perimeter rhythm
-function calEquipBay(f,b){let fr;if(f.label.includes("perimeter")){fr=rimFrame(f,8);fr.L=f.tiles.length*11.6-1.6}
+function calEquipBay(f,b){let fr;if(f.label.includes("perimeter")&&!hubById[f.room]){fr=calWallFrame(f,8)}else if(f.label.includes("perimeter")){fr=rimFrame(f,8);fr.L=f.tiles.length*11.6-1.6}
   else{const [cx,cy]=roomCentre(f.room);const vert=b[3]-b[1]>b[2]-b[0];const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;
     fr=vert?{cx:x,cy:y,a:[0,1],f:[x<cx?1:-1,0],L:b[3]-b[1]-1.4,D:b[2]-b[0]-2.4}:{cx:x,cy:y,a:[1,0],f:[0,y<cy?1:-1],L:b[2]-b[0]-1.4,D:b[3]-b[1]-2.4}}
   return{h:11,draw(){SV.eq.bay(fr,{seed:hash(f.label)%7})}}}
 function calServiceCab(f,b){const [cx0,cy0]=roomCentre(f.room);const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,L:7.6,D:7};const u=[cx0-fr.cx,cy0-fr.cy];const L=Math.hypot(...u);fr.f=[u[0]/L,u[1]/L];fr.a=[-fr.f[1],fr.f[0]];
+  if(!hubById[f.room]&&f.label.includes("perimeter")){const w=calWallFrame(f,7);fr.cx=w.cx;fr.cy=w.cy;fr.f=w.f;fr.a=w.a}
   return{h:16,draw(){SV.eq.service(fr,{tone:"red",seed:hash(f.label)%7})}}}
 // SRV-005 relay stacks alternate the two relay constructions: an open patch frame and a blade rack
 // a perimeter rack standing under a registered rim display is built as a half-height rack so the display stays readable
@@ -445,7 +465,23 @@ function calCluster(f,b){const fr=calFaceRoom(f,b,8,8);return{h:25,draw(){SV.scr
 function calCart(f,b){const fr=calFaceRoom(f,b,7.2,6);return{h:12,draw(){SV.eq.cart(fr,{seed:hash(f.label)%7})}}}
 function calOptics(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:23,draw(){SV.eq.optics(x,y)}}}
 function calTank(f,b){const horiz=b[2]-b[0]>b[3]-b[1];const fr=calFaceRoom(f,b,horiz?b[2]-b[0]-1.6:b[3]-b[1]-1.6,8);if(horiz){fr.a=[1,0];fr.f=[0,Math.sign(roomCentre(f.room)[1]-(b[1]+b[3])/2)||1]}return{h:16,draw(){SV.eq.tank(fr,{seed:hash(f.label)%7})}}}
-const BUILD_CAL={"CON-006":calWorkstation,"CON-008":calWorkstation,"CON-007":calLabBench,"EQP-005":calDome,"SCR-006":calProjector,"SCR-013":calCluster,"STO-007":calCart,"EQP-006":calOptics,"EQP-007":calTank,"CON-030":calBank,"CON-031":calSecondary,"STO-001":calLocker,"STO-005":calEquipBay,"STO-006":calServiceCab,"PLT-001":calPlanter,"SRV-005":calRelay,"CON-003":calWorkstation,"CON-004":calWorkstation,"CON-005":calWorkstation,"CON-022":calWorkstation,"SEA-002":calChair,"TBL-001":calTable,"SEA-001":calCommandChair,"SEA-005":calBench};
+// wing families
+function calChart(f,b){const horiz=b[2]-b[0]>=b[3]-b[1];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:horiz?[0,1]:[1,0],L:(horiz?b[2]-b[0]:b[3]-b[1])-3,D:(horiz?b[3]-b[1]:b[2]-b[0])-3};return{h:10,draw(){SV.table.chart(fr)}}}
+function calStage(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,1],L:b[2]-b[0]-2,D:b[3]-b[1]-2};return{h:8,draw(){SV.table.stage(fr)}}}
+function calWorkTable(f,b){const horiz=b[2]-b[0]>=b[3]-b[1];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:horiz?[0,1]:[1,0],L:(horiz?b[2]-b[0]:b[3]-b[1])-2,D:(horiz?b[3]-b[1]:b[2]-b[0])-3};return{h:15,draw(){SV.table.work(fr)}}}
+function calReactor(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:31,draw(){SV.eq.reactor(x,y)}}}
+function calPodium(f,b){const fr=calFaceRoom(f,b,8,8);const an=(servesMap[f.label]||[])[0];if(an){const u=[an.tile[0]*T+6-fr.cx,an.tile[1]*T+6-fr.cy];const L=Math.hypot(...u)||1;fr.f=[u[0]/L,u[1]/L];fr.a=[-fr.f[1],fr.f[0]]}return{h:11,draw(){SV.eq.podium(fr,{seed:hash(f.label)%7})}}}
+function calTube(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[0,1],f:[1,0],L:b[3]-b[1]-2};return{h:28,draw(){SV.eq.tube(fr)}}}
+function calRack(f,b){const vert=b[3]-b[1]>b[2]-b[0];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:vert?[0,1]:[1,0],f:vert?[-1,0]:[0,1],L:(vert?b[3]-b[1]:b[2]-b[0])-2,D:8};const w=calWallFrame(f,8);fr.f=w.f;fr.a=w.a;fr.cx=w.cx;fr.cy=w.cy;
+  return{h:22,draw(){SV.eq.rack(fr,{seed:hash(f.label)%7,h:f.asset==="STO-004"?17:20.5})}}}
+function calBoard(f,b){const fr=calWallFrame(f,6);return{h:16,draw(){SV.con.bank(fr,{bays:3,seed:4,kits:["readout","screen","readout"],housingH:15})}}}
+function calBreaker(f,b){const fr=calWallFrame(f,7);fr.L=8;return{h:16,draw(){SV.eq.service(fr,{tone:"steel",h:14})}}}
+function calPedestal(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,1]};return{h:15,draw(){SV.eq.projector(fr)}}}
+const BUILD_CAL={"CON-006":calWorkstation,
+  "CON-009":calWorkstation,"CON-002":calWorkstation,"CON-016":calWorkstation,"CON-017":calWorkstation,"CON-018":calWorkstation,"CON-019":calWorkstation,"CON-020":calWorkstation,"CON-027":calWorkstation,
+  "CON-001":calWorkstation,"CON-013":calWorkstation,"CON-014":calWorkstation,"CON-012":calWorkstation,"CON-029":calWorkstation,"CON-023":calWorkstation,
+  "CON-011":calPodium,"CON-015":calBreaker,"CON-010":calPedestal,"TBL-002":calChart,"TBL-007":calStage,"TBL-005":calWorkTable,"EQP-001":calReactor,"EQP-002":calTube,"EQP-003":calBoard,
+  "SRV-001":calRack,"SRV-002":calRack,"STO-004":calRack,"SEA-003":calChair,"CON-008":calWorkstation,"CON-007":calLabBench,"EQP-005":calDome,"SCR-006":calProjector,"SCR-013":calCluster,"STO-007":calCart,"EQP-006":calOptics,"EQP-007":calTank,"CON-030":calBank,"CON-031":calSecondary,"STO-001":calLocker,"STO-005":calEquipBay,"STO-006":calServiceCab,"PLT-001":calPlanter,"SRV-005":calRelay,"CON-003":calWorkstation,"CON-004":calWorkstation,"CON-005":calWorkstation,"CON-022":calWorkstation,"SEA-002":calChair,"TBL-001":calTable,"SEA-001":calCommandChair,"SEA-005":calBench};
 // console displays of the four role workstations render inside the workstation; this item keeps hover/inspect on the display
 function calConsoleDisplayItem(d,f){const b=fp(f);return{b:inset(b,2),h:17,bias:0.3,draw(){}}}
 // ---- H-CMD deck plan, composed from SV.floor: staggered panels with structural beams, a treadway walkway ring, grilles and
@@ -557,6 +593,57 @@ function lightsHLABCal(pool,WHITE,CYAN,COLD){const c=hubById["H-LAB"];const LAMP
   for(const a of D.agents.filter(q=>q.room==="H-LAB"&&!q.noProducer&&/feed|driver/.test(q.anchor))){const an=D.anchors.find(q=>q.name===a.anchor);if(an)pool(an.tile[0]*T+6,an.tile[1]*T+6,18,CYAN,0.12)}
   for(const f of D.furniture.filter(q=>q.room==="H-LAB"&&/SRV-005|STO-005|STO-006|EQP-007|SCR-013/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,10,AMB,0.07)}
   for(const z of calGroupZones("H-LAB",20))pool((z[0]+z[2])/2,(z[1]+z[3])/2,Math.max(z[2]-z[0],z[3]-z[1])*0.6,LAMP,0.06)}
+// ================================================================ WING CALIBRATION: department rooms L1-L4, L6, L7, L9, L10 and corridors
+// Composition with the Stellar Visual Vocabulary (docs/STELLAR_WING_CALIBRATION_V1.md). Walls become dark bulkheads whose faces
+// follow the same bay rhythm as the hubs, with an upper layer above wall equipment (never behind a registered wall display);
+// doors are SV.door assemblies; floors are SV.floor decks; geometry, anchors, doors and displays are unchanged.
+const CAL_WALL_SIDE=n=>n[1]>0.5?"N":n[1]<-0.5?"S":n[0]>0.5?"W":"E";
+function calWallOwner(w,own,kind){if(kind==="reserved")return false;if(kind==="niche"){const d=D.doors.find(q=>q.id===own);return !!(d&&calDoorZone(d))}return CAL_WING.has(own)||CAL_CORR.has(own)}
+function calUnderWallDisplay(room,side,segC){return D.displays.some(d=>d.place[0]==="wall"&&d.place[1]===room&&d.place[2]===side&&Math.abs(segC-d.place[3])<d.place[4]/2+0.6)}
+function calWallSegment(w,b,h){const horiz=w.p1[1]===w.p2[1];prismX(rectPoly(...b),0,h,CAL.crown,CAL.gun,{lw:0.4,shadow:false,hi:false,mat:h>=10});
+  ctx.fillStyle=h>=10?CAL.crown:"#5e5c55";ctx.fill(poly2(rectPoly(...b),h));
+  if(h<10)return;const idx=Math.round((horiz?w.p1[0]:w.p1[1])/T);
+  const sides=horiz?[[[b[0],b[1]],[b[2],b[1]],[0,-1]],[[b[0],b[3]],[b[2],b[3]],[0,1]]]:[[[b[0],b[1]],[b[0],b[3]],[-1,0]],[[b[2],b[1]],[b[2],b[3]],[1,0]]];
+  for(const [a,c,n] of sides){const mid=[(a[0]+c[0])/2,(a[1]+c[1])/2];const room=tileRoom.get(Math.floor((mid[0]+n[0]*6)/T)+","+Math.floor((mid[1]+n[1]*6)/T));
+    if(!(CAL_WING.has(room)||CAL_CORR.has(room)))continue;const corr=CAL_CORR.has(room);const rib=idx%4===0;
+    const kind=rib?"rib":corr?["panel","grille","panel"][idx%3]:SV.wall.BAYS[(Math.floor(idx/4)+hash(room))%SV.wall.BAYS.length][(idx%4)-1];
+    onFace(a,c,n,0,h,(W,HH)=>{SV.wall.face(kind,W,HH,idx);if(!rib&&idx%2===0)SV.wall.tray(W,HH);if(rib&&idx%8===0)SV.small.lampBox(W/2-2.6,3.2,5.2,3)});
+    if(corr||rib||h<20||n[0]*V.cam[0]+n[1]*V.cam[1]<=0.02)continue;
+    const bb=D.bbox[room];const side=CAL_WALL_SIDE(n);const segC=horiz?(Math.min(w.p1[0],w.p2[0])/T-bb[0]+0.5):(Math.min(w.p1[1],w.p2[1])/T-bb[1]+0.5);if(calUnderWallDisplay(room,side,segC))continue;
+    const ft=Math.floor((mid[0]+n[0]*6)/T)+","+Math.floor((mid[1]+n[1]*6)/T);const fu=D.furniture.find(f=>f.room===room&&f.kind==="block"&&f.tiles.some(q=>q[0]+","+q[1]===ft));if(!fu)continue;
+    const up=/^CON-/.test(fu.asset)?["monitor",18.5,Math.min(h-1,26)]:["cabinet",20.5,Math.min(h-1,25.5)];if(up[2]-up[1]<3)continue;
+    const fr={cx:mid[0]+n[0]*2.2,cy:mid[1]+n[1]*2.2,a:horiz?[1,0]:[0,1],f:n,L:T*0.84,D:3.4};SV.wall.upper(fr,up[0],up[1],up[2],idx)}}
+function drawWingCalFloor(){const detail=cam.z>=1.2,fine=cam.z>=2.2;
+  const marked=new Set();for(const f of D.furniture)if(f.kind==="floor"&&(CAL_WING.has(f.room)))for(const q of f.tiles)marked.add(q[0]+","+q[1]);
+  const per=new Set();for(const f of D.furniture)if(CAL_WING.has(f.room)&&f.kind==="block"&&f.label.includes("perimeter"))for(const q of f.tiles)per.add(q[0]+","+q[1]);
+  for(const [tc,tr,n] of D.tiles){if(!(CAL_WING.has(n)||CAL_CORR.has(n)))continue;const X=tc*T,Y=tr*T;const hsh=(tc*73856093^tr*19349663)>>>0;
+    SV.floor.panel(tc,tr,X,Y,fine,detail);
+    if(n==="L10"){SV.floor.grille(X,Y);continue} // FLR-003 grating floor
+    if(CAL_CORR.has(n)){const bb=D.bbox[n];if(tr===(bb[1]+bb[3])/2){ctx.fillStyle="#26272a";ctx.fill(poly2(rectPoly(X,Y+0.4,X+T,Y+T-0.4),0.01));if(detail){const lean=tc%2?1:-1;for(let i=0;i<3;i++)for(let j=0;j<3;j++){const bx=X+2+i*3.6,by=Y+2+j*3.6;line3([bx,by+1.2+lean*0.6,0.02],[bx+2.4,by+1.2-lean*0.6,0.02],"rgba(150,140,120,.28)",0.6)}}
+        for(const yy of [Y+0.4,Y+T-0.4])line3([X,yy,0.03],[X+T,yy,0.03],"rgba(214,156,52,.8)",0.7,[2.2,1.4])}
+      else if(detail&&tc%3===0)SV.floor.vent(X,Y);continue}
+    if(marked.has(tc+","+tr))continue;
+    let near=false;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(per.has((tc+dx)+","+(tr+dy)))near=true;
+    if(near&&!per.has(tc+","+tr)){ctx.fillStyle="#1f2023";ctx.fill(poly2(rectPoly(X,Y,X+T,Y+T),0.01));if(detail)for(let k=1.5;k<12;k+=2.4)line3([X+0.5,Y+k,0.02],[X+11.5,Y+k,0.02],"rgba(0,0,0,.4)",0.45);continue}
+    if(detail&&hsh%13===0)SV.floor.grille(X,Y);if(detail&&hsh%17===5)SV.floor.hatch(X,Y,fine);if(detail){if(tc%4===0)SV.floor.beam(X,Y,"W",fine);if(tr%4===0)SV.floor.beam(X,Y,"N",fine)}}
+  // corridor guide strip (LGT-004, Corridor Design CD-7): chevrons toward both ends, on the treadway
+  for(const cid of CAL_CORR){const [c0,r0,c1,r1]=D.bbox[cid];const y=(r0+r1+1)/2*T,x0=c0*T,x1=(c1+1)*T,xm=(x0+x1)/2;
+    for(let x=x0+30;x<x1-30;x+=36){const dir=x<xm?-1:1;const q=V.P(x+dir*5,y);ctx.strokeStyle="rgba(120,230,245,.6)";ctx.lineWidth=0.6;ctx.beginPath();const a=V.P(x,y-2.5),b2=V.P(x,y+2.5);ctx.moveTo(a[0],a[1]);ctx.lineTo(q[0],q[1]);ctx.lineTo(b2[0],b2[1]);ctx.stroke()}}
+  // hero bands: L2 chart table, L3 evidence stage, L4 reactor column, L9 launch deck, L10 risk core line
+  const fb=l=>{const f=D.furniture.find(q=>q.label===l);return f&&fp(f)};const oct=(cx,cy,r)=>{const o=[];for(let k=0;k<8;k++){const a=k*TAU/8+Math.PI/8;o.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return o};
+  {const b=fb("TBL-002 holo chart table");if(b){const q=rectPoly(b[0]-3,b[1]-3,b[2]+3,b[3]+3);SV.floor.hatchBand(q,1.8,0.02)}}
+  {const b=fb("TBL-007 evidence stage");if(b)SV.floor.hatchBand(oct((b[0]+b[2])/2,(b[1]+b[3])/2,24),2,0.02)}
+  {const b=fb("EQP-001 + SCR-006 column");if(b){SV.floor.hatchBand(oct((b[0]+b[2])/2,(b[1]+b[3])/2,10),1.8,0.02);SV.floor.junction(b[0],b[1])}}
+  {const f=D.furniture.find(q=>q.asset==="FLR-008");if(f){const b=fp(f);const q=rectPoly(b[0]+3,b[1]+3,b[2]-3,b[3]-3);SV.floor.hatchBand(q,2.4,0.02);ctx.strokeStyle="rgba(205,212,220,.45)";ctx.lineWidth=0.4;ctx.stroke(poly2(rectPoly(...inset(b,8)),0.02))}}
+  {const f=D.furniture.find(q=>q.label.startsWith("risk.core"));if(f){const b=fp(f);const q=rectPoly(b[0]+1,b[1]+3.6,b[2]-1,b[1]+8.4);ctx.save();ctx.clip(poly2(q,0.02));ctx.fillStyle="#1b1c1f";ctx.fill(poly2(q,0.02));for(let k=b[0]-8;k<b[2];k+=3.2)line3([k,b[1]+3.6,0.03],[k+4.8,b[1]+8.4,0.03],"rgba(201,146,46,.72)",1.1);ctx.restore()}}}
+// wing light: low room ambient, task pools at work anchors, cyan spill at live consoles, amber at wall equipment, hero light, corridor lamps
+function lightsWingCal(pool,WHITE,CYAN,COLD){const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";
+  for(const id of CAL_WING){const [c0,r0,c1,r1]=D.bbox[id];pool((c0+c1+1)/2*T,(r0+r1+1)/2*T,70,COLD,0.045)}
+  for(const a of D.anchors.filter(q=>CAL_WING.has(q.room)&&q.chr))pool(a.tile[0]*T+6,a.tile[1]*T+6,14,LAMP,0.11);
+  for(const a of D.agents.filter(q=>CAL_WING.has(q.room)&&!q.noProducer)){const an=D.anchors.find(q=>q.name===a.anchor);if(an&&an.serves)pool(an.tile[0]*T+6,an.tile[1]*T+6,16,CYAN,0.1)}
+  for(const f of D.furniture.filter(q=>CAL_WING.has(q.room)&&q.label.includes("perimeter"))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,9,AMB,0.07)}
+  for(const [l,c,r,a] of [["TBL-002 holo chart table",CYAN,30,0.18],["TBL-007 evidence stage",WHITE,30,0.1],["EQP-001 + SCR-006 column",CYAN,26,0.2],["EQP-002 Dispatch Tube",CYAN,18,0.16]]){const f=D.furniture.find(q=>q.label===l);if(f){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,r,c,a)}}
+  for(const id of CAL_CORR){const [c0,r0,c1,r1]=D.bbox[id];for(let x=c0*T+20;x<(c1+1)*T;x+=48)pool(x,(r0+r1+1)/2*T,30,WHITE,0.09)}}
 function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";pool(c.x,c.y,95,LAMP,0.05);pool(c.x,c.y,40,CYAN,0.28);
   // wall lamps: a warm pool under each fixture of the wall rhythm (same segment rule as calRimSegment)
   {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-14)*Math.cos(a),c.y+(c.R-14)*Math.sin(a),30,LAMP,0.13)}}
@@ -594,7 +681,7 @@ function calRimSegment(pts,h,i,hb){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*k,p[1]+(
 // ---- compact crew (reference construction: large head ~40 % of height, strong outline) in Stellar uniforms, integrated seating
 function drawAgentCal(a,x,y){
   const hsh=hash(a.chr);const skin=SKIN[hsh%SKIN.length],hair=HAIR[(hsh>>3)%HAIR.length],style=(hsh>>9)%4;
-  const seated=seatTiles.has(a.tile[0]+","+a.tile[1]);const atDesk=seated&&/console|feed|bench|driver/.test(a.anchor);let ox=0,oy=0;
+  const seated=seatTiles.has(a.tile[0]+","+a.tile[1]);const atDesk=seated&&/console|feed|bench|driver|desk/.test(a.anchor);let ox=0,oy=0;
   if(seated){const L=Math.hypot(a.face[0],a.face[1])||1;const pull=atDesk?2.6:1.2;ox=a.face[0]/L*pull;oy=a.face[1]/L*pull}
   const X=x+ox,Y=y+oy;const h0=calBaseH(x,y);const s=V.P(X,Y,h0);const fw=V.P(X+a.face[0],Y+a.face[1],0),f0=V.P(X,Y,0);let tx=fw[0]-f0[0];tx/=Math.hypot(tx,fw[1]-f0[1])||1;
   const away=(V.cam[0]*a.face[0]+V.cam[1]*a.face[1])<-0.05;const active=opt.preview&&!a.noProducer;const dc=DEPT[a.dept];const O=CAL.out,OW=0.8;
@@ -669,7 +756,7 @@ function displayItem(d){
   else if(kind==="rim"){const hb=hubById[p[1]];const R=hb.R-1.2,ang=p[2]*Math.PI/6,half=p[3]/2/R;
     const a=clockPt(hb.x,hb.y,R,p[2]-half*6/Math.PI),b=clockPt(hb.x,hb.y,R,p[2]+half*6/Math.PI);const nin=[-Math.sin(ang),Math.cos(ang)];
     it=wallPanel(d,a,b,nin,p[4],p[5])}
-  else if(kind==="console"){const f=D.furniture.find(q=>q.label===p[1]);if(!f)return null;if(CAL_ROOMS.has(f.room)&&/^CON-0(03|04|05|22)$/.test(f.asset))it=calConsoleDisplayItem(d,f);else{const b=fp(f);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;
+  else if(kind==="console"){const f=D.furniture.find(q=>q.label===p[1]);if(!f)return null;if(CAL_ROOMS.has(f.room)&&BUILD_CAL[f.asset]===calWorkstation)it=calConsoleDisplayItem(d,f);else{const b=fp(f);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;
     const hw={"SCR-005":[18,4.5],"SCR-006":[11,7]}[d.hw]||[16,9];it=billboard(d,cx,cy,(d.hw==="SCR-006"?(f.asset==="EQP-001"?31:17):12),hw[0],hw[1])}}
   else if(kind==="surface"){const [lab,room]=p[1].split("@");const f=D.furniture.find(q=>q.label===lab&&(!room||q.room===room));if(!f)return null;const b=inset(fp(f),3);
     const hh=f.asset==="TBL-007"?4.2:7.2;it={b:[b[0],b[1],b[2],b[3]],h:hh,bias:0.2,draw(){surfacePanel(d,b,hh)}}}
@@ -754,17 +841,9 @@ function drawGround(){
   // room inlays (titanium, walk-over)
   const ti="rgba(185,194,204,.5)";
   const fpL=l=>fp(D.furniture.find(f=>f.label===l));
-  {const b=inset(fpL("TBL-002 holo chart table"),-3.5);ctx.strokeStyle=ti;ctx.lineWidth=0.6;ctx.stroke(poly2(rectPoly(...b),0))}
-  {const b=fpL("TBL-007 evidence stage");ell((b[0]+b[2])/2,(b[1]+b[3])/2,26,0,null,ti,0.6)}
-  {const b=fpL("EQP-001 + SCR-006 column");ell((b[0]+b[2])/2,(b[1]+b[3])/2,11,0,null,ti,0.6)}
-  {const [c0,r0]=D.bbox.L1;ctx.strokeStyle=ti;ctx.lineWidth=0.6;ctx.stroke(poly2(rectPoly((c0+3)*T,(r0+4)*T,(c0+6)*T,(r0+12)*T),0))}
-  {const f=D.furniture.find(q=>q.asset==="FLR-008");const b=fp(f);ctx.strokeStyle="rgba(205,212,220,.6)";ctx.lineWidth=0.7;ctx.stroke(poly2(rectPoly(...inset(b,3)),0));ctx.lineWidth=0.4;ctx.stroke(poly2(rectPoly(...inset(b,6)),0))}
-  {const f=D.furniture.find(q=>q.label.startsWith("risk.core"));const b=fp(f);line3([b[0]+2,b[1]+1,0],[b[2]-2,b[1]+1,0],"rgba(205,212,220,.55)",0.8,[3,2])}
-  // corridors: titanium lane inlay + guide strip LGT-004 toward both ends (CD-7)
-  for(const cid of ["COR-N","COR-S"]){const [c0,r0,c1,r1]=D.bbox[cid];const y=(r0+r1+1)/2*T,x0=c0*T,x1=(c1+1)*T,xm=(x0+x1)/2;line3([x0,y,0],[x1,y,0],"rgba(185,194,204,.45)",0.5);
-    for(let x=x0+30;x<x1-30;x+=36){const dir=x<xm?-1:1;const p=V.P(x,y+5),q=V.P(x+dir*5,y+5);ctx.strokeStyle="rgba(120,230,245,.55)";ctx.lineWidth=0.6;ctx.beginPath();const a=V.P(x,y+3.5),b2=V.P(x,y+6.5);ctx.moveTo(a[0],a[1]);ctx.lineTo(q[0],q[1]);ctx.lineTo(b2[0],b2[1]);ctx.stroke()}}
+  drawWingCalFloor(); // wing calibration: department rooms and corridors composed from SV.floor
   // door thresholds: titanium strips; restricted marking SGN-006 (hatch, readable without colour)
-  for(const d of D.doors){for(const f of d.frames){line3([...f.p1,0.05],[...f.p2,0.05],d.status==="open"?"rgba(205,212,220,.8)":"rgba(90,98,110,.8)",1.0)}
+  for(const d of D.doors){if(calDoorZone(d))continue;for(const f of d.frames){line3([...f.p1,0.05],[...f.p2,0.05],d.status==="open"?"rgba(205,212,220,.8)":"rgba(90,98,110,.8)",1.0)}
     if(d.restricted){const f=d.frames[0];const y=f.p1[1];const x0=Math.min(f.p1[0],f.p2[0]),x1=Math.max(f.p1[0],f.p2[0]);ctx.save();ctx.clip(poly2(rectPoly(x0,y-8,x1,y),0));
       for(let x=x0-12;x<x1+12;x+=3){line3([x,y,0.05],[x+8,y-8,0.05],"rgba(242,164,58,.55)",0.9)}ctx.restore();ctx.strokeStyle="rgba(242,164,58,.7)";ctx.lineWidth=0.4;ctx.stroke(poly2(rectPoly(x0,y-8,x1,y),0))}}
 }
@@ -774,12 +853,10 @@ function drawLights(){
   const WHITE="rgba(235,242,255,A)",CYAN="rgba(110,215,240,A)",WARM="rgba(255,205,150,A)",COLD="rgba(190,215,255,A)";
   lightsHCMDCal(pool,WHITE,CYAN);
   lightsHLABCal(pool,WHITE,CYAN,COLD);
+  lightsWingCal(pool,WHITE,CYAN,COLD);
   const hb=hubById["H-HAB"];pool(hb.x,hb.y,60,WARM,0.16);pool(hb.x,hb.y,175,WARM,0.05);
   for(const f of D.furniture){if(f.asset==="TBL-003"||f.asset==="LEI-001"){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,f.asset==="LEI-001"?32:16,WARM,0.2)}}
-  for(const id of ["L1","L2","L3","L6","L7"]){const [c0,r0,c1,r1]=D.bbox[id];pool((c0+c1+1)/2*T,(r0+r1+1)/2*T,80,COLD,0.07)}
-  for(const id of ["L4","L9"]){const [c0,r0,c1,r1]=D.bbox[id];pool((c0+c1+1)/2*T,(r0+r1+1)/2*T,80,WHITE,0.07)}
   for(const f of D.furniture.filter(f=>f.room==="L10"&&f.kind==="block")){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,22,COLD,0.12)} // LGT-005 cold panel light
-  for(const id of ["COR-N","COR-S"]){const [c0,r0,c1,r1]=D.bbox[id];for(let x=c0*T+20;x<(c1+1)*T;x+=48)pool(x,(r0+r1+1)/2*T,30,WHITE,0.1)}
   if(opt.preview){for(const a of D.agents){if(a.noProducer)continue;const an=D.anchors.find(q=>q.name===a.anchor);if(!an||!an.serves)continue;const f=D.furniture.find(q=>q.label===an.serves);if(!f)continue;const b=fp(f);
     pool((b[0]+b[2])/2,(b[1]+b[3])/2,f.asset==="CON-011"?20:16,f.asset==="CON-011"?WHITE:CYAN,0.28)}}
   ctx.restore();
