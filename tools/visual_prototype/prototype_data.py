@@ -29,7 +29,12 @@ def build_prototype_data(g, registries):
         "COR-S": ("Lower corridor", "NEU", "corr"),
         "L5": ("Reserved", "RES", "reserved"),
         "L8": ("Reserved", "RES", "reserved"),
+        # habitat recreation rooms (owner-approved): R1-R3 open off H-HAB; R4-R6 stay reserved
+        "R1": ("Zen Room · Wellbeing", "HAB", "room"),
+        "R2": ("Crew Cinema", "HAB", "room"),
+        "R3": ("Decompression Room", "HAB", "room"),
     }
+    R_ACTIVE = {"R1", "R2", "R3"}
     FLOOR = {
         "H-CMD": "FLR-001",
         "H-LAB": "FLR-001",
@@ -146,7 +151,17 @@ def build_prototype_data(g, registries):
     hx, hy, hr = hubs["H-HAB"]
     for rid, (x, y) in g["r_doors"].items():
         ang = math.atan2(y - hy, x - hx)
-        r_doors.append({"id": rid, "x": x, "y": y, "ang": ang, "room": "R" + rid[-1]})
+        room = "R" + rid[-1]
+        r_doors.append(
+            {
+                "id": rid,
+                "x": x,
+                "y": y,
+                "ang": ang,
+                "room": room,
+                "status": "open" if room in R_ACTIVE else "reserved",
+            }
+        )
 
     # hub rim door gaps (angles) from the door frames
     hub_gaps = {h: [] for h in hubs}

@@ -680,6 +680,41 @@ SV.hab.dog=(x,y,o={})=>{const s=V.P(x,y,0);ell(x,y,2.8,0.02,"rgba(0,0,0,.35)");c
   ctx.fillStyle="#efe0c4";ctx.beginPath();ctx.ellipse(-1.4,-7,1.2,0.85,0,0,TAU);ctx.fill();ctx.strokeStyle=O;ctx.lineWidth=0.35;ctx.stroke();ctx.fillStyle="#1a1a1a";ctx.beginPath();ctx.arc(-2.4,-7.2,0.35,0,TAU);ctx.fill(); // muzzle + nose
   ctx.fillStyle=dark;for(const ex of [-1.2,1.3]){ctx.beginPath();ctx.ellipse(ex,-8.6,0.7,1.5,ex<0?0.5:-0.5,0,TAU);ctx.fill();ctx.lineWidth=0.4;ctx.stroke()}
   ctx.fillStyle="#1a1a1a";ctx.beginPath();ctx.arc(-0.9,-8,0.28,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(0.5,-8,0.28,0,TAU);ctx.fill();ctx.restore()};
+// ================================================================ RECREATION family (habitat rooms R1 zen, R2 cinema, R3 decompression)
+SV.rec={};
+// meditation mat + round cushion (walk-over)
+SV.rec.mat=(fr,o={})=>{const hL=fr.L/2||5,hD=fr.D/2||3.4;prismX(frameCham(fr,-hL,hL,-hD,hD,0.8),0,0.5,o.col||"#7a8a6a",o.colLo||"#5e6b52",{lw:0.3,mat:false});
+  onTop(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,0.52,(W,Dd)=>{ctx.strokeStyle="rgba(0,0,0,.18)";ctx.lineWidth=0.2;for(let x=1;x<W;x+=1.4){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,Dd);ctx.stroke()}});
+  const c=[fr.cx+fr.a[0]*(-hL*0.45),fr.cy+fr.a[1]*(-hL*0.45)];cyl(c[0],c[1],1.8,0.5,1.8,"#c9a77c","#8c6239",{n:14});ell(c[0],c[1],1.2,1.82,null,"rgba(255,240,215,.4)",0.25)};
+// ambient speaker column: a slim wood-clad column with a fabric grille and a warm status pip (world-building: no audio)
+SV.rec.speaker=(x,y)=>{prismX(rectPoly(x-2.2,y-2.2,x+2.2,y+2.2),0,0.8,"#2a2c31","#1d1f23",{lw:0.3,mat:false,hi:false});prismX(rectPoly(x-1.7,y-1.7,x+1.7,y+1.7),0.8,13,"#8c6239","#6b4a2f",{lw:0.35});
+  for(const [n,a,b] of [[[0,1],[x-1.7,y+1.7],[x+1.7,y+1.7]],[[1,0],[x+1.7,y+1.7],[x+1.7,y-1.7]]])onFace(a,b,n,0.8,13,(W,H)=>{ctx.fillStyle="#2a2420";ctx.fillRect(0.5,1,W-1,H-3);ctx.fillStyle="rgba(255,240,215,.08)";for(let k=1.4;k<H-2;k+=0.7)ctx.fillRect(0.6,k,W-1.2,0.2);ctx.fillStyle="#3a302a";ctx.beginPath();ctx.arc(W/2,H*0.3,W*0.28,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(W/2,H*0.62,W*0.2,0,TAU);ctx.fill();ctx.fillStyle="#f0b860";ctx.fillRect(W/2-0.2,H-1.6,0.4,0.3)})};
+// zen sand garden: a low wood-framed bed of raked sand with three stones and a small tree
+SV.rec.garden=(fr)=>{const hL=fr.L/2,hD=fr.D/2;prismX(frameCham(fr,-hL,hL,-hD,hD,1),0,1.6,"#8c6239","#6b4a2f");const sand=frameRect(fr,-hL+1,hL-1,-hD+1,hD-1);ctx.fillStyle="#d8cdb8";ctx.fill(poly2(sand,1.62));
+  ctx.save();ctx.clip(poly2(sand,1.62));for(let k=-hD;k<hD;k+=1.1)line3([fr.cx-fr.a[0]*hL+fr.f[0]*k,fr.cy-fr.a[1]*hL+fr.f[1]*k,1.63],[fr.cx+fr.a[0]*hL+fr.f[0]*k,fr.cy+fr.a[1]*hL+fr.f[1]*k,1.63],"rgba(140,120,95,.45)",0.25);ctx.restore();
+  for(const [s,d,r] of [[-hL*0.45,-hD*0.2,2.2],[-hL*0.2,hD*0.35,1.4],[hL*0.1,-hD*0.3,1.1]]){const x=fr.cx+fr.a[0]*s+fr.f[0]*d,y=fr.cy+fr.a[1]*s+fr.f[1]*d;ell(x,y,r+1.6,1.64,null,"rgba(140,120,95,.5)",0.25);cyl(x,y,r,1.6,1.6+r*1.1,"#8a8f96","#5e636a",{n:9})}
+  SV.hab.tree(fr.cx+fr.a[0]*hL*0.55,fr.cy+fr.a[1]*hL*0.55,{seed:4})};
+// cinema screen: a wide physical screen on wall brackets, with masking borders; dark, no display identity, no content
+SV.rec.screen=(fr,h0,h1)=>{const hL=fr.L/2;prismX(frameRect(fr,-hL-1.6,hL+1.6,-1.6,0),h0-1.2,h1+1.2,"#1d1f23","#141517",{lw:0.4,shadow:false});
+  const [a,b,n]=faces(fr,-hL-1.6,hL+1.6,-1.6,0).front;onFace(a,b,n,h0-1.2,h1+1.2,(W,H)=>{ctx.fillStyle="#0a0b0d";ctx.fillRect(0,0,W,H);ctx.fillStyle="#1d2630";ctx.fillRect(2.4,1.6,W-4.8,H-3.2);const g=ctx.createLinearGradient(0,1.6,0,H-1.6);g.addColorStop(0,"rgba(180,200,220,.10)");g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(2.4,1.6,W-4.8,H-3.2);
+    ctx.fillStyle="rgba(255,255,255,.05)";ctx.beginPath();ctx.moveTo(W*0.1,1.6);ctx.lineTo(W*0.3,1.6);ctx.lineTo(W*0.15,H-1.6);ctx.lineTo(W*-0.05,H-1.6);ctx.closePath();ctx.fill();dRivets(0.4,0.4,W-0.8,H-0.8,"#3a3d43")})};
+// cinema recliner pair on a stepped riser: carpeted riser with an aisle-light strip, two upholstered recliners with cup-holder arms
+SV.rec.recliners=(fr,h0,n)=>{const hL=fr.L/2,hD=fr.D/2;if(h0>0.05){prismX(frameRect(fr,-hL-1,hL+1,-hD-1,hD+1),0,h0,"#3a2a30","#2a1f24",{lw:0.35,shadow:false});const [a,b,nn]=faces(fr,-hL-1,hL+1,-hD-1,hD+1).front;onFace(a,b,nn,0,h0,(W,H)=>{for(let x=1;x<W;x+=3){ctx.fillStyle="rgba(255,190,110,.75)";ctx.fillRect(x,H*0.4,0.8,0.4)}})}
+  const seatW=(fr.L-1)/n;for(let i=0;i<n;i++){const s0=-hL+0.5+i*seatW;const sf={cx:fr.cx+fr.a[0]*(s0+seatW/2),cy:fr.cy+fr.a[1]*(s0+seatW/2),a:fr.a,f:fr.f};const w=seatW/2-0.9;
+    prismX(frameCham(sf,-w,w,-hD+0.6,hD-0.6,0.8),h0,h0+3,"#7a3a44","#5a2a32");prismX(frameCham(sf,-w,w,-hD+0.4,-hD+2,0.6),h0+3,h0+8.4,"#7a3a44","#5a2a32",{mat:false});
+    for(const sg of [-1,1])prismX(frameRect(sf,sg*w+(sg<0?-0.9:0),sg*w+(sg<0?0:0.9),-hD+0.6,hD-0.6),h0,h0+4.4,"#3a3d43","#26282c",{lw:0.3,mat:false});const cp=V.P(sf.cx+sf.a[0]*(w+0.45)+sf.f[0]*(hD-1.2),sf.cy+sf.a[1]*(w+0.45)+sf.f[1]*(hD-1.2),h0+4.45);ctx.fillStyle="#0e0f11";ctx.beginPath();ctx.arc(cp[0],cp[1],0.35,0,TAU);ctx.fill()}};
+// projector stand: a low cabinet with a lens hood; the lens is dark (no content is projected)
+SV.rec.projector=(fr)=>{plinth(fr,-4,4,-3,3,0.8);prismX(frameCham(fr,-3.4,3.4,-2.6,2.6,0.6),0.8,9,"#45484f",CAL.gun);prismX(frameCham(fr,-3,3,-2.4,2.4,0.8),9,12.4,"#2a2c31","#1d1f23");
+  const lp=[fr.cx+fr.f[0]*2.8,fr.cy+fr.f[1]*2.8];cyl(lp[0],lp[1],1.1,10,11.6,"#0e0f11","#2a2c31",{n:10});const [a,b,n]=faces(fr,-3.4,3.4,-2.6,2.6).front;onFace(a,b,n,0.8,9,(W,H)=>{dGrille(0.8,0.8,W-1.6,H*0.3);dRecess(0.8,H*0.5,W-1.6,H*0.4,"#24262a");dIndicator(W-1.6,H*0.55,false)})};
+// padded bench (R3): a low upholstered block on a recessed plinth
+SV.rec.padBench=(fr)=>{const hL=fr.L/2,hD=fr.D/2;prismX(frameRect(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6),0,1,"#26282c","#1d1f23",{lw:0.3,mat:false});prismX(frameCham(fr,-hL,hL,-hD,hD,1),1,4.4,"#6e6a74","#55515c");
+  onTop(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,4.42,(W,Dd)=>{ctx.fillStyle="rgba(0,0,0,.18)";for(let x=1.4;x<W;x+=2.6)for(let y=1;y<Dd;y+=2.2){ctx.beginPath();ctx.arc(x,y,0.25,0,TAU);ctx.fill()}})};
+// wall faces for the recreation rooms
+SV.wall.acoustic=(W,H,seed,o={})=>{const dark=!!o.dark;SV.wall.band(W,H);ctx.fillStyle=dark?"#15161a":"#4a3626";ctx.fillRect(0.6,2,W-1.2,H-5);for(let x=1;x<W-0.8;x+=1.2){ctx.fillStyle=dark?(Math.floor(x)%2?"#24232b":"#1d1c23"):(Math.floor(x)%2?"#8c6239":"#7a5530");ctx.fillRect(x,2.4,0.9,H-5.8)}
+  ctx.fillStyle=dark?"rgba(255,190,110,.35)":"rgba(255,215,150,.28)";ctx.fillRect(0.6,H-3.4,W-1.2,0.6);dWear(W,H-3,seed)};
+SV.wall.padded=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle="#55515c";ctx.fillRect(0.4,1.8,W-0.8,H-4.6);const cw=W/Math.max(1,Math.round(W/4.6));
+  for(let x=0.4;x<W-0.5;x+=cw)for(let y=1.8;y<H-3;y+=4.2){ctx.fillStyle="#6e6a74";chamRect(x+0.3,y+0.3,cw-0.6,3.6,1);ctx.fill();ctx.fillStyle="rgba(0,0,0,.25)";ctx.beginPath();ctx.arc(x+cw/2,y+2.1,0.35,0,TAU);ctx.fill()}
+  ctx.fillStyle="#2a2c31";for(let x=0.4;x<W;x+=cw)ctx.fillRect(x-0.2,1.8,0.4,H-4.6)};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -726,6 +761,9 @@ const SV_CATALOGUE=[
   {name:"HAB fountain (hero)",w:44,d:40,draw:(fr)=>SV.hab.fountain(fr.cx,fr.cy,14,0)},
   {name:"HAB park tree + bed",w:34,d:16,draw:(fr)=>{SV.hab.bed({...fr,cx:fr.cx-6,L:18,D:8},{seed:2});SV.hab.tree(fr.cx+12,fr.cy)}},
   {name:"HAB dog corner + dog",w:30,d:14,draw:(fr)=>{SV.hab.dogCorner({...fr,cx:fr.cx-3,L:22,D:10});SV.hab.dog(fr.cx+12,fr.cy+2)}},
+  {name:"REC zen: mats, speaker, garden",w:48,d:22,draw:(fr)=>{SV.rec.garden({...fr,cx:fr.cx-12,L:20,D:14});SV.rec.mat({...fr,cx:fr.cx+8,L:10,D:6.8});SV.rec.speaker(fr.cx+20,fr.cy)}},
+  {name:"REC cinema: recliners, projector",w:44,d:16,draw:(fr)=>{SV.rec.recliners({...fr,cx:fr.cx-6,f:[0,-1],L:24,D:8},1.6,2);SV.rec.projector({...fr,cx:fr.cx+16,f:[0,-1]})}},
+  {name:"REC padded bench",w:26,d:12,draw:(fr)=>SV.rec.padBench({...fr,L:18,D:7})},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

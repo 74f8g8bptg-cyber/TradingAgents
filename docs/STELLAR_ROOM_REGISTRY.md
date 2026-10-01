@@ -62,9 +62,9 @@ paths around it (A12).
 | 11 | `L8` | — | — | M | `DR-L8` → `COR-S` | RESERVED · FUTURE_OPERATIONS |
 | 12 | `L9` | Execution Bay | `execbay` | M | `DR-L9` → `COR-S` | ACTIVE · RESTRICTED |
 | 13 | `L10` | Risk Control Room | `risk` | M | `DR-L10` → `COR-S` | ACTIVE · RESTRICTED |
-| 14 | `R1` | Performance & Wellbeing / Coaching Room | `coaching` | M | `DR-R1` → `H-HAB` | RESERVED · DESIGNATED (future) |
-| 15 | `R2` | — | — | M | `DR-R2` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
-| 16 | `R3` | — | — | M | `DR-R3` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
+| 14 | `R1` | Zen Room · Wellbeing (meditation and relaxation; compatible with the Performance & Wellbeing / Coaching designation) | `coaching` | M | `DR-R1` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
+| 15 | `R2` | Crew Cinema | `cinema` | M | `DR-R2` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
+| 16 | `R3` | Decompression Room (sound-isolated) | `decompression` | M | `DR-R3` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
 | 17 | `R4` | — | — | M | `DR-R4` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
 | 18 | `R5` | — | — | M | `DR-R5` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
 | 19 | `R6` | — | — | M | `DR-R6` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
@@ -266,8 +266,9 @@ changes this file only.
 |---|---|---|
 | `L5` | FUTURE_RESEARCH | Expansion for the Research Lab (experiment runtime is not built) |
 | `L8` | FUTURE_OPERATIONS | Operations expansion; no function assigned |
-| `R1` | DESIGNATED: **Performance & Wellbeing / Coaching Room** | §4 |
-| `R2`–`R6` | FUTURE_AGENT_TEAM | Future agent teams around the Habitat |
+| `R1` | **ACTIVE** as the Zen Room · Wellbeing (habitat recreation, owner-approved); the coaching designation stays compatible | §4, `docs/STELLAR_REC_ROOMS_V1.md` |
+| `R2`, `R3` | **ACTIVE** as the Crew Cinema and the Decompression Room (owner-approved) | `docs/STELLAR_REC_ROOMS_V1.md` |
+| `R4`–`R6` | FUTURE_AGENT_TEAM | Future agent teams around the Habitat (unchanged) |
 
 ---
 

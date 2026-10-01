@@ -73,15 +73,15 @@
 | `LGT` | Lighting | 10 | 1 | 9 |
 | `DEC` | Decoration | 9 | 0 | 9 |
 | `SRV` | Servers and conduits | 5 | 0 | 5 |
-| `WAL` | Walls and structure | 11 | 1 | 10 |
+| `WAL` | Walls and structure | 13 | 1 | 12 |
 | `FLR` | Floors | 12 | 1 | 11 |
 | `STO` | Storage | 7 | 0 | 7 |
 | `PLT` | Plants | 7 | 0 | 7 |
 | `SGN` | Signage | 8 | 2 | 6 |
-| `LEI` | Leisure furniture | 8 | 0 | 8 |
+| `LEI` | Leisure furniture | 15 | 0 | 15 |
 | `EQP` | Hero equipment | 7 | 0 | 7 |
 | `PRP` | Hand-held and moving props | 8 | 0 | 8 |
-| **Total** | **19 prefixes (18 in use)** | **222** | **26** | **196** |
+| **Total** | **19 prefixes (18 in use)** | **231** | **26** | **205** |
 
 ---
 
@@ -255,6 +255,8 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `WAL-009` | Structural gap infill | The non-walkable hull between small rooms and between the L-block and the hubs (Q4). Must read as solid mass, never as a corridor | solid | Y | **new** |
 | `WAL-010` | Radial junction collar | Where a rotated R room meets the `H-HAB` rim around `DOR-009` | solid | Y | **new** |
 | `WAL-011` | Segmented bulkhead rim (gunmetal panels, ribs, titanium cap) | `H-CMD` rim (calibration V1) | solid | Y | **new** |
+| `WAL-012` | Acoustic wall treatment (fabric slat panels; R1 warm, R2 dark) | R1, R2 (habitat recreation rooms) | wall | Y | **new** |
+| `WAL-013` | Sound-isolation padded wall (thick tufted padding, sealed seam strips, SOUND ISOLATED plate) | R3 decompression room | wall | Y | **new** |
 
 ### `FLR` — Floors
 
@@ -322,6 +324,13 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LEI-006` | Bookshelf nook | blocks | opt |
 | `LEI-007` | Park fountain (hero: stone basin, central column, water; **decorative, no data**) | blocks | Y |
 | `LEI-008` | Dog corner (dog bed, food and water bowls, toy basket, small storage) | blocks | Y |
+| `LEI-009` | Meditation mat and cushion (R1) | walk-over | Y |
+| `LEI-010` | Ambient speaker column (R1; **world-building only, no audio playback**) | blocks | Y |
+| `LEI-011` | Zen sand garden with stones and a small tree (R1 focal point) | blocks | Y |
+| `LEI-012` | Cinema screen (R2; a physical screen with **no display identity and no content**) | wall | Y |
+| `LEI-013` | Cinema recliner row (R2, two-seat units on a riser) | blocks | Y |
+| `LEI-014` | Media projector stand (R2; dark, no content) | blocks | Y |
+| `LEI-015` | Padded floor mat and padded bench (R3) | walk-over / seat | Y |
 
 ### `EQP` — Hero equipment
 
