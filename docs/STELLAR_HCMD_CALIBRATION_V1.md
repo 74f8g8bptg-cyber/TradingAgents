@@ -250,3 +250,17 @@ V5.1 is the base. No furniture was added. This pass changes the **renderer only*
 | Station (21 doors) | | | Exactly 1 each (before: 6 doors had 2) | | | | |
 
 **Note:** the oblique camera looks north, and all three H-CMD doors face east–west, so in that view they are seen side-on. They read as heavy jamb and threshold silhouettes, not as frontal doors. That is inherent to the camera angle.
+
+## 12. Calibration V5.3 (in review): screen band, wall lamps, floor structure, table frame
+
+V5.2 (committed `df7b882`) is the base. Composition, doors and vocabulary are kept. No furniture was added; only walk-over floor grates (`FLR-010`). Geometry, anchors, doors and circulation are unchanged.
+
+**Remaining differences vs the reference bridge (studied again), and what V5.3 does:**
+
+| # | Difference | Reference construction | V5.3 adaptation |
+|---|---|---|---|
+| 1 | Screens and vertical layer | A continuous row of large screens above the console deck on the back wall | The wall's high layer now follows what stands in front: a continuous **screen band** of large dark monitors (`SV.wall.upper` "monitor", 18.5–27.6 high) above every console-bank segment; equipment cabinets above racks and bays; cable boxes above gaps; bare wall above lockers. Screens stay dark (no data) |
+| 2 | Wall lighting | Bright recessed lamp boxes at the wall midpoints with warm pools | **`SV.small.lampBox`** on every other rib; light pools tied to the same rib rule |
+| 3 | Floor construction | Wide diagonal-hatched frame bands; paired square floor grates | **`SV.floor.hatchBand`** replaces the dashed group-zone borders. **`SV.floor.bigGrate`**: three mirror pairs of 2 × 2 grates (north axis, west/east, south), chosen automatically on free deck |
+| 4 | Central command area | The table sits in a hatched frame on its plinth | An octagonal **hatched band** on the dais around the table (footprint unchanged) |
+| 5 | Screen glow | Lit cyan screens everywhere | **Kept deliberately dark:** approved offline states only; screens with no data are physical but dark |

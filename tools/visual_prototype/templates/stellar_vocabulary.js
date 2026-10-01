@@ -453,6 +453,25 @@ SV.door.leaf=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2;for(co
     const ex=sg<0?W-1:0;for(let y=0.4;y<HH;y+=1.4){ctx.fillStyle=Math.floor(y/1.4)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(ex,y,1,0.7)}dWear(W,HH,sg+2)})}}};
 // the whole assembly in camera order; returns nothing (items are split by the caller for depth sorting when needed)
 SV.door.build=(fr,type,o={})=>{SV.door.threshold(fr,type,o);const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));SV.door.jamb(fr,type,order[0],o);if(o.closed)SV.door.leaf(fr,type,o);SV.door.jamb(fr,type,order[1],o);SV.door.lintel(fr,type,o)};
+// FLR-bigGrate: a large framed deck grate (n x n tiles): titanium frame with bolts, a recessed well, a grid of square holes with
+// a lit lip, a centre cross-brace; the reference bridge's paired floor grates, built in Stellar's deck language
+SV.floor.bigGrate=(X,Y,S,fine)=>{const q=rectPoly(X+1,Y+1,X+S-1,Y+S-1);ctx.fillStyle="#3a3c40";ctx.fill(poly2(q,0.03));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(q,0.03));
+  ctx.fillStyle="#101113";ctx.fill(poly2(rectPoly(X+2.4,Y+2.4,X+S-2.4,Y+S-2.4),0.04));const n=Math.round((S-5)/2.4);const st=(S-5)/n;
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){const x0=X+2.5+i*st+0.35,y0=Y+2.5+j*st+0.35;ctx.fillStyle="#2a2c30";ctx.fill(poly2(rectPoly(x0,y0,x0+st-0.7,y0+st-0.7),0.05));ctx.fillStyle="#08090a";ctx.fill(poly2(rectPoly(x0+0.35,y0+0.35,x0+st-1.05,y0+st-1.05),0.055))}
+  line3([X+S/2,Y+2.4,0.06],[X+S/2,Y+S-2.4,0.06],"#4a4d54",0.9);line3([X+2.4,Y+S/2,0.06],[X+S-2.4,Y+S/2,0.06],"#4a4d54",0.9);
+  line3([X+1,Y+1.2,0.06],[X+S-1,Y+1.2,0.06],"rgba(255,240,215,.16)",0.35);
+  if(fine){ctx.fillStyle="#8a7448";for(const [dx,dy] of [[1.7,1.7],[S-1.7,1.7],[1.7,S-1.7],[S-1.7,S-1.7],[S/2,1.7],[S/2,S-1.7],[1.7,S/2],[S-1.7,S/2]]){const p=V.P(X+dx,Y+dy,0.07);ctx.fillRect(p[0]-0.3,p[1]-0.3,0.6,0.6)}}};
+// FLR-hatchBand: a wide framed band of diagonal hazard hatching along a closed polygon (zone borders, the table frame)
+SV.floor.hatchBand=(poly,w,h)=>{const inner=poly;const cx=poly.reduce((a,p)=>a+p[0],0)/poly.length,cy=poly.reduce((a,p)=>a+p[1],0)/poly.length;
+  const outer=poly.map(p=>{const d=Math.hypot(p[0]-cx,p[1]-cy)||1;return[p[0]+(p[0]-cx)/d*w*1.2,p[1]+(p[1]-cy)/d*w*1.2]});
+  const path=new Path2D();path.addPath(poly2(outer,h));const ip=poly2(inner,h);ctx.save();ctx.beginPath();outer.forEach((p,i)=>{const s2=V.P(p[0],p[1],h);i?ctx.lineTo(s2[0],s2[1]):ctx.moveTo(s2[0],s2[1])});ctx.closePath();
+  inner.slice().reverse().forEach((p,i)=>{const s2=V.P(p[0],p[1],h);i?ctx.lineTo(s2[0],s2[1]):ctx.moveTo(s2[0],s2[1])});ctx.closePath();ctx.fillStyle="#18191b";ctx.fill("evenodd");ctx.clip("evenodd");
+  const xs=outer.map(p=>p[0]),ys=outer.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  for(let k=x0-(y1-y0);k<x1;k+=3){line3([k,y0,h+0.005],[k+(y1-y0),y1,h+0.005],"rgba(201,146,46,.62)",0.9)}ctx.restore();
+  ctx.strokeStyle="rgba(195,203,212,.38)";ctx.lineWidth=0.35;ctx.stroke(poly2(outer,h+0.01));ctx.stroke(ip)};
+// SV.small.lampBox (wall face units): a large recessed wall lamp box (bright warm-white panel in a bolted housing with a glow)
+SV.small.lampBox=(x,y,w,h)=>{ctx.fillStyle="rgba(255,226,180,.22)";ctx.fillRect(x-1.6,y-1.2,w+3.2,h+2.4);ctx.fillStyle="#1c1d20";ctx.fillRect(x-0.8,y-0.8,w+1.6,h+1.6);ctx.strokeStyle=CAL.out;ctx.lineWidth=0.3;ctx.strokeRect(x-0.8,y-0.8,w+1.6,h+1.6);
+  const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,"#fff6e2");g.addColorStop(1,"#f0d6a8");ctx.fillStyle=g;ctx.fillRect(x,y,w,h);ctx.fillStyle="rgba(0,0,0,.18)";for(let k=x+1;k<x+w-0.4;k+=1.4)ctx.fillRect(k,y,0.25,h);dRivets(x-0.8,y-0.8,w+1.6,h+1.6,"#8a7448")};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -478,6 +497,7 @@ const SV_CATALOGUE=[
   {name:"DOOR-B hub access",w:40,d:16,draw:(fr)=>SV.door.build({...fr,L:24},"hub",{plate:"H-HAB"})},
   {name:"DOOR-C restricted",w:38,d:16,draw:(fr)=>SV.door.build({...fr,L:22},"restricted",{plate:"RESTRICTED"})},
   {name:"DOOR closed (reserved)",w:34,d:14,draw:(fr)=>SV.door.build({...fr,L:22},"standard",{closed:true,plate:"RESERVED"})},
+  {name:"FLR big grate + hatched band",w:40,d:30,draw:(fr)=>{const k=4;const q=[[fr.cx-17+k,fr.cy-13],[fr.cx+17-k,fr.cy-13],[fr.cx+17,fr.cy-13+k],[fr.cx+17,fr.cy+13-k],[fr.cx+17-k,fr.cy+13],[fr.cx-17+k,fr.cy+13],[fr.cx-17,fr.cy+13-k],[fr.cx-17,fr.cy-13+k]];SV.floor.hatchBand(q,2,0.02);SV.floor.bigGrate(fr.cx-12,fr.cy-12,24,true)}},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

@@ -466,10 +466,11 @@ function drawHCMDCalFloor(G){const c=hubById["H-CMD"];const detail=cam.z>=1.2,fi
       let nb=0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])if(ks.has((tc+dx)+","+(tr+dy)))nb++;if(nb<=1&&Math.hypot(X+6-c.x,Y+6-c.y)>walkR1)SV.floor.junction(X,Y)}}}
   {const ap=D.furniture.find(f=>f.label.includes("console aprons"));if(ap)for(const [tc,tr] of ap.tiles)SV.floor.hazard(tc*T,tr*T,tc*T+0.5,tr*T+0.5,tc*T+11.5,tr*T+11.5)}
   for(const f of D.furniture.filter(f=>f.room==="H-CMD"&&f.asset==="SRV-005"&&!f.label.includes("perimeter"))){const [tc,tr]=f.tiles[0];const X=tc*T,Y=tr*T;SV.floor.hazard(X,Y,X-1,Y-1,X+T+1,Y+T+1);ctx.fillStyle=CAL.plate;ctx.fill(poly2(rectPoly(X+1,Y+1,X+T-1,Y+T-1),0.03))}
-  for(const f of D.furniture.filter(f=>f.room==="H-CMD"&&f.asset==="FLR-010"))for(const [tc,tr] of f.tiles)SV.floor.vent(tc*T,tr*T);
+  for(const f of D.furniture.filter(f=>f.room==="H-CMD"&&f.asset==="FLR-010")){if(f.label.includes("large")){for(let k=0;k<f.tiles.length;k+=4){const sq=f.tiles.slice(k,k+4);SV.floor.bigGrate(Math.min(...sq.map(q=>q[0]))*T,Math.min(...sq.map(q=>q[1]))*T,2*T,fine)}}
+    else for(const [tc,tr] of f.tiles)SV.floor.vent(tc*T,tr*T)}
   // group zones: equipment that works together sits inside one hazard-bordered deck zone (the reference's deck-perimeter decal)
   for(const z of calGroupZones()){const [x0,y0,x1,y1]=z,k=3;const q=[[x0+k,y0],[x1-k,y0],[x1,y0+k],[x1,y1-k],[x1-k,y1],[x0+k,y1],[x0,y1-k],[x0,y0+k]];
-    ctx.fillStyle="rgba(10,10,12,.16)";ctx.fill(poly2(q,0.012));ctx.save();ctx.lineWidth=1.3;ctx.strokeStyle="#1a1b1d";ctx.stroke(poly2(q,0.02));ctx.setLineDash([1.6,1.6]);ctx.strokeStyle="rgba(201,146,46,.85)";ctx.stroke(poly2(q,0.025));ctx.restore()}
+    ctx.fillStyle="rgba(10,10,12,.16)";ctx.fill(poly2(q,0.012));SV.floor.hatchBand(q,1.6,0.02)}
   const g=ctx.createRadialGradient(0,0,c.R*0.62,0,0,c.R);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.34)");ctx.save();ctx.translate(s[0],s[1]);ctx.scale(V.kx,V.ky);ctx.fillStyle=g;ctx.fillRect(-c.R,-c.R,2*c.R,2*c.R);ctx.restore();
   ctx.restore();
   // FLR-009 hazard ring and the raised FLR-002 dais (bevel edge, brass studs, command-red line)
@@ -478,6 +479,8 @@ function drawHCMDCalFloor(G){const c=hubById["H-CMD"];const detail=cam.z>=1.2,fi
   prismX(circPoly(c.x,c.y,CAL_DAIS_R,48),0,CAL_DAIS_H,"#35363a","#202124",{shadow:false});
   for(let k=0;k<16;k++){const a=k*TAU/16;line3([c.x+30*Math.cos(a),c.y+30*Math.sin(a),CAL_DAIS_H],[c.x+64*Math.cos(a),c.y+64*Math.sin(a),CAL_DAIS_H],"rgba(0,0,0,.4)",0.45);const p=V.P(c.x+65.5*Math.cos(a),c.y+65.5*Math.sin(a),CAL_DAIS_H);ctx.fillStyle=CAL.brass;ctx.fillRect(p[0]-0.45,p[1]-0.45,0.9,0.9)}
   for(const r of [30,46])ell(c.x,c.y,r,CAL_DAIS_H,null,"rgba(0,0,0,.4)",0.45);ell(c.x,c.y,CAL_DAIS_R,CAL_DAIS_H,null,CAL.ti,1.2);ell(c.x,c.y,64.5,CAL_DAIS_H,null,CAL.red,0.55);
+  // command table frame: an octagonal hatched band on the dais around the table (the reference table's framed plinth border)
+  {const oct=[];for(let k=0;k<8;k++){const a=k*TAU/8+Math.PI/8;oct.push([c.x+35*Math.cos(a),c.y+35*Math.sin(a)])}SV.floor.hatchBand(oct,2.4,CAL_DAIS_H+0.015)}
   // central command area: four technical channels from the table base to the dais edge with flush service plates, and
   // deck lights in the dais rim (structure and light only; the circulation ring stays clear)
   for(let k=0;k<4;k++){const a=Math.PI/4+k*Math.PI/2;const u=[Math.cos(a),Math.sin(a)],w=[-u[1],u[0]];const h=CAL_DAIS_H+0.02;
@@ -511,17 +514,23 @@ function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgb
 // ---- rim WAL-011 / DEC-008 / LGT-010, composed from SV.wall: a rib every fourth segment, and between ribs a BAY of three faces
 // read as one group (flanking panels around one feature), cycling through SV.wall.BAYS; cable trays on alternate segments,
 // a lamp fixture over the centre of every other bay (calRimLamp: shared with the light pass)
-const calRimLamp=i=>i%4===2&&Math.floor(i/4)%2===0;
+const calRimLamp=i=>i%8===0; // a large recessed lamp box on every other rib
+// what stands in front of a rim segment (perimeter equipment by angle): drives the wall's upper layer
+let _calPerim=null;
+function calPerimAt(am){const c=hubById["H-CMD"];if(!_calPerim)_calPerim=D.furniture.filter(f=>f.room==="H-CMD"&&f.kind==="block"&&(f.label.includes("perimeter")||/CON-030|STO-001/.test(f.asset))).flatMap(f=>f.tiles.map(t=>[Math.atan2(t[1]*T+6-c.y,t[0]*T+6-c.x),f.asset]));
+  let best=null,bd=0.045;for(const [a,as] of _calPerim){const d=Math.abs(wrapA(a-am));if(d<bd){bd=d;best=as}}return best}
 function calRimSegment(pts,h,i,hb){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*k,p[1]+(q[1]-p[1])*k];const P4=[pts[0],pts[1],ext(pts[1],pts[2],7/3),ext(pts[0],pts[3],7/3)];
   const rib=i%4===0;const H=rib&&h>6?h+1.5:h;prismX(P4,0,H,null,rib?"#2a2c30":(i%2?CAL.gun:"#404349"),{seam:"rgba(0,0,0,.4)",lw:0.4,shadow:false,hi:false,mat:h>=10});
   ctx.fillStyle=h>=10?CAL.crown:"#5e5c55";ctx.fill(poly2(P4,H));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(P4,H));
   const q0=pts[0],q1=pts[1];line3([q0[0],q0[1],H],[q1[0],q1[1],H],"rgba(255,245,225,.55)",0.5);
   if(h<10)return;const c=hubById[hb.id];const m=[(q0[0]+q1[0])/2,(q0[1]+q1[1])/2];const n=[c.x-m[0],c.y-m[1]];const nl=Math.hypot(...n);
   const kind=rib?"rib":SV.wall.BAYS[Math.floor(i/4)%SV.wall.BAYS.length][(i%4)-1];
-  onFace(q0,q1,[n[0]/nl,n[1]/nl],0,H,(W,HH)=>{SV.wall.face(kind,W,HH,i);if(!rib&&i%2===0)SV.wall.tray(W,HH);if(calRimLamp(i))SV.small.lamp(W/2-2.2,2.4,4.4)});
-  // HIGH layer: wall-hung upper modules over the flanking faces of two bays in three
-  if(!rib&&h>=20&&i%4!==2&&Math.floor(i/4)%3!==1){const L=Math.hypot(q1[0]-q0[0],q1[1]-q0[1]);const u=[(q1[0]-q0[0])/L,(q1[1]-q0[1])/L],nn=[n[0]/nl,n[1]/nl];
-    const fr={cx:m[0]+nn[0]*2.2,cy:m[1]+nn[1]*2.2,a:u,f:nn,L:L*0.82,D:3.4};SV.wall.upper(fr,["cabinet","monitor","cable"][(i+Math.floor(i/4))%3],20.5,26,i)}}
+  onFace(q0,q1,[n[0]/nl,n[1]/nl],0,H,(W,HH)=>{SV.wall.face(kind,W,HH,i);if(!rib&&i%2===0)SV.wall.tray(W,HH);if(calRimLamp(i))SV.small.lampBox(W/2-2.6,3.2,5.2,3)});
+  // HIGH layer, composed with what stands in front: a continuous SCREEN BAND of large dark monitors above console banks (the
+  // reference back wall), equipment cabinets above racks and bays, cable boxes above gaps; lockers and ribs keep the bare wall
+  if(!rib&&h>=20){const front=calPerimAt(Math.atan2(m[1]-c.y,m[0]-c.x));const L=Math.hypot(q1[0]-q0[0],q1[1]-q0[1]);const u=[(q1[0]-q0[0])/L,(q1[1]-q0[1])/L],nn=[n[0]/nl,n[1]/nl];
+    const up=front==="CON-030"?["monitor",0.96,18.5,27.6]:/SRV-005|STO-005|STO-006/.test(front||"")?["cabinet",0.8,20.5,26]:front?null:["cable",0.7,21,25.5];
+    if(up){const fr={cx:m[0]+nn[0]*2.2,cy:m[1]+nn[1]*2.2,a:u,f:nn,L:L*up[1],D:3.4};SV.wall.upper(fr,up[0],up[2],up[3],i)}}}
 // ---- compact crew (reference construction: large head ~40 % of height, strong outline) in Stellar uniforms, integrated seating
 function drawAgentCal(a,x,y){
   const hsh=hash(a.chr);const skin=SKIN[hsh%SKIN.length],hair=HAIR[(hsh>>3)%HAIR.length],style=(hsh>>9)%4;

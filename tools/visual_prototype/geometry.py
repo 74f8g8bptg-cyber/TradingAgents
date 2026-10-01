@@ -665,6 +665,32 @@ def build_geometry():
             if t0 in ring_gaps:
                 break
     F("H-CMD", "FLR-011", conduits, "FLR-011 cable conduit", kind="floor")
+    # calibration V5.3: large framed floor grates in symmetric pairs (the reference bridge's paired deck grates),
+    # 2 x 2 tiles of FLR-010, on free outer-deck tiles only (walk-over; never on markings, conduits or approaches)
+    marked = {t for f in furn if f["room"] == "H-CMD" for t in f["tiles"]}
+    big = []
+
+    def sq_ok(c0, r0):
+        sq = [(c0 + i, r0 + j) for i in (0, 1) for j in (0, 1)]
+        ok = all(
+            region.get(t) == "H-CMD" and t not in marked and t not in used and t not in corridor
+            for t in sq
+        ) and all(9.8 < math.hypot(t[0] + 0.5 - cc, t[1] + 0.5 - cr) < 15 for t in sq)
+        return sq if ok else None
+
+    picked = []  # mirror pairs across the north-south axis, spread around the room
+    for dr in range(-15, 15):
+        for dc in range(-16, -1):
+            a, b = sq_ok(cc + dc, cr + dr), sq_ok(cc - dc - 1, cr + dr)
+            if not (a and b):
+                continue
+            ang = math.atan2(dr + 1, dc + 1)
+            if all(abs(math.atan2(math.sin(ang - q), math.cos(ang - q))) > 0.75 for q in picked):
+                picked.append(ang)
+                big += a + b
+                marked.update(a + b)
+    if big:
+        F("H-CMD", "FLR-010", big, "FLR-010 large floor grates (paired)", kind="floor")
     dais = [
         (c, r)
         for c in range(cc - 7, cc + 8)
