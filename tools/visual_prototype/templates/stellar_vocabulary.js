@@ -658,16 +658,6 @@ SV.hab.bed=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,sd=o.seed||0;prismX(frameCham(f
   const C=["#2f6a3c","#3c8048","#4d9a58","#5aa765"],F=["#e0b25a","#c86a5a","#d8cdb8","#9fb8e8"];let r=(sd*16807+11)%2147483647;const R=()=>{r=(r*16807)%2147483647;return r/2147483647};
   for(let k=0;k<14;k++){const s0=(R()*2-1)*(hL-1.4),d0=(R()*2-1)*(hD-1.2);const p=V.P(fr.cx+fr.a[0]*s0+fr.f[0]*d0,fr.cy+fr.a[1]*s0+fr.f[1]*d0,2.4+R()*2.6);ctx.fillStyle=C[k%4];ctx.beginPath();ctx.ellipse(p[0],p[1],1.4+R(),0.9+R()*0.6,R()*3,0,TAU);ctx.fill()}
   for(let k=0;k<5;k++){const s0=(R()*2-1)*(hL-1.6),d0=(R()*2-1)*(hD-1.4);const p=V.P(fr.cx+fr.a[0]*s0+fr.f[0]*d0,fr.cy+fr.a[1]*s0+fr.f[1]*d0,4.6);ctx.fillStyle=F[k%4];ctx.beginPath();ctx.arc(p[0],p[1],0.45,0,TAU);ctx.fill()}};
-// dog corner: a cushioned dog bed in a wood frame, food and water bowls on a mat, a toy basket, and a small two-door storage cabinet
-SV.hab.dogCorner=(fr)=>{const hL=fr.L/2,hD=fr.D/2;const s0=-hL+0.6,s1=s0+5.6;
-  prismX(frameCham(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2,0.5),0,7.2,"#8c6239","#6b4a2f");{const [a,b,n]=faces(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2).front;onFace(a,b,n,0,7.2,(W,H)=>{ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=0.25;ctx.strokeRect(0.6,0.6,W/2-0.9,H-1.2);ctx.strokeRect(W/2+0.3,0.6,W/2-0.9,H-1.2);ctx.fillStyle="#b8904e";ctx.fillRect(W/2-1,H*0.45,0.5,1.4);ctx.fillRect(W/2+0.5,H*0.45,0.5,1.4)})}
-  capTop(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2,7.2,3);
-  prismX(frameCham(fr,s0,s1,-hD+0.6,hD-0.6,1.4),0,1.6,"#8c6239","#6b4a2f",{lw:0.35});prismX(frameCham(fr,s0+0.6,s1-0.6,-hD+1.2,hD-1.2,1.2),1.6,2.4,"#8a6a5a","#6e5446",{mat:false,lw:0.3});
-  onTop(fr,s0+1.2,s1-1.2,-hD+1.8,hD-1.8,2.42,(W,Dd)=>{ctx.fillStyle="#a2836a";ctx.beginPath();ctx.ellipse(W/2,Dd/2,W*0.42,Dd*0.4,0,0,TAU);ctx.fill()});
-  const mat={cx:fr.cx+fr.a[0]*(hL-3.6)+fr.f[0]*(hD-2.2),cy:fr.cy+fr.a[1]*(hL-3.6)+fr.f[1]*(hD-2.2),a:fr.a,f:fr.f};ctx.fillStyle="#3c6f9a";ctx.fill(poly2(frameCham(mat,-2.8,2.8,-1.4,1.4,0.6),0.04));
-  for(const [ds,c] of [[-1.3,"#c9a24a"],[1.3,"#7fd0e0"]]){const x=mat.cx+fr.a[0]*ds,y=mat.cy+fr.a[1]*ds;cyl(x,y,1,0.05,0.9,"#d8d2c2","#9aa1a9",{n:10});ell(x,y,0.7,0.92,c)}
-  const bx=fr.cx+fr.a[0]*(s1+0.9)+fr.f[0]*(hD-1.6),by=fr.cy+fr.a[1]*(s1+0.9)+fr.f[1]*(hD-1.6);cyl(bx,by,1.2,0,2.2,"#c9a77c","#8c6239",{n:10});for(const [dx,dy,c] of [[-0.4,0,"#c86a5a"],[0.5,0.3,"#e0b25a"],[0,-0.5,"#5aa765"]]){const p=V.P(bx+dx,by+dy,2.6);ctx.fillStyle=c;ctx.beginPath();ctx.arc(p[0],p[1],0.45,0,TAU);ctx.fill()}
-  const tp=V.P(fr.cx+fr.a[0]*(s0+1)+fr.f[0]*(hD+0.6),fr.cy+fr.a[1]*(s0+1)+fr.f[1]*(hD+0.6),0.5);ctx.fillStyle="#c86a5a";ctx.beginPath();ctx.arc(tp[0],tp[1],0.55,0,TAU);ctx.fill();ctx.strokeStyle="#8a4a3a";ctx.lineWidth=0.15;ctx.stroke()};
 // resident station dog: compact, outlined like the crew (large head, strong outline), sitting, tan coat, a teal collar with a tag
 SV.hab.dog=(x,y,o={})=>{const s=V.P(x,y,0);ell(x,y,2.8,0.02,"rgba(0,0,0,.35)");ctx.save();ctx.translate(s[0],s[1]);const O="#2a1d16",coat=o.coat||"#c9965a",dark="#8a5e34",lw=0.55;ctx.lineJoin="round";ctx.strokeStyle=O;ctx.lineWidth=lw;
   ctx.fillStyle=coat;ctx.beginPath();ctx.ellipse(0.8,-2.4,2.4,2.2,0,0,TAU);ctx.fill();ctx.stroke(); // haunch
@@ -709,6 +699,117 @@ SV.rec.projector=(fr)=>{plinth(fr,-4,4,-3,3,0.8);prismX(frameCham(fr,-3.4,3.4,-2
 // padded bench (R3): a low upholstered block on a recessed plinth
 SV.rec.padBench=(fr)=>{const hL=fr.L/2,hD=fr.D/2;prismX(frameRect(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6),0,1,"#26282c","#1d1f23",{lw:0.3,mat:false});prismX(frameCham(fr,-hL,hL,-hD,hD,1),1,4.4,"#6e6a74","#55515c");
   onTop(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,4.42,(W,Dd)=>{ctx.fillStyle="rgba(0,0,0,.18)";for(let x=1.4;x<W;x+=2.6)for(let y=1;y<Dd;y+=2.2){ctx.beginPath();ctx.arc(x,y,0.25,0,TAU);ctx.fill()}})};
+// ================================================================ CANINE family (R4 dog play room): compact agility set built like station equipment
+// Steel frames, bolted feet, rubber-coated decks and fabric tunnels in the station palette (slate-teal decks, amber contact zones,
+// gunmetal frames). Scaled to the resident dog (about 10 units sitting): A-frame apex 11, jump bar 4.5, weave poles 9, tunnel Ø 8.4
+SV.dog={};
+const dogP=(fr,s,d)=>[fr.cx+fr.a[0]*s+fr.f[0]*d,fr.cy+fr.a[1]*s+fr.f[1]*d];
+const dog3=(fr,s,d,h)=>[...dogP(fr,s,d),h];
+function q3(pts,fill,o={}){ctx.beginPath();pts.forEach((p,i)=>{const s=V.P(p[0],p[1],p[2]);i?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1])});ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(o.out!==false){ctx.strokeStyle=o.out||CAL.out;ctx.lineWidth=o.lw||0.4;ctx.lineJoin="round";ctx.stroke()}}
+function bar3(a,b,w,col){line3(a,b,CAL.out,w+0.55);line3(a,b,col,w)}
+// a sloped deck from (s0,h0) to (s1,h1), slats across it, an amber contact zone over the last share near the floor
+function dogDeck(fr,s0,h0,s1,h1,hD,col,zone){const len=Math.hypot(s1-s0,h1-h0)||1;const sg=Math.sign(s0-s1)*Math.sign(h1-h0);const hz=(fr.a[0]*LIGHT[0]+fr.a[1]*LIGHT[1])*sg*Math.abs(h1-h0)/len;const k=0.72+0.28*Math.max(0,Math.min(1,hz+0.6*Math.abs(s1-s0)/len));
+  q3([dog3(fr,s0,-hD,h0),dog3(fr,s1,-hD,h1),dog3(fr,s1,hD,h1),dog3(fr,s0,hD,h0)],shade(col,k));
+  if(zone){const z=zone,sa=s0+(s1-s0)*(h0<h1?0:1-z),sb=s0+(s1-s0)*(h0<h1?z:1),ha=h0+(h1-h0)*(h0<h1?0:1-z),hb=h0+(h1-h0)*(h0<h1?z:1);q3([dog3(fr,sa,-hD,ha),dog3(fr,sb,-hD,hb),dog3(fr,sb,hD,hb),dog3(fr,sa,hD,ha)],shade("#d8a64a",k),{lw:0.3})}
+  const n=Math.max(2,Math.round(Math.hypot(s1-s0,h1-h0)/1.6));for(let i=1;i<n;i++){const t=i/n;line3(dog3(fr,s0+(s1-s0)*t,-hD,h0+(h1-h0)*t),dog3(fr,s0+(s1-s0)*t,hD,h0+(h1-h0)*t),"rgba(0,0,0,.32)",0.28)}
+  for(const d of [-hD,hD])bar3(dog3(fr,s0,d,h0),dog3(fr,s1,d,h1),0.55,"#5d636b")}
+// soft ball / toy (sphere with a lit cap and a contact shadow)
+SV.dog.ball=(x,y,r,col)=>{ell(x,y,r*1.1,0.02,"rgba(0,0,0,.3)");const s=V.P(x,y,r);ctx.fillStyle=col;ctx.beginPath();ctx.arc(s[0],s[1],r*1.1,0,TAU);ctx.fill();ctx.strokeStyle=CAL.out;ctx.lineWidth=0.3;ctx.stroke();
+  ctx.fillStyle="rgba(255,250,235,.55)";ctx.beginPath();ctx.arc(s[0]-r*0.35,s[1]-r*0.4,r*0.35,0,TAU);ctx.fill()};
+// scattered toys: balls, a knotted rope toy and a ring toy
+SV.dog.toys=(x,y,seed)=>{const C=["#e0b25a","#c86a5a","#5aa765","#3fb7cc"];let r=(seed*16807+7)%2147483647;const R=()=>{r=(r*16807)%2147483647;return r/2147483647};
+  {const a=R()*TAU,p=[x+Math.cos(a)*4,y+Math.sin(a)*4];const q=[p[0]+Math.cos(a+1.2)*3.4,p[1]+Math.sin(a+1.2)*3.4];line3([...p,0.35],[...q,0.35],CAL.out,1.1);line3([...p,0.35],[...q,0.35],"#d8cdb8",0.7);for(const e of [p,q])SV.dog.ball(e[0],e[1],0.45,"#c86a5a")}
+  {const a=R()*TAU;const c=[x+Math.cos(a)*5,y+Math.sin(a)*5];ell(c[0],c[1],1.1,0.2,null,CAL.out,0.75);ell(c[0],c[1],1.1,0.2,null,"#3fb7cc",0.45)}
+  for(let k=0;k<3;k++){const a=R()*TAU,d=1.5+R()*5;SV.dog.ball(x+Math.cos(a)*d,y+Math.sin(a)*d,0.7,C[k%4])}};
+// fabric tunnel on a curved line: steel hoops every few units, alternating amber and cream bays, ground straps with weights
+SV.dog.tunnel=(fr,o={})=>{const hL=fr.L/2,bend=o.bend||0,r=o.r||4.2,hc=r*0.9,N=Math.max(24,Math.round(fr.L/0.6));
+  const C=k=>dogP(fr,-hL+fr.L*k/N,bend*Math.sin(Math.PI*k/N));const disc=[];
+  for(let k=0;k<=N;k++){const p=C(k),q=C(Math.min(N,k+1)),m=C(Math.max(0,k-1));let tx=q[0]-m[0],ty=q[1]-m[1];const L=Math.hypot(tx,ty)||1;tx/=L;ty/=L;
+    const pts=[];for(let j=0;j<20;j++){const th=j/20*TAU;pts.push([p[0]-ty*r*Math.cos(th),p[1]+tx*r*Math.cos(th),Math.max(0,hc+r*Math.sin(th))])}disc.push({k,p,t:[tx,ty],pts})}
+  const weights=[];for(const k of [Math.round(N*0.2),Math.round(N*0.8)]){const dd=disc[k];for(const sg of [-1,1]){const w=[dd.p[0]-dd.t[1]*(r+1.4)*sg,dd.p[1]+dd.t[0]*(r+1.4)*sg];weights.push({w,t:dd.t,near:camAlong([-dd.t[1]*sg,dd.t[0]*sg])>0})}}
+  const wt=(q)=>{const f2={cx:q.w[0],cy:q.w[1],a:q.t,f:[-q.t[1],q.t[0]]};prismX(frameCham(f2,-1.6,1.6,-1.1,1.1,0.5),0,1.4,"#4a4f46","#383c35",{lw:0.3,mat:false})};
+  for(const q of weights)if(!q.near)wt(q);
+  // each bay between two neighbouring hoops is filled as the convex hull of both projected rings, so the skin stays closed edge-on
+  const hull=(P)=>{P=P.slice().sort((A,B)=>A[0]-B[0]||A[1]-B[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];
+    for(const q of P){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q)}for(const q of P.slice().reverse()){while(up.length>1&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q)}return lo.slice(0,-1).concat(up.slice(0,-1))};
+  const scr=d=>d.pts.map(q=>V.P(q[0],q[1],q[2]));const seg=[];for(let k=0;k<N;k++)seg.push({k,m:[(disc[k].p[0]+disc[k+1].p[0])/2,(disc[k].p[1]+disc[k+1].p[1])/2],h:hull(scr(disc[k]).concat(scr(disc[k+1])))});
+  const ord=seg.sort((A,B)=>V.depth(...A.m)-V.depth(...B.m));const path=h=>{ctx.beginPath();h.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath()};
+  for(const g of ord){const c=V.P(g.m[0],g.m[1],hc);ctx.fillStyle=CAL.out;path(g.h.map(q=>[c[0]+(q[0]-c[0])*1.07,c[1]+(q[1]-c[1])*1.07]));ctx.fill()}
+  const bays=Math.max(1,Math.round(N/7));
+  for(const g of ord){const top=V.P(g.m[0],g.m[1],hc+r),bot=V.P(g.m[0],g.m[1],0);const band=Math.floor(g.k/bays)%2;const gr=ctx.createLinearGradient(0,top[1],0,bot[1]);
+    gr.addColorStop(0,band?"#e8d7b2":"#e2a44c");gr.addColorStop(0.55,band?"#c4b08a":"#c4822f");gr.addColorStop(1,band?"#857556":"#7e521d");ctx.fillStyle=gr;path(g.h);ctx.fill();
+    for(const kk of [g.k,g.k+1])if(kk%bays===0&&kk>0&&kk<N){ctx.strokeStyle="#3a3d43";ctx.lineWidth=0.55;path(scr(disc[kk]));ctx.stroke()}}
+  for(const k of [0,N]){const d=disc[k];const out=k===0?[-d.t[0],-d.t[1]]:d.t;if(camAlong(out)<=0)continue;ctx.beginPath();d.pts.forEach((q,i)=>{const s=V.P(q[0],q[1],q[2]);i?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1])});ctx.closePath();ctx.strokeStyle=CAL.out;ctx.lineWidth=0.9;ctx.stroke();ctx.strokeStyle="#5d636b";ctx.lineWidth=0.5;ctx.stroke();
+    ctx.fillStyle="#17120e";ctx.beginPath();d.pts.forEach((q,i)=>{const s=V.P(d.p[0]+(q[0]-d.p[0])*0.78,d.p[1]+(q[1]-d.p[1])*0.78,hc+(q[2]-hc)*0.78);i?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1])});ctx.closePath();ctx.fill()}
+  for(const q of weights)if(q.near)wt(q)};
+// A-frame: two slatted decks hinged at the apex, steel stringers, amber contact zones, chain braces, bolted floor rails
+SV.dog.aframe=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,H=o.h||11;const near=camAlong(fr.a)>0?1:-1;
+  for(const sg of [-1,1])prismX(frameRect(fr,sg>0?hL-2.2:-hL,sg>0?hL:-hL+2.2,-hD-0.8,hD+0.8),0,0.6,"#3a3d43","#26282c",{lw:0.3,mat:false});
+  const side=(sg)=>dogDeck(fr,sg*hL,0.6,0,H,hD,"#4f7378",0.32);
+  side(-near);for(const d of [-hD+0.3,hD-0.3])line3(dog3(fr,-hL*0.45,d,H*0.5),dog3(fr,hL*0.45,d,H*0.5),"#9aa1a9",0.3,[0.6,0.4]);side(near);
+  bar3(dog3(fr,0,-hD-0.4,H+0.2),dog3(fr,0,hD+0.4,H+0.2),0.9,"#5d636b")};
+// low ramp to a pause platform: a slatted ramp with a contact zone, a riveted steel platform with a rubber top and a paw plate
+SV.dog.ramp=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,H=o.h||4,s1=o.top??hL-10;
+  const plat=()=>{prismX(frameCham(fr,s1,hL,-hD-0.6,hD+0.6,0.6),0,H,"#5a4a3e","#4f5359");const fc=faces(fr,s1,hL,-hD-0.6,hD+0.6);for(const k of ["front","back","e2"]){const [a,b,n]=fc[k];onFace(a,b,n,0,H,(W,Hh)=>{dRecess(0.6,0.6,W-1.2,Hh-1.2,"#3a3d43");dRivets(0.6,0.6,W-1.2,Hh-1.2,"#7d7a70")})}
+    onTop(fr,s1+0.8,hL-0.8,-hD+0.2,hD-0.2,H+0.02,(W,Dd)=>{ctx.fillStyle="rgba(0,0,0,.2)";for(let x=0.8;x<W;x+=1.6)ctx.fillRect(x,0,0.25,Dd);ctx.fillStyle="rgba(232,215,178,.5)";ctx.beginPath();ctx.ellipse(W/2,Dd/2+0.5,1,0.8,0,0,TAU);ctx.fill();for(const [dx,dy] of [[-1.1,-0.9],[-0.4,-1.5],[0.4,-1.5],[1.1,-0.9]]){ctx.beginPath();ctx.arc(W/2+dx,Dd/2+dy,0.35,0,TAU);ctx.fill()}})};
+  const ramp=()=>{for(const d of [-hD,hD]){const n=[fr.f[0]*Math.sign(d),fr.f[1]*Math.sign(d)];if(camAlong(n)>0)q3([dog3(fr,-hL,d,0),dog3(fr,s1,d,0),dog3(fr,s1,d,H)],shade("#4f5359",0.8),{lw:0.35})}dogDeck(fr,-hL,0.2,s1,H,hD,"#4f7378",0.35)};
+  if(camAlong(fr.a)>0){ramp();plat()}else{plat();ramp()}};
+// suspended ring: two posts on bolted foot bars, a top beam, an amber ring hung on cables with side tension lines
+SV.dog.ring=(fr,o={})=>{const hL=fr.L/2,Hp=o.h||16,R=o.ring||3.6,hc=o.hc||8.5;
+  for(const sg of [-1,1])prismX(frameRect(fr,sg*hL-1,sg*hL+1,-4,4),0,0.8,"#3a3d43","#26282c",{lw:0.3,mat:false});
+  const post=(sg)=>{prismX(frameRect(fr,sg*hL-0.6,sg*hL+0.6,-0.6,0.6),0.8,Hp,"#5d636b","#3a3d43",{lw:0.35});for(const d of [-1,1])bar3(dog3(fr,sg*hL,d*3.4,0.8),dog3(fr,sg*hL,d*0.5,4.5),0.4,"#5d636b")};
+  const near=camAlong(fr.a)>0?1:-1;post(-near);
+  for(const sg of [-1,1]){line3(dog3(fr,sg*R*0.7,0,Hp),dog3(fr,sg*R*0.7,0,hc+R*0.72),"#9aa1a9",0.3);line3(dog3(fr,sg*R,0,hc),dog3(fr,sg*(hL-0.6),0,hc),"#9aa1a9",0.3)}
+  const pts=[];for(let j=0;j<=32;j++){const th=j/32*TAU;pts.push(V.P(...dogP(fr,R*Math.cos(th),0),hc+R*Math.sin(th)))}
+  const ring=(col,w)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke()};ring(CAL.out,1.9);ring("#d8a64a",1.25);ring("rgba(255,240,200,.5)",0.3);
+  for(let k=0;k<8;k++){const th=k/8*TAU;const p=V.P(...dogP(fr,R*Math.cos(th),0),hc+R*Math.sin(th));ctx.fillStyle="#3a3d43";ctx.fillRect(p[0]-0.25,p[1]-0.25,0.5,0.5)}
+  post(near);prismX(frameRect(fr,-hL-0.7,hL+0.7,-0.7,0.7),Hp,Hp+1.2,"#5d636b","#3a3d43",{lw:0.35})};
+// weave poles: a bolted base rail with end feet, cream poles with alternating amber bands and dark caps
+SV.dog.weave=(fr,o={})=>{const hL=fr.L/2,n=o.n||6,H=o.h||9;
+  for(const sg of [-1,1])prismX(frameRect(fr,sg>0?hL-1.2:-hL,sg>0?hL:-hL+1.2,-3,3),0,0.6,"#3a3d43","#26282c",{lw:0.3,mat:false});
+  prismX(frameCham(fr,-hL,hL,-0.9,0.9,0.4),0,0.8,"#5d636b","#3a3d43",{lw:0.35,mat:false});
+  const ps=[];for(let i=0;i<n;i++){const s=-hL+1.6+i*(fr.L-3.2)/(n-1);ps.push({i,p:dogP(fr,s,0)})}ps.sort((A,B)=>V.depth(...A.p)-V.depth(...B.p));
+  for(const {i,p} of ps){cyl(p[0],p[1],0.45,0.8,H,"#efe2c4","#c9bfae",{n:8});for(const b of i%2?[2.4,5.8]:[4.1,7.5])cyl(p[0],p[1],0.47,b,b+1.4,null,"#d8a64a",{n:8});cyl(p[0],p[1],0.55,H,H+0.5,"#2a2c31","#1d1f23",{n:8})}};
+// low jump: two lattice wing panels on foot bars, a striped bar resting in dark cups, a ground bar beneath
+SV.dog.jump=(fr,o={})=>{const hL=fr.L/2,hb=o.bar||4.5,Hw=o.h||8;
+  const wing=(sg)=>{const s0=sg*hL-0.5,s1=sg*hL+0.5;prismX(frameRect(fr,s0-0.4,s1+0.4,-3.2,3.2),0,0.6,"#3a3d43","#26282c",{lw:0.3,mat:false});prismX(frameRect(fr,s0,s1,-2.6,2.6),0.6,Hw,"#5d636b","#3a3d43",{lw:0.35,mat:false});
+    const fc=faces(fr,s0,s1,-2.6,2.6);for(const k of ["e1","e2"]){const [a,b,n]=fc[k];onFace(a,b,n,0.6,Hw,(W,H)=>{ctx.fillStyle="#2a2c31";ctx.fillRect(0.6,0.6,W-1.2,H-1.2);ctx.strokeStyle="#d8a64a";ctx.lineWidth=0.4;ctx.beginPath();ctx.moveTo(0.8,0.8);ctx.lineTo(W-0.8,H-0.8);ctx.moveTo(W-0.8,0.8);ctx.lineTo(0.8,H-0.8);ctx.stroke();dRivets(0.6,0.6,W-1.2,H-1.2,"#7d7a70")})}};
+  const near=camAlong(fr.a)>0?1:-1;wing(-near);
+  bar3(dog3(fr,-hL+0.5,0,0.9),dog3(fr,hL-0.5,0,0.9),0.5,"#5d636b");
+  const K=6;for(let k=0;k<K;k++){const s0=-hL+0.5+(fr.L-1)*k/K,s1=-hL+0.5+(fr.L-1)*(k+1)/K;line3(dog3(fr,s0,0,hb),dog3(fr,s1,0,hb),CAL.out,1.35)}for(let k=0;k<K;k++){const s0=-hL+0.5+(fr.L-1)*k/K,s1=-hL+0.5+(fr.L-1)*(k+1)/K;line3(dog3(fr,s0,0,hb),dog3(fr,s1,0,hb),k%2?"#efe2c4":"#d8a64a",0.85)}
+  for(const sg of [-1,1]){const p=V.P(...dogP(fr,sg*(hL-0.7),0),hb-0.6);ctx.fillStyle="#1d1f23";ctx.fillRect(p[0]-0.6,p[1]-0.2,1.2,0.9)}wing(near)};
+// curved balance bridge: an arched run of wood planks with amber contact ends on steel trestles
+SV.dog.bridge=(fr,o={})=>{const hL=fr.L/2,hD=o.w||1.9,H=o.h||5,N=o.n||14;const hs=s=>0.5+(H-0.5)*Math.sin(Math.PI*(s+hL)/fr.L);
+  const seg=[];for(let k=0;k<N;k++){const s0=-hL+fr.L*k/N,s1=-hL+fr.L*(k+1)/N;seg.push({k,s0,s1,m:dogP(fr,(s0+s1)/2,0)})}seg.sort((A,B)=>V.depth(...A.m)-V.depth(...B.m));
+  for(const g of seg){const {k,s0,s1}=g,h0=hs(s0),h1=hs(s1);if(k%3===1&&k<N-1){const sm=(s0+s1)/2,hm=hs(sm);prismX(frameRect(fr,sm-0.5,sm+0.5,-hD-0.8,hD+0.8),0,0.5,"#3a3d43","#26282c",{lw:0.3,mat:false});for(const d of [-hD+0.4,hD-0.9])prismX(frameRect(fr,sm-0.25,sm+0.25,d,d+0.5),0.5,hm-0.6,"#5d636b","#3a3d43",{lw:0.3,mat:false})}
+    const dv=camAlong(fr.f)>0?hD:-hD;q3([dog3(fr,s0,dv,h0-0.7),dog3(fr,s1,dv,h1-0.7),dog3(fr,s1,dv,h1),dog3(fr,s0,dv,h0)],"#6b4a2f",{lw:0.3});
+    const zone=k===0||k===N-1;q3([dog3(fr,s0,-hD,h0),dog3(fr,s1,-hD,h1),dog3(fr,s1,hD,h1),dog3(fr,s0,hD,h0)],zone?"#d8a64a":(k%2?"#9a6e44":"#8c6239"),{lw:0.3})}};
+// raised rest bed: a steel cot frame on feet, a deep cushion, a U-shaped bolster open to the front and a folded blanket
+SV.dog.bed=(fr)=>{const hL=fr.L/2,hD=fr.D/2;feet(fr,-hL,hL,-hD,hD,1.4);prismX(frameCham(fr,-hL,hL,-hD,hD,1.2),1.4,2.4,"#5d636b","#3a3d43",{lw:0.35,mat:false});
+  prismX(frameCham(fr,-hL+0.5,hL-0.5,-hD+0.5,hD-0.5,1.4),2.4,3.8,"#8a6a5a","#6e5446",{mat:false,lw:0.35});
+  const parts=[[-hL+0.5,hL-0.5,-hD+0.5,-hD+2.6],[-hL+0.5,-hL+2.6,-hD+2.6,hD-0.8],[hL-2.6,hL-0.5,-hD+2.6,hD-0.8]].map(b=>({b,m:dogP(fr,(b[0]+b[1])/2,(b[2]+b[3])/2)}));parts.sort((A,B)=>V.depth(...A.m)-V.depth(...B.m));
+  const blanket=()=>onTop(fr,-hL+3.2,hL-3.2,-hD+3,hD-1,3.82,(W,Dd)=>{ctx.fillStyle="#a2836a";ctx.beginPath();ctx.ellipse(W/2,Dd/2,W*0.42,Dd*0.38,0,0,TAU);ctx.fill();ctx.fillStyle="#c9a77c";ctx.fillRect(W*0.55,Dd*0.15,W*0.3,Dd*0.7);ctx.fillStyle="rgba(255,240,215,.35)";for(let y=Dd*0.2;y<Dd*0.85;y+=1)ctx.fillRect(W*0.55,y,W*0.3,0.2)});
+  blanket();for(const p of parts)prismX(frameCham(fr,...p.b,0.9),3.8,6,"#9a7a68","#7a5e50",{mat:false,lw:0.35})};
+// low privacy screen for the rest corner: a felt-faced steel frame panel on feet with a small REST plate
+SV.dog.screen=(fr,o={})=>{const hL=fr.L/2,H=o.h||7;feet(fr,-hL,hL,-1.2,1.2,0.6);prismX(frameRect(fr,-hL,hL,-0.7,0.7),0.6,H,"#5d636b","#3a3d43",{lw:0.35,mat:false});
+  const fc=faces(fr,-hL,hL,-0.7,0.7);for(const k of ["front","back"]){const [a,b,n]=fc[k];onFace(a,b,n,0.6,H,(W,Hh)=>{const m=Math.max(1,Math.round(W/8));for(let j=0;j<m;j++){const x=j*W/m;ctx.fillStyle="#6e5a48";ctx.fillRect(x+0.6,0.6,W/m-1.2,Hh-1.2);ctx.strokeStyle="rgba(255,240,215,.18)";ctx.lineWidth=0.2;ctx.setLineDash([0.4,0.4]);ctx.strokeRect(x+1,1,W/m-2,Hh-2);ctx.setLineDash([])}
+    ctx.fillStyle="#1d1f23";ctx.fillRect(W/2-2.2,1.1,4.4,1.5);ctx.fillStyle="#efe2c4";ctx.font="700 0.9px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("REST",W/2,1.88)})}};
+// water station: a steel stand with two bowls, a refill post with a tap and a supply line into the floor, a blue status pip
+SV.dog.water=(fr)=>{ctx.fillStyle="#2f3a3e";ctx.fill(poly2(frameCham(fr,-4,4,-2.8,2.8,0.8),0.03));
+  const post=()=>{const p=dogP(fr,0,-2.2);cyl(p[0],p[1],0.45,0,6,"#9aa1a9","#5d636b",{n:8});prismX(frameCham({...fr,cx:p[0],cy:p[1]},-0.9,0.9,-0.6,1.3,0.3),5.4,6.4,"#5d636b","#3a3d43",{lw:0.3,mat:false});const q=V.P(...dogP(fr,0,0.9),5.6);ctx.fillStyle="#7fd0e0";ctx.fillRect(q[0]-0.2,q[1],0.4,0.6);const pp=V.P(p[0],p[1],3.6);ctx.fillStyle="#3fb7cc";ctx.fillRect(pp[0]-0.3,pp[1]-0.3,0.6,0.6)};
+  const stand=()=>{prismX(frameCham(fr,-3,3,-1.4,1.8,0.5),0,1.8,"#4f5359","#3a3d43",{lw:0.35,mat:false});for(const s of [-1.5,1.5]){const p=dogP(fr,s,0.2);cyl(p[0],p[1],1.15,1.8,2.5,"#d8d2c2","#9aa1a9",{n:12});ell(p[0],p[1],0.85,2.52,s<0?"#7fd0e0":"#c9a24a")}};
+  if(camAlong(fr.f)>0){post();stand()}else{stand();post()}};
+// toy bin: an open wood crate with slatted sides and toys showing above the rim
+SV.dog.toyBin=(fr)=>{const hL=fr.L/2,hD=fr.D/2;prismX(frameCham(fr,-hL,hL,-hD,hD,0.5),0,3.6,"#8c6239","#6b4a2f",{lw:0.35});ctx.fillStyle="#2a2018";ctx.fill(poly2(frameCham(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,0.4),3.62));
+  const fc=faces(fr,-hL,hL,-hD,hD);for(const k of ["front","back","e1","e2"]){const [a,b,n]=fc[k];onFace(a,b,n,0,3.6,(W,H)=>{ctx.fillStyle="rgba(0,0,0,.28)";for(let y=1.1;y<H;y+=1.2)ctx.fillRect(0,y,W,0.22)})}
+  for(const [s,d,c] of [[-hL*0.4,0,"#e0b25a"],[hL*0.2,-hD*0.3,"#c86a5a"],[hL*0.45,hD*0.25,"#5aa765"]]){const p=V.P(...dogP(fr,s,d),3.9);ctx.fillStyle=c;ctx.beginPath();ctx.arc(p[0],p[1],0.7,0,TAU);ctx.fill();ctx.strokeStyle=CAL.out;ctx.lineWidth=0.25;ctx.stroke()}};
+// paw print on the floor (main pad and four toes), heading ang in world radians
+SV.dog.paw=(x,y,h,ang,sc,col)=>{const c=Math.cos(ang),s=Math.sin(ang);ctx.fillStyle=col;for(const [u,v,r] of [[0,0,0.9],[1.3,-0.9,0.38],[1.6,-0.3,0.38],[1.6,0.3,0.38],[1.3,0.9,0.38]]){const p=V.P(x+(u*c-v*s)*sc,y+(u*s+v*c)*sc,h);ctx.beginPath();ctx.ellipse(p[0],p[1],V.kx*r*sc,V.ky*r*sc*1.1,0,0,TAU);ctx.fill()}};
+// wall face (R4): warm acoustic slats above a padded bumper dado (dog-height), brass rail between
+SV.wall.kennel=(W,H,seed)=>{SV.wall.acoustic(W,H,seed);const y0=H-10.4;ctx.fillStyle="#2a2420";ctx.fillRect(0.6,y0,W-1.2,7.4);const cw=W/Math.max(1,Math.round(W/4.4));
+  for(let x=0.6;x<W-0.8;x+=cw){ctx.fillStyle="#6e5a48";chamRect(x+0.25,y0+0.4,cw-0.5,6.6,0.9);ctx.fill();ctx.fillStyle="rgba(0,0,0,.25)";ctx.beginPath();ctx.arc(x+cw/2,y0+3.7,0.3,0,TAU);ctx.fill()}
+  ctx.fillStyle=CAL.brass;ctx.fillRect(0.6,y0-0.5,W-1.2,0.45)};
 // wall faces for the recreation rooms
 SV.wall.acoustic=(W,H,seed,o={})=>{const dark=!!o.dark;SV.wall.band(W,H);ctx.fillStyle=dark?"#15161a":"#4a3626";ctx.fillRect(0.6,2,W-1.2,H-5);for(let x=1;x<W-0.8;x+=1.2){ctx.fillStyle=dark?(Math.floor(x)%2?"#24232b":"#1d1c23"):(Math.floor(x)%2?"#8c6239":"#7a5530");ctx.fillRect(x,2.4,0.9,H-5.8)}
   ctx.fillStyle=dark?"rgba(255,190,110,.35)":"rgba(255,215,150,.28)";ctx.fillRect(0.6,H-3.4,W-1.2,0.6);dWear(W,H-3,seed)};
@@ -760,10 +861,14 @@ const SV_CATALOGUE=[
   {name:"HAB planter (hero)",w:44,d:44,draw:(fr)=>SV.hab.planter(fr.cx,fr.cy,13)},
   {name:"HAB fountain (hero)",w:44,d:40,draw:(fr)=>SV.hab.fountain(fr.cx,fr.cy,14,0)},
   {name:"HAB park tree + bed",w:34,d:16,draw:(fr)=>{SV.hab.bed({...fr,cx:fr.cx-6,L:18,D:8},{seed:2});SV.hab.tree(fr.cx+12,fr.cy)}},
-  {name:"HAB dog corner + dog",w:30,d:14,draw:(fr)=>{SV.hab.dogCorner({...fr,cx:fr.cx-3,L:22,D:10});SV.hab.dog(fr.cx+12,fr.cy+2)}},
+  {name:"HAB resident dog (H-HAB + R4 only)",w:14,d:14,draw:(fr)=>SV.hab.dog(fr.cx,fr.cy+2)},
   {name:"REC zen: mats, speaker, garden",w:48,d:22,draw:(fr)=>{SV.rec.garden({...fr,cx:fr.cx-12,L:20,D:14});SV.rec.mat({...fr,cx:fr.cx+8,L:10,D:6.8});SV.rec.speaker(fr.cx+20,fr.cy)}},
   {name:"REC cinema: recliners, projector",w:44,d:16,draw:(fr)=>{SV.rec.recliners({...fr,cx:fr.cx-6,f:[0,-1],L:24,D:8},1.6,2);SV.rec.projector({...fr,cx:fr.cx+16,f:[0,-1]})}},
   {name:"REC padded bench",w:26,d:12,draw:(fr)=>SV.rec.padBench({...fr,L:18,D:7})},
+  {name:"DOG A-frame + ramp (dog for scale)",w:66,d:16,draw:(fr)=>{SV.dog.aframe({...fr,cx:fr.cx-20,L:26,D:7});SV.dog.ramp({...fr,cx:fr.cx+14,L:22,D:6});SV.hab.dog(fr.cx+30,fr.cy+5)}},
+  {name:"DOG tunnel + weave poles",w:62,d:28,draw:(fr)=>{SV.dog.tunnel({...fr,cx:fr.cx-14,cy:fr.cy-2,L:30,D:9},{bend:6});SV.dog.weave({...fr,cx:fr.cx+16,L:26,D:2})}},
+  {name:"DOG ring + jump + bridge",w:66,d:16,draw:(fr)=>{SV.dog.ring({...fr,cx:fr.cx-24,L:14,D:2});SV.dog.jump({...fr,cx:fr.cx-6,L:12,D:2});SV.dog.bridge({...fr,cx:fr.cx+18,L:26,D:4})}},
+  {name:"DOG rest: bed, screen, water, toy bin, toys",w:66,d:18,draw:(fr)=>{SV.dog.bed({...fr,cx:fr.cx-20,L:18,D:12});SV.dog.water({...fr,cx:fr.cx-4,L:8,D:6});SV.dog.toyBin({...fr,cx:fr.cx+8,L:7,D:5});SV.dog.screen({...fr,cx:fr.cx+22,L:16,D:2});SV.dog.toys(fr.cx+8,fr.cy+9,3)}},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

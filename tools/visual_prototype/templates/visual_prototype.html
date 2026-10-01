@@ -503,9 +503,8 @@ function calHabBench(f,b){let fr=habFrameFP(b,b[2]-b[0]-1.6,7);if(f.label.includ
 function calHabFountain(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:13,draw(){SV.hab.fountain(x,y,15.5,0)}}}
 function calHabTree(f,b){return{h:19,draw(){SV.hab.tree((b[0]+b[2])/2,(b[1]+b[3])/2,{seed:hash(f.label)%7})}}}
 function calHabBed(f,b){const horiz=b[2]-b[0]>=b[3]-b[1];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:horiz?[0,1]:[1,0],L:(horiz?b[2]-b[0]:b[3]-b[1])-1,D:(horiz?b[3]-b[1]:b[2]-b[0])-2};return{h:6,draw(){SV.hab.bed(fr,{seed:hash(f.label)%9})}}}
-function calHabDogCorner(f,b){const fr=habFrameFP(b,b[2]-b[0]-1,b[3]-b[1]-1);fr.f=[0,-1];fr.a=[1,0];return{h:8,draw(){SV.hab.dogCorner(fr)}}}
 function calHabDog(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:10,draw(){SV.hab.dog(x,y)}}}
-const BUILD_CAL={"CON-006":calWorkstation,"LEI-007":calHabFountain,"PLT-007":calHabTree,"PLT-006":calHabBed,"LEI-008":calHabDogCorner,"DEC-009":calHabDog,
+const BUILD_CAL={"CON-006":calWorkstation,"LEI-007":calHabFountain,"PLT-007":calHabTree,"PLT-006":calHabBed,"DEC-009":calHabDog,
   "PLT-005":calHabPlanter,"LEI-002":calHabBar,"LEI-003":calHabDispenser,"TBL-003":calHabCafeTable,"SEA-007":calHabShell,"SEA-006":calHabSofa,"TBL-004":calHabGlass,"LEI-001":calHabPool,"STO-003":calHabRack,
   "LEI-005":calHabRest,"EQP-004":calHabRecovery,"SEA-009":calHabBench,"CON-021":calWorkstation,
   "CON-009":calWorkstation,"CON-002":calWorkstation,"CON-016":calWorkstation,"CON-017":calWorkstation,"CON-018":calWorkstation,"CON-019":calWorkstation,"CON-020":calWorkstation,"CON-027":calWorkstation,
@@ -631,10 +630,10 @@ function calSealedWall(pts,h,idx){prismX(pts,0,h,"#3a3a38","#26282c",{lw:0.4,sha
     onFace(a,b,n,0,h,(W,H)=>{ctx.fillStyle="#1a1b1e";ctx.fillRect(0,H-2.8,W,2.8);ctx.fillStyle="#2a2c31";ctx.fillRect(0,0.5,W,1.3);ctx.strokeStyle="#16171a";ctx.lineWidth=0.5;
       const k=Math.max(1,Math.round(W/12));for(let j=0;j<k;j++){const x=j*W/k;ctx.strokeRect(x+0.8,2.4,W/k-1.6,H-5.8);if((idx+j)%4===0){ctx.fillStyle="#2e3035";ctx.fillRect(x+W/k/2-1.4,1.8,2.8,H-4.6)}dRivets(x+0.8,2.4,W/k-1.6,H-5.8,"#5a5040")}})}}
 // ================================================================ HABITAT RECREATION ROOMS (owner-approved; docs/STELLAR_REC_ROOMS_V1.md)
-// R1 zen / wellbeing, R2 crew cinema, R3 sound-isolated decompression room. These rooms are render-only quads off the H-HAB rim (no tile
+// R1 zen / wellbeing, R2 crew cinema, R3 sound-isolated decompression room, R4 dog play / canine room. These rooms are render-only quads off the H-HAB rim (no tile
 // grid), so their furniture is drawn as scene items in room-local coordinates: s along the room axis (door at s=-92.5), t across it.
-// R4-R6 stay sealed reserved shells. No anchors, no characters, no audio or behaviour; the cinema screen carries no display and no content
-const REC_ACTIVE=new Set(["R1","R2","R3"]);const REC_PLATE={R1:"ZEN",R2:"CINEMA",R3:"QUIET"};
+// R5-R6 stay sealed reserved shells. R4 is the resident dog's own room (D.occupancy: the dog may be in H-HAB or R4 only). No anchors, no characters, no audio or behaviour; the cinema screen carries no display and no content
+const REC_ACTIVE=new Set(["R1","R2","R3","R4"]);const REC_PLATE={R1:"ZEN",R2:"CINEMA",R3:"QUIET",R4:"DOG PLAY"};
 const recU=rr=>[Math.cos(rr.a),Math.sin(rr.a)],recV=rr=>[-Math.sin(rr.a),Math.cos(rr.a)];
 const recP=(rr,s,t)=>{const u=recU(rr),v=recV(rr);return[rr.cx+u[0]*s+v[0]*t,rr.cy+u[1]*s+v[1]*t]};
 function recFrame(rr,s,t,face,L,D){const u=recU(rr),v=recV(rr);const [x,y]=recP(rr,s,t);const f={u,"-u":[-u[0],-u[1]],v,"-v":[-v[0],-v[1]]}[face];return{cx:x,cy:y,a:[-f[1],f[0]],f,L,D}}
@@ -656,25 +655,56 @@ function calRecItems(rr){const it=[];
     for(const [s,tt] of [[-30,30],[60,-36]])it.push(recItem(rr,s,tt,4,2.6,()=>{const [x,y]=recP(rr,s,tt);cyl(x,y,3.6,0,2.4,"#8a7f9a","#6a6078",{n:14});ell(x,y,2.4,2.42,null,"rgba(255,255,255,.18)",0.3)}));
 it.push(recItem(rr,-58,-46,10,6,()=>SV.rec.padBench(recFrame(rr,-58,-46,"v",20,8))));
     it.push(recItem(rr,-80,40,3,12,()=>{const fr=recFrame(rr,-80,40,"u",5,4);prismX(frameCham(fr,-2.4,2.4,-1.8,1.8,0.5),0,11,"#45484f",CAL.gun);const [a,b,n]=faces(fr,-2.4,2.4,-1.8,1.8).front;onFace(a,b,n,0,11,(W,H)=>{dRecess(0.6,1,W-1.2,H*0.5,"#1d1f23");dKnob(W/2,H*0.25,0.8);dButtons(0.9,H*0.42,2,1,0.9,4);ctx.fillStyle="#efe2c4";ctx.font="700 0.8px system-ui";ctx.textAlign="center";ctx.fillText("LIGHT",W/2,H*0.62)})}))}
+  if(rr.id==="R4"){ // compact agility course in a U around an open centre mat: tall pieces on the far side, low pieces on the near side,
+    // the tunnel across the far end (kept clear of the tall end bulkhead); the quiet rest corner sits by the door behind a low screen; storage by the door on the far side
+    const F=(s,tt,face,L,D)=>recFrame(rr,s,tt,face,L,D);
+    it.push(recItem(rr,-26,-42,13,12,()=>SV.dog.aframe(F(-26,-42,"-v",26,7))));
+    it.push(recItem(rr,4,-42,7,17,()=>SV.dog.ring(F(4,-42,"u",14,2))));
+    it.push(recItem(rr,32,-42,14,10,()=>SV.dog.weave(F(32,-42,"-v",28,2))));
+    it.push(recItem(rr,64,0,12,8,()=>SV.dog.tunnel(F(57,0,"u",56,9),{bend:13})));
+    it.push(recItem(rr,42,42,6,8,()=>SV.dog.jump(F(42,42,"u",12,2))));
+    it.push(recItem(rr,10,42,14,5,()=>SV.dog.bridge(F(10,42,"-v",28,4))));
+    it.push(recItem(rr,-26,42,11,5,()=>SV.dog.ramp(F(-26,42,"-v",22,6))));
+    for(const [s,tt,sd] of [[-6,6,1],[14,-8,2]])it.push(recItem(rr,s,tt,6,1.5,()=>{const [x,y]=recP(rr,s,tt);SV.dog.toys(x,y,sd)}));
+    it.push(recItem(rr,-50,39,14,7,()=>SV.dog.screen(F(-50,39,"u",28,2))));
+    it.push(recItem(rr,-74,44,9,6,()=>SV.dog.bed(F(-74,44,"-v",18,12))));
+    it.push(recItem(rr,-58,47,4,6,()=>SV.dog.water(F(-58,47,"-v",8,6))));
+    it.push(recItem(rr,-82,-50,6,14,()=>SV.eq.locker(F(-82,-50,"v",10.5,7),{h:14})));
+    it.push(recItem(rr,-68,-51,4,4,()=>SV.dog.toyBin(F(-68,-51,"v",7,5))))}
   return it}
-// walls: the near (door) wall stays low; others are full bulkheads faced with acoustic panels (R1 warm, R2 dark) or padding (R3)
+// walls: the near (door) wall stays low; others are full bulkheads faced with acoustic panels (R1 warm, R2 dark), padding (R3)
+// or warm slats over a padded dog-height bumper dado (R4)
 function calRecWall(rr,pts,a,b,h,i){prismX(pts,0,h,"#3a3a38",rr.id==="R3"?"#3e3b44":"#2f2a27",{lw:0.4,shadow:false,hi:false,mat:h>=10});ctx.fillStyle=rr.id==="R3"?"#4e4a56":CAL.crown;ctx.fill(poly2(pts,h));
   if(h<10)return;const n=[rr.cx-(a[0]+b[0])/2,rr.cy-(a[1]+b[1])/2];const L=Math.hypot(...n);
   onFace(a,b,[n[0]/L,n[1]/L],0,h,(W,H)=>{const k=Math.max(1,Math.round(W/14));for(let j=0;j<k;j++){ctx.save();ctx.translate(j*W/k,0);
     if(rr.id==="R3"){SV.wall.padded(W/k,H,i*7+j);if(j===0&&i===0){ctx.fillStyle="#141517";ctx.fillRect(1.4,H*0.18,W/k-2.8,2.4);ctx.fillStyle="#efe2c4";ctx.font="700 1.3px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("SOUND ISOLATED",W/k/2,H*0.18+1.2)}}
+    else if(rr.id==="R4"){SV.wall.kennel(W/k,H,i*7+j);if(j%2===0)SV.small.lampBox(W/k/2-2,3.2,4,2.2);if(j===1&&i===1){ctx.fillStyle="#141517";ctx.fillRect(1.4,H*0.3,W/k-2.8,2.4);ctx.fillStyle="#efe2c4";ctx.font="700 1.3px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("DOG PLAY · K9",W/k/2,H*0.3+1.2)}}
     else{SV.wall.acoustic(W/k,H,i*7+j,{dark:rr.id==="R2"});if(rr.id==="R1"&&j%2===0)SV.small.lampBox(W/k/2-2,3.2,4,2.2)}ctx.restore()}})}
-// floors: R1 warm wood with a tatami field, R2 dark carpet with a lit centre aisle, R3 a soft padded floor with an open centre
+// floors: R1 warm wood with a tatami field, R2 dark carpet with a lit centre aisle, R3 a soft padded floor with an open centre,
+// R4 interlocking rubber tiles with a turf course band, a soft centre play mat, a rest-corner carpet and a light paw-print trail
 function drawRecFloors(){for(const rr of rRooms.filter(r=>REC_ACTIVE.has(r.id))){const q=rr.pts;ctx.save();ctx.clip(poly2(q,0));
   if(rr.id==="R1"){ctx.fillStyle="#7a5636";ctx.fill(poly2(q,0));for(let s=-92;s<93;s+=6){const a=recP(rr,s,-60),b=recP(rr,s,60);line3([...a,0.01],[...b,0.01],"rgba(40,24,12,.4)",0.35)}
     const tz=[recP(rr,-30,-40),recP(rr,40,-40),recP(rr,40,40),recP(rr,-30,40)];ctx.fillStyle="#b9b07a";ctx.fill(poly2(tz,0.02));for(let s=-30;s<=40;s+=10){line3([...recP(rr,s,-40),0.03],[...recP(rr,s,40),0.03],"rgba(60,50,20,.45)",0.4)}line3([...recP(rr,5,-40),0.03],[...recP(rr,5,40),0.03],"rgba(60,50,20,.45)",0.4);ctx.strokeStyle="#3a2a1a";ctx.lineWidth=0.8;ctx.stroke(poly2(tz,0.03))}
   if(rr.id==="R2"){ctx.fillStyle="#2a1f24";ctx.fill(poly2(q,0));const ai=[recP(rr,-92,-5),recP(rr,92,-5),recP(rr,92,5),recP(rr,-92,5)];ctx.fillStyle="#1d161a";ctx.fill(poly2(ai,0.01));for(let s=-88;s<90;s+=8)for(const tt of [-5,5]){const p=V.P(...recP(rr,s,tt),0.02);ctx.fillStyle="rgba(255,190,110,.8)";ctx.fillRect(p[0]-0.35,p[1]-0.2,0.7,0.4)}}
   if(rr.id==="R3"){ctx.fillStyle="#4a4652";ctx.fill(poly2(q,0));for(let s=-88;s<90;s+=8)for(let tt=-54;tt<56;tt+=8){const p=V.P(...recP(rr,s,tt),0.01);ctx.fillStyle="rgba(0,0,0,.18)";ctx.beginPath();ctx.arc(p[0],p[1],0.4,0,TAU);ctx.fill()}
     {const p=V.P(...recP(rr,-62,0),0.02);ctx.save();ctx.translate(p[0],p[1]);ctx.fillStyle="rgba(220,210,240,.45)";ctx.font="700 4px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("SOUND ISOLATED",0,0);ctx.restore()}}
+  if(rr.id==="R4"){const Q=pp=>pp.map(([s,tt])=>recP(rr,s,tt));ctx.fillStyle="#4e4038";ctx.fill(poly2(q,0));
+    for(let s=-90;s<93;s+=10)line3([...recP(rr,s,-58),0.01],[...recP(rr,s,58),0.01],"rgba(0,0,0,.22)",0.3);for(let tt=-50;tt<58;tt+=10)line3([...recP(rr,-93,tt),0.01],[...recP(rr,93,tt),0.01],"rgba(0,0,0,.22)",0.3);
+    const turf=Q([[-44,-54],[90,-54],[90,54],[-42,54],[-42,30],[48,30],[48,-30],[-44,-30]]);ctx.fillStyle="#4a5338";ctx.fill(poly2(turf,0.015));ctx.save();ctx.clip(poly2(turf,0.015));for(let s=-40;s<92;s+=1.6)line3([...recP(rr,s,-56),0.02],[...recP(rr,s,56),0.02],"rgba(20,30,10,.25)",0.25);ctx.restore();ctx.strokeStyle="rgba(232,215,178,.4)";ctx.lineWidth=0.5;ctx.stroke(poly2(turf,0.02));
+    const rug=Q([[-90,24],[-54,24],[-54,55],[-90,55]]);ctx.fillStyle="#6e5a48";ctx.fill(poly2(rug,0.015));ctx.strokeStyle="rgba(255,240,215,.25)";ctx.setLineDash([0.8,0.6]);ctx.lineWidth=0.35;ctx.stroke(poly2(Q([[-88,26],[-56,26],[-56,53],[-88,53]]),0.02));ctx.setLineDash([]);
+    const mf={cx:recP(rr,-2,0)[0],cy:recP(rr,-2,0)[1],a:recU(rr),f:recV(rr)};const mat=frameCham(mf,-28,28,-18,18,6);ctx.fillStyle="#2f5a62";ctx.fill(poly2(mat,0.03));ctx.fillStyle="#356770";ctx.fill(poly2(frameCham(mf,-26.6,26.6,-16.6,16.6,5.4),0.05));
+    for(let s=-21;s<28;s+=7)line3([...dogP(mf,s,-16.6),0.06],[...dogP(mf,s,16.6),0.06],"rgba(0,0,0,.18)",0.25);ctx.strokeStyle="#6fb0b4";ctx.lineWidth=0.5;ctx.stroke(poly2(frameCham(mf,-26.6,26.6,-16.6,16.6,5.4),0.06));
+    SV.dog.paw(...recP(rr,-4,0),0.07,rr.a,4.2,"rgba(232,215,178,.16)");
+    const trail=(pts,step)=>{let acc=0,side=1;for(let k=0;k<pts.length-1;k++){const a=pts[k],b=pts[k+1];const L=Math.hypot(b[0]-a[0],b[1]-a[1]);const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);for(;acc<L;acc+=step){const x=a[0]+(b[0]-a[0])*acc/L,y=a[1]+(b[1]-a[1])*acc/L;side=-side;SV.dog.paw(x-Math.sin(ang)*side*0.9,y+Math.cos(ang)*side*0.9,0.08,ang,0.6,"rgba(232,215,178,.32)")}acc-=L}};
+    const loop=[];for(let k=0;k<=24;k++){const th=Math.PI*(1-k/24);loop.push([-4+38*Math.cos(th),24*Math.sin(th)])}
+    trail(Q([[-86,2],[-42,2],...loop]),3.4);
+    {const p=V.P(...recP(rr,-60,-24),0.03);ctx.save();ctx.translate(p[0],p[1]);ctx.fillStyle="rgba(232,215,178,.35)";ctx.font="700 3.2px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("DOG PLAY",0,0);ctx.restore()}}
   ctx.restore()}}
 function lightsRecCal(pool,WHITE,CYAN,WARM){for(const rr of rRooms.filter(r=>REC_ACTIVE.has(r.id))){
   if(rr.id==="R1"){for(const [s,tt] of [[-70,-40],[-70,40],[70,0],[10,0]])pool(...recP(rr,s,tt),34,WARM,0.12)}
   if(rr.id==="R2"){pool(...recP(rr,70,0),40,"rgba(150,170,200,A)",0.06);pool(...recP(rr,0,0),60,WARM,0.04)}
-  if(rr.id==="R3"){pool(...recP(rr,20,0),55,"rgba(190,175,230,A)",0.08)}}}
+  if(rr.id==="R3"){pool(...recP(rr,20,0),55,"rgba(190,175,230,A)",0.08)}
+  if(rr.id==="R4"){pool(...recP(rr,-2,0),52,WARM,0.10);for(const [s,tt] of [[-10,-40],[50,-40],[30,40],[72,0]])pool(...recP(rr,s,tt),30,WARM,0.08);pool(...recP(rr,-72,40),24,"rgba(255,196,140,A)",0.10)}}}
 // ================================================================ WING CALIBRATION: department rooms L1-L4, L6, L7, L9, L10 and corridors
 // Composition with the Stellar Visual Vocabulary (docs/STELLAR_WING_CALIBRATION_V1.md). Walls become dark bulkheads whose faces
 // follow the same bay rhythm as the hubs, with an upper layer above wall equipment (never behind a registered wall display);
@@ -759,7 +789,7 @@ function lightsHHABCal(pool,WHITE,CYAN,WARM,COLD){const c=hubById["H-HAB"];pool(
     if(f.asset==="TBL-003")pool(x,y,16,WARM,0.22);else if(f.asset==="LEI-001")pool(x,y,32,WARM,0.2);else if(f.asset==="TBL-004")pool(x,y,24,WARM,0.18);else if(f.asset==="LEI-002")pool(x,y,22,WARM,0.14);
     else if(f.asset==="EQP-004")pool(x,y,14,WHITE,0.14);else if(f.asset==="CON-021")pool(x,y,12,CYAN,0.1)}
   {const ft=D.furniture.find(f=>f.asset==="LEI-007");if(ft){const b=fp(ft);pool((b[0]+b[2])/2,(b[1]+b[3])/2,30,CYAN,0.16);pool((b[0]+b[2])/2,(b[1]+b[3])/2,46,WARM,0.08)}
-    for(const f of D.furniture.filter(q=>/PLT-007|LEI-008/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,14,WARM,0.1)}}
+    for(const f of D.furniture.filter(q=>/PLT-007/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,14,WARM,0.1)}}
   for(const a of [5.6,6.0,6.4]){const ang=a*Math.PI/6-Math.PI/2;pool(c.x+(c.R-18)*Math.cos(ang),c.y+(c.R-18)*Math.sin(ang),28,COLD,0.1)}
   {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-12)*Math.cos(a),c.y+(c.R-12)*Math.sin(a),22,WARM,0.1)}}}
 function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";pool(c.x,c.y,95,LAMP,0.05);pool(c.x,c.y,40,CYAN,0.28);
@@ -1106,7 +1136,7 @@ $("#t-preview").onclick=()=>toggle("preview","#t-preview");$("#preview").onclick
 $("#t-legend").onclick=e=>{const l=$("#legend");const on=l.style.display!=="block";l.style.display=on?"block":"none";e.target.classList.toggle("on",on)};
 $("#t-theme").onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"};
 // room list
-const ROOM_ORDER=[["Station","Full overview"],["H-CMD"],["H-LAB"],["H-HAB"],["COR-N"],["COR-S"],["L1"],["L2"],["L3"],["L4"],["L6"],["L7"],["L9"],["L10"],["R1"],["R2"],["R3"],["L5","Reserved"],["L8","Reserved"],["Reserved","R4–R6 (radial)"]];
+const ROOM_ORDER=[["Station","Full overview"],["H-CMD"],["H-LAB"],["H-HAB"],["COR-N"],["COR-S"],["L1"],["L2"],["L3"],["L4"],["L6"],["L7"],["L9"],["L10"],["R1"],["R2"],["R3"],["R4"],["L5","Reserved"],["L8","Reserved"],["Reserved","R5–R6 (radial)"]];
 for(const [id,nm] of ROOM_ORDER){const b=document.createElement("button");b.dataset.room=id;const i=D.rooms[id];
   b.innerHTML=`<span class="dot" style="background:${id==="Reserved"||i&&i[2]==="reserved"?"#3a414c":id==="Station"?"#4fd1e3":(ACC[i[1]]||ACC.NEU)}"></span><span class="code">${id}</span><span class="nm">${nm||i[0]}</span>`;b.onclick=()=>focusRoom(id);$("#rooms").appendChild(b)}
 // ---------------------------------------------------------------- boot

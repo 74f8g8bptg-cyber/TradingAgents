@@ -22,8 +22,8 @@ The park is about 15 × 9 tiles, between the lounge, café, games and recovery z
 
 | Element | Asset | Construction |
 |---|---|---|
-| Dog corner | `LEI-008` (new) | Wood-framed cushioned dog bed, food and water bowls on a mat, a toy basket, a small two-door storage cabinet, a ball on the floor |
-| The dog | `DEC-009` (new) | A sitting tan dog in the crew's compact outlined style, with a teal collar and a brass tag. Next to its corner at the park's south-east edge. **World-building only:** not a character, no AI, no behaviour, no data |
+| Dog corner | `LEI-008` | **Retired:** the dog's bed, water and toys moved to its own room, R4 Dog Play (`docs/STELLAR_REC_ROOMS_V1.md`), and H-HAB has no second dog bed |
+| The dog | `DEC-009` (new) | A sitting tan dog in the crew's compact outlined style, with a teal collar and a brass tag. Shown at the park's south-east edge. **Occupancy:** it may be anywhere in the H-HAB zone or in R4, and nowhere else (Room Registry §3.3a). **World-building only:** not a character, no AI, no behaviour, no data |
 
 ## 3. Zen room, cinema, decompression room: room selection (not built)
 

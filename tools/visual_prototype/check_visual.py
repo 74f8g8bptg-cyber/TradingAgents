@@ -106,6 +106,14 @@ def check_visual(d, registries, html):
                 hub.startswith("L") and re.search(r"\bL rooms\b|most rooms|everywhere", row)
             ):
                 notes.append(f"{a} ({f['label']}) in {hub}: room not named in its registry row")
+    # 2b occupancy: a decorative resident is only ever placed inside its permitted zone
+    for asset, rule in d.get("occupancy", {}).items():
+        for f in d["furniture"]:
+            if f["asset"] == asset:
+                ok(
+                    f["room"] in rule["rooms"],
+                    f"{asset} placed in {f['room']}, outside {rule['rooms']}",
+                )
     # 3 characters
     rendered = {a["chr"]: a for a in d["agents"]}
     for cid, c in chars.items():

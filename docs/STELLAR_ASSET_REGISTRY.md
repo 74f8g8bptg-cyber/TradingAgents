@@ -73,15 +73,15 @@
 | `LGT` | Lighting | 10 | 1 | 9 |
 | `DEC` | Decoration | 9 | 0 | 9 |
 | `SRV` | Servers and conduits | 5 | 0 | 5 |
-| `WAL` | Walls and structure | 13 | 1 | 12 |
-| `FLR` | Floors | 12 | 1 | 11 |
+| `WAL` | Walls and structure | 14 | 1 | 13 |
+| `FLR` | Floors | 13 | 1 | 12 |
 | `STO` | Storage | 7 | 0 | 7 |
 | `PLT` | Plants | 7 | 0 | 7 |
 | `SGN` | Signage | 8 | 2 | 6 |
-| `LEI` | Leisure furniture | 15 | 0 | 15 |
+| `LEI` | Leisure furniture | 25 | 1 | 24 |
 | `EQP` | Hero equipment | 7 | 0 | 7 |
 | `PRP` | Hand-held and moving props | 8 | 0 | 8 |
-| **Total** | **19 prefixes (18 in use)** | **231** | **26** | **205** |
+| **Total** | **19 prefixes (18 in use)** | **243** | **27** | **216** |
 
 ---
 
@@ -228,7 +228,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `DEC-006` | Department emblem plaque (shape icons only) | room doors | Y | kept |
 | `DEC-007` | Holo globe (**decorative only**: no real data, no fake system status, no charts or metrics) | `H-CMD`, `H-LAB` centres | opt | **new** |
 | `DEC-008` | Wall equipment panel (vents, cable trays, junction boxes; **no data**) | `H-CMD` rim segments (calibration V1); `H-LAB` rim (H-LAB calibration V1) | Y | **new** |
-| `DEC-009` | Resident station dog (world-building only: a visual resident of the habitat; **no AI, no behaviour, carries no data**) | `H-HAB` dog corner (H-HAB park V1) | Y | **new** |
+| `DEC-009` | Resident station dog (world-building only: a visual resident of the habitat; **no AI, no behaviour, carries no data**) | `H-HAB` habitat zone and `R4` only (occupancy rule, Room Registry §3.3a); shown at the park edge | Y | **new** |
 
 ### `SRV` — Servers and conduits
 
@@ -257,6 +257,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `WAL-011` | Segmented bulkhead rim (gunmetal panels, ribs, titanium cap) | `H-CMD` rim (calibration V1) | solid | Y | **new** |
 | `WAL-012` | Acoustic wall treatment (fabric slat panels; R1 warm, R2 dark) | R1, R2 (habitat recreation rooms) | wall | Y | **new** |
 | `WAL-013` | Sound-isolation padded wall (thick tufted padding, sealed seam strips, SOUND ISOLATED plate) | R3 decompression room | wall | Y | **new** |
+| `WAL-014` | Dog-room wall face (warm acoustic slats over a padded dog-height bumper dado, brass rail, indirect lamp boxes, DOG PLAY · K9 plate) | R4 dog play room | wall | Y | **new** |
 
 ### `FLR` — Floors
 
@@ -274,12 +275,13 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `FLR-010` | Floor vent grille (decal) | `H-CMD` walkway (calibration V1); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
 | `FLR-011` | Cable conduit (floor channel, decal) | `H-CMD` back bank to the dais (calibration V2); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
 | `FLR-012` | Park ground and garden paths (decal) | `H-HAB` park (H-HAB park V1) | walk-over | Y | **new** |
+| `FLR-013` | Dog play floor (interlocking rubber tiles, turf course band, soft centre play mat, rest-corner carpet, light paw-print trail; decal) | R4 dog play room | walk-over | Y | **new** |
 
 ### `STO` — Storage (kept)
 
 | ID | Name | Where | Nav | V1 |
 |---|---|---|---|---|
-| `STO-001` | Wall locker | L6, L9, L10, `H-LAB`, `H-CMD` (rim, flanking the doors; calibration V1) | wall / blocks | opt |
+| `STO-001` | Wall locker | L6, L9, L10, `H-LAB`, `H-CMD` (rim, flanking the doors; calibration V1); R4 (dog-room storage) | wall / blocks | opt |
 | `STO-002` | Crate stack | L4 | blocks | opt |
 | `STO-003` | Shelf / cue rack | `H-HAB` (cue rack; rim-edge shelves, H-HAB calibration V1) | blocks | Y |
 | `STO-004` | Crystal archive shelf | L6 | blocks | Y |
@@ -323,7 +325,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LEI-005` | Cosmetic rest pod (no countdown, no vitals) | seat | Y |
 | `LEI-006` | Bookshelf nook | blocks | opt |
 | `LEI-007` | Park fountain (hero: stone basin, central column, water; **decorative, no data**) | blocks | Y |
-| `LEI-008` | Dog corner (dog bed, food and water bowls, toy basket, small storage) | blocks | Y |
+| `LEI-008` | Dog corner (dog bed, food and water bowls, toy basket, small storage) | — | **RETIRED** (superseded by the R4 dog room; H-HAB has no second dog bed) |
 | `LEI-009` | Meditation mat and cushion (R1) | walk-over | Y |
 | `LEI-010` | Ambient speaker column (R1; **world-building only, no audio playback**) | blocks | Y |
 | `LEI-011` | Zen sand garden with stones and a small tree (R1 focal point) | blocks | Y |
@@ -331,6 +333,16 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LEI-013` | Cinema recliner row (R2, two-seat units on a riser) | blocks | Y |
 | `LEI-014` | Media projector stand (R2; dark, no content) | blocks | Y |
 | `LEI-015` | Padded floor mat and padded bench (R3) | walk-over / seat | Y |
+| `LEI-016` | Agility tunnel (R4; curved fabric tube on steel hoops, ground weights) | blocks | Y |
+| `LEI-017` | Agility A-frame (R4; slatted decks, amber contact zones, steel stringers, chain braces) | blocks | Y |
+| `LEI-018` | Low ramp with pause platform (R4; riveted steel platform, rubber top) | blocks | Y |
+| `LEI-019` | Suspended ring frame (R4; two posts, top beam, ring on cables) | blocks | Y |
+| `LEI-020` | Weave poles (R4; six poles on a bolted base rail) | blocks | Y |
+| `LEI-021` | Low jump (R4; lattice wing panels, striped bar in cups) | blocks | Y |
+| `LEI-022` | Curved balance bridge (R4; arched plank walk on steel trestles) | blocks | Y |
+| `LEI-023` | Dog rest bed and low privacy screen (R4 quiet corner; raised cot, bolster, blanket, REST panel) | blocks | Y |
+| `LEI-024` | Dog water station (R4; steel stand, two bowls, refill post; **no data**) | blocks | Y |
+| `LEI-025` | Dog toys and toy bin (R4; balls, rope toy, ring toy, open wood crate) | walk-over / blocks | Y |
 
 ### `EQP` — Hero equipment
 

@@ -65,13 +65,14 @@ paths around it (A12).
 | 14 | `R1` | Zen Room · Wellbeing (meditation and relaxation; compatible with the Performance & Wellbeing / Coaching designation) | `coaching` | M | `DR-R1` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
 | 15 | `R2` | Crew Cinema | `cinema` | M | `DR-R2` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
 | 16 | `R3` | Decompression Room (sound-isolated) | `decompression` | M | `DR-R3` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
-| 17 | `R4` | — | — | M | `DR-R4` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
+| 17 | `R4` | Dog Play · Canine Room (indoor agility course and rest corner for the resident station dog; decorative, no behaviour) | `canine` | M | `DR-R4` → `H-HAB` | ACTIVE (habitat recreation, owner-approved) |
 | 18 | `R5` | — | — | M | `DR-R5` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
 | 19 | `R6` | — | — | M | `DR-R6` → `H-HAB` | RESERVED · FUTURE_AGENT_TEAM |
 
 **Totals:**
 - **11 active**: 3 hubs + L1, L2, L3, L4, L6, L7, L9, L10. L9 and L10 are restricted.
-- **8 reserved**: L5, L8, R1–R6.
+- **4 habitat recreation rooms (owner-approved)**: R1 Zen, R2 Cinema, R3 Decompression, R4 Dog Play.
+- **4 reserved**: L5, L8, R5, R6.
 
 ### 2.1 Why this placement (the decision chain follows the corridors)
 
@@ -143,7 +144,8 @@ changes this file only.
 | Zones | `habitat.plants` (centre planter, hero) · `habitat.cafe` (north arc, counter) · `habitat.lounge` (south arc) · `habitat.games` (east arc, billiards) · `habitat.rest` (south-west, cosmetic pods) · `habitat.recovery` (north-west, real-cooldown pods and vitals) · `habitat.ring` (circulation linking all seven doors; kept clear) |
 | Mandatory furniture | `PLT-005` central planter, `LEI-002` café counter, `LEI-003` dispenser, `TBL-003` café tables, `SEA-007` café chairs, `SEA-006` sofas, `TBL-004` coffee table, `LEI-004` rug, `LEI-001` billiard table, `STO-003` cue rack, `LEI-005` cosmetic rest pods, `EQP-004` recovery pods (real cooldown), `CON-021` vitals console, `SEA-009` window bench, `LGT-006` warm pendants |
 | Calibration additions (V1) | Built with the Stellar Visual Vocabulary habitat family (`docs/STELLAR_HHAB_CALIBRATION_V1.md`): approved items rebuilt in warm materials; rim-edge `PLT-001` planters and `STO-003` shelves; zone accents (planters, a recovery-bay `STO-006` cabinet); warm rim bays, viewport and living-wall bays; R1–R6 doors as closed assemblies. No anchors added; ring, R-door approaches and billiards clearance kept clear |
-| Enrichment (park V1) | Central indoor park in `habitat.plants` (`docs/STELLAR_HHAB_PARK_V1.md`): `FLR-012` park ground and paths, `LEI-007` fountain, `PLT-007` trees × 5, `PLT-006` garden beds × 6, `SEA-009` park benches × 2; resident dog corner `LEI-008` and the dog `DEC-009` (world-building only). No anchors added; keep rules unchanged |
+| Enrichment (park V1) | Central indoor park in `habitat.plants` (`docs/STELLAR_HHAB_PARK_V1.md`): `FLR-012` park ground and paths, `LEI-007` fountain, `PLT-007` trees × 5, `PLT-006` garden beds × 6, `SEA-009` park benches × 2; the resident dog `DEC-009` (world-building only; its bed, water and toys are in `R4`, so H-HAB has no separate dog corner). No anchors added; keep rules unchanged |
+| Occupancy rule (resident dog) | The dog `DEC-009` is a resident of the **whole H-HAB habitat zone** (park, café, lounge, games, rest and living areas) and of its own room `R4` Dog Play. It is never placed anywhere else. See §3.3a |
 | Mandatory screens | `DSP-HAB-01`…`DSP-HAB-04` |
 | Anchors | `habitat.counter` (Bix) · `habitat.cafe_seat_1`…`_6` · `habitat.sofa_1`…`_4` · `habitat.billiards_1`, `_2` · `habitat.rest_pod_1`…`_3` (cosmetic) · `habitat.recovery_pod_1`…`_3` (real cooldown only) · `habitat.vitals` (Medic persona) · `habitat.window_1`, `_2` |
 | Usual agents | `CHR-043` Bix (host), `CHR-041` Medic persona; idle crew (ambient); agents in a real cooldown |
@@ -260,6 +262,23 @@ changes this file only.
 | Usual agents | `CHR-036` P2, `CHR-037` P3; visits: `CHR-005` (intake only), `CHR-039` (outbox only), `CHR-003`, `CHR-041` (entry only) |
 | Lighting / accent | Cold panel light; engineering gold on charcoal |
 
+### 3.3a H-HAB occupancy rule: resident station dog
+
+The resident dog (`DEC-009`) belongs to the H-HAB habitat zone. It has no single fixed location.
+
+| | Rooms / areas |
+|---|---|
+| **Allowed** | All of `H-HAB`: the park, café, lounge, games area, and rest and living areas. Also `R4` Dog Play · Canine Room, the dog's dedicated room with its bed, water, toys and agility course |
+| **Not allowed** | Any corridor outside H-HAB (`COR-N`, `COR-S` and every connector), `H-CMD`, `H-LAB`, `L1`–`L10`, `R1`–`R3`, `R5`, `R6`, and any other station room |
+
+Rules for construction and future simulation:
+- The dog is shown in H-HAB as a decorative resident (currently at the park edge). Any position inside the allowed zone is valid.
+- `R4` is its only personal space. H-HAB carries **no** second dog bed or dog corner (`LEI-008` is retired for this reason).
+- The dog's bed, bowls, toys, storage and agility equipment belong in `R4` only. No dog equipment is placed elsewhere in H-HAB.
+- Future room construction must never place the dog outside H-HAB or `R4`. `R5` and `R6` stay reserved.
+- This is a world/occupancy rule only. There is no AI, no pathfinding and no behaviour; the dog carries no data.
+- Enforcement: the page data carries `occupancy.DEC-009 = {zone: H-HAB, rooms: [H-HAB, R4]}`, and the visual check fails if `DEC-009` is placed in any other room.
+
 ### 3.12 Reserved rooms
 
 | Room | Reservation | Note |
@@ -268,7 +287,8 @@ changes this file only.
 | `L8` | FUTURE_OPERATIONS | Operations expansion; no function assigned |
 | `R1` | **ACTIVE** as the Zen Room · Wellbeing (habitat recreation, owner-approved); the coaching designation stays compatible | §4, `docs/STELLAR_REC_ROOMS_V1.md` |
 | `R2`, `R3` | **ACTIVE** as the Crew Cinema and the Decompression Room (owner-approved) | `docs/STELLAR_REC_ROOMS_V1.md` |
-| `R4`–`R6` | FUTURE_AGENT_TEAM | Future agent teams around the Habitat (unchanged) |
+| `R4` | **ACTIVE** as the Dog Play · Canine Room (owner-approved) | `docs/STELLAR_REC_ROOMS_V1.md` §R4 |
+| `R5`, `R6` | FUTURE_AGENT_TEAM | Future agent teams around the Habitat (unchanged, sealed) |
 
 ---
 

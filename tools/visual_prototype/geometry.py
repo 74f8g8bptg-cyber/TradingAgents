@@ -1203,9 +1203,8 @@ def build_geometry():
         if (hc + dc, hr + dr) in hab and (hc + dc, hr + dr) not in hab_keep
     ]
     F("H-HAB", "FLR-012", park_ground, "FLR-012 park ground and paths", kind="floor")
-    for offs in ([(6, 5), (7, 5)], [(5, 5), (6, 5)], [(9, 4), (10, 4)]):
-        if park_place("LEI-008", offs, "LEI-008 dog corner"):
-            break
+    # the resident dog lives in the whole H-HAB zone; its bed, water and toys are in R4 (Dog Play), so the
+    # park carries no separate dog corner. Occupancy rule: docs/STELLAR_ROOM_REGISTRY.md §3.3a
     for o in ((7, 4), (6, 4), (8, 4), (5, 4)):
         if park_place("DEC-009", [o], "DEC-009 resident station dog"):
             break

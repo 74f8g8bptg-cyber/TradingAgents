@@ -29,12 +29,13 @@ def build_prototype_data(g, registries):
         "COR-S": ("Lower corridor", "NEU", "corr"),
         "L5": ("Reserved", "RES", "reserved"),
         "L8": ("Reserved", "RES", "reserved"),
-        # habitat recreation rooms (owner-approved): R1-R3 open off H-HAB; R4-R6 stay reserved
+        # habitat recreation rooms (owner-approved): R1-R4 open off H-HAB; R5-R6 stay reserved
         "R1": ("Zen Room · Wellbeing", "HAB", "room"),
         "R2": ("Crew Cinema", "HAB", "room"),
         "R3": ("Decompression Room", "HAB", "room"),
+        "R4": ("Dog Play · Canine Room", "HAB", "room"),
     }
-    R_ACTIVE = {"R1", "R2", "R3"}
+    R_ACTIVE = {"R1", "R2", "R3", "R4"}
     FLOOR = {
         "H-CMD": "FLR-001",
         "H-LAB": "FLR-001",
@@ -360,6 +361,9 @@ def build_prototype_data(g, registries):
         "anchors": g["anchors"],
         "agents": agents,
         "displays": displays,
+        # world/occupancy rules for decorative residents (no AI, no pathfinding): where each may ever appear.
+        # DEC-009, the resident dog, may roam the whole H-HAB habitat zone and its own room R4; nowhere else
+        "occupancy": {"DEC-009": {"zone": "H-HAB", "rooms": ["H-HAB", "R4"]}},
         "engineOrder": [
             "MARKET_DATA",
             "TECHNICAL",

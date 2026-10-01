@@ -22,6 +22,7 @@ const cases = [
   ["R1_zen", "?focus=R1"],
   ["R2_cinema", "?focus=R2"],
   ["R3_decompression", "?focus=R3"],
+  ["R4_dog_play", "?focus=R4"],
   ["vocabulary", "?vocab=1"],
   ["vocabulary_oblique", "?vocab=1&view=obl"],
   ["L2", "?focus=L2"],
