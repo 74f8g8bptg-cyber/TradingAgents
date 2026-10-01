@@ -1080,6 +1080,64 @@ def build_geometry():
         F("H-HAB", "LEI-005", [t], f"LEI-005 rest pod {i}", kind="seat")
         A_("H-HAB", f"habitat.rest_pod_{i}", t, serves=f"LEI-005 rest pod {i}")
 
+    # ---- H-HAB calibration (docs/STELLAR_HHAB_CALIBRATION_V1.md): rim-edge dressing only (planters and shelves), so the ring
+    # circulation, the R-door approaches (30 units + 1 tile), the windows, the living wall, the rim displays, the billiards
+    # clearance and every anchor and its neighbours stay clear. Approved H-HAB items above are unchanged; no anchors added
+    hx_, hy_, _hr = HUBS["H-HAB"]
+    hab = {t for t, n in region.items() if n == "H-HAB"}
+    hab_taken = {t for f in furn for t in f["tiles"]}
+    hab_anc = [a["tile"] for a in anchors if a["room"] == "H-HAB"]
+    hab_keep = {(a[0] + dc, a[1] + dr) for a in hab_anc for dc in (-1, 0, 1) for dr in (-1, 0, 1)}
+    hab_keep |= {tuple(t) for f in furn if f["label"] == "LEI-001 +1 clearance" for t in f["tiles"]}
+    hab_lanes = [
+        tuple(t) for d in door_info.values() if "HAB" in d["id"] for ch in d["lanes"] for t in ch
+    ]
+    no_arcs = [
+        (5.35, 6.65),
+        (7.75, 8.55),
+        (1.0, 1.9),
+        (9.1, 10.9),
+    ]  # windows, living wall, DSP-HAB-01..04
+    hab_edge = []
+    for t in hab:
+        if t in hab_taken or t in hab_keep:
+            continue
+        if all((t[0] + dc, t[1] + dr) in hab for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            continue
+        x, y = cen(t[0]), cen(t[1])
+        if any(math.hypot(x - rx, y - ry) <= 30 + T for rx, ry in R_DOORS.values()):
+            continue
+        if any(math.hypot(t[0] - ln[0], t[1] - ln[1]) <= 4 for ln in hab_lanes):
+            continue
+        clk = ((math.atan2(y - hy_, x - hx_) + math.pi / 2) / (math.pi / 6) + 12) % 12
+        if any(a0 <= clk <= a1 for a0, a1 in no_arcs):
+            continue
+        hab_edge.append((math.atan2(y - hy_, x - hx_), t))
+    hab_edge.sort()
+    hab_rhythm = ("P", "S", "G", "P", "G", "S", "G")
+    last = None
+    for i, (_ang, t) in enumerate(hab_edge):
+        if last is not None and abs(t[0] - last[0]) + abs(t[1] - last[1]) <= 1:
+            continue
+        step = hab_rhythm[i % len(hab_rhythm)]
+        if step == "G":
+            continue
+        asset = "PLT-001" if step == "P" else "STO-003"
+        F("H-HAB", asset, [t], f"{asset} H-HAB perimeter {len(furn)}", tall=asset == "STO-003")
+        last = t
+    # zone accents: planters flanking the café counter and the lounge, a service cabinet in the recovery bay
+    hab_used = {t for f in furn for t in f["tiles"]}
+    for asset, t in (
+        ("PLT-001", (hc + 4, hr - 10)),
+        ("PLT-001", (hc + 9, hr - 10)),
+        ("PLT-001", (hc - 4, hr + 6)),
+        ("PLT-001", (hc + 4, hr + 8)),
+        ("STO-006", (hc - 12, hr - 5)),
+        ("PLT-001", (hc - 6, hr + 9)),
+    ):
+        if t in hab and t not in hab_used and t not in hab_keep:
+            F("H-HAB", asset, [t], f"{asset} H-HAB accent {len(furn)}")
+            hab_used.add(t)
     # ---------------- checks ----------------
     blocked = {}
     for f in furn:

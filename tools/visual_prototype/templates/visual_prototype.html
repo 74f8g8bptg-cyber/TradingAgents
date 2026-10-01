@@ -213,9 +213,9 @@ function buildScene(){
       if(hb.id==="H-HAB"&&clk>7.75&&clk<8.55)special="living";
       const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
       add({kind:"rim",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h,draw(){
+        if(CAL_ROOMS.has(hb.id)){calRimSegment(pts,h,i,hb,special);return}
         if(special==="window"){prism(pts,0,h,"#c4cbd3","#1a2b48",{seam:COL.ti});return}
         if(special==="living"){prism(pts,0,Math.max(h,6),"#4d8a56","#3c7a48",{seam:"#2f5f38"});return}
-        if(CAL_ROOMS.has(hb.id)){calRimSegment(pts,h,i,hb);return}
         prism(pts,0,h,COL.wallTop,i%2?col:"#e2dccf",{seam:"rgba(0,0,0,.12)"});
         if(h>=16){const q0=pts[0],q1=pts[1];line3([q0[0],q0[1],h-1.6],[q1[0],q1[1],h-1.6],"rgba(190,245,255,.85)",0.7)}}});
     }
@@ -235,7 +235,7 @@ function buildScene(){
   // (two frame records, one per wall face) is drawn as ONE deep doorway, never as two doors
   for(const d of D.doors){const cz=calDoorZone(d);if(cz){addCalDoor(add,cz);continue}
     if(d.frames.length===2){const [f0,f1]=d.frames;addDoorFrame(add,d,f0.p1,f0.p2,f0.region,f1.p1,f1.p2)}else for(const f of d.frames)addDoorFrame(add,d,f.p1,f.p2,f.region)}
-  for(const rd of D.rDoors){const hb=hubById["H-HAB"];const R=hb.R+1.5,half=12/R;
+  for(const rd of D.rDoors){const rz=calRDoorZone(rd);if(rz){addCalDoor(add,rz);continue}const hb=hubById["H-HAB"];const R=hb.R+1.5,half=12/R;
     const p1=[hb.x+R*Math.cos(rd.ang-half),hb.y+R*Math.sin(rd.ang-half)],p2=[hb.x+R*Math.cos(rd.ang+half),hb.y+R*Math.sin(rd.ang+half)];
     addDoorFrame(add,{id:rd.id,status:"reserved",kind:"DOR-009",restricted:false,A:"H-HAB",B:rd.room,collar:true},p1,p2,"H-HAB")}
   // furniture
@@ -310,7 +310,10 @@ function calWingDoorZone(d){if(!d.frames.length||![d.A,d.B].some(r=>CAL_WING.has
   const W=Math.hypot(f0.p2[0]-f0.p1[0],f0.p2[1]-f0.p1[1]);const u=[(f0.p2[0]-f0.p1[0])/W,(f0.p2[1]-f0.p1[1])/W];const room=CAL_CORR.has(d.A)?d.B:d.A;const [rx,ry]=roomCentre(room);
   let n=[-u[1],u[0]];if(n[0]*(rx-m[0])+n[1]*(ry-m[1])<0)n=[-n[0],-n[1]];const depth=d.frames.length===2?Math.abs((d.frames[1].p1[0]-f0.p1[0])*n[0]+(d.frames[1].p1[1]-f0.p1[1])*n[1]):0;
   const type=d.restricted?"restricted":"standard";const sp=SV.door.SPEC[type];return{d,type,sp,m,u,n,W,hub:false,D:Math.max(sp.depth,depth+4),fr:{cx:m[0],cy:m[1],a:u,f:n,L:W},plate:room,closed:d.status!=="open"}}
-let _calDZ=null;const calDoorZones=()=>_calDZ||(_calDZ=D.doors.map(calDoorZone).filter(Boolean));
+// reserved radial-room doors on the H-HAB rim: closed SV.door assemblies built into the rim (the rooms stay sealed shells)
+function calRDoorZone(rd){if(!CAL_ROOMS.has("H-HAB"))return null;const hb=hubById["H-HAB"];const m=[hb.x+(hb.R+1.5)*Math.cos(rd.ang),hb.y+(hb.R+1.5)*Math.sin(rd.ang)];const n=[-Math.cos(rd.ang),-Math.sin(rd.ang)],u=[-n[1],n[0]];
+  const sp=SV.door.SPEC.standard;return{d:{id:rd.id,status:"reserved",kind:"DOR-009",restricted:false,A:"H-HAB",B:rd.room},type:"standard",sp,m,u,n,W:24,hub:true,fr:{cx:m[0],cy:m[1],a:u,f:n,L:24},plate:rd.room,closed:true}}
+let _calDZ=null;const calDoorZones=()=>_calDZ||(_calDZ=[...D.doors.map(calDoorZone),...D.rDoors.map(calRDoorZone)].filter(Boolean));
 function calInDoorZone(p){return calDoorZones().some(z=>{if(!z.hub)return false;const r=[p[0]-z.m[0],p[1]-z.m[1]];const al=Math.abs(r[0]*z.u[0]+r[1]*z.u[1]),dn=r[0]*z.n[0]+r[1]*z.n[1];return al<=z.W/2+z.sp.jw+0.5&&dn>=-z.sp.depth/2-14&&dn<=z.sp.depth/2+10})}
 // kept rim endpoints (inner face) of a hub, with the same skip rules as the rim pass
 function rimKeptEnds(hb){const gaps=(D.hubGaps[hb.id]||[]);const other=hubList.filter(o=>o!==hb);const N=Math.round(hb.R*TAU/14);const out=[];
@@ -390,7 +393,7 @@ function rackForm(b){const bb=[b[0]+4,b[1]+1,b[2]-0.5,b[3]-1];return{h:13,draw()
 // comes from geometry.py; display identities and content from the registries.
 /*VOCABULARY*/
 const CAL_WING=new Set(["L1","L2","L3","L4","L6","L7","L9","L10"]);const CAL_CORR=new Set(["COR-N","COR-S"]);
-const CAL_ROOMS=new Set(["H-CMD","H-LAB",...CAL_WING]);
+const CAL_ROOMS=new Set(["H-CMD","H-LAB","H-HAB",...CAL_WING]);
 const tileRoom=new Map();for(const [c,r,n] of D.tiles)tileRoom.set(c+","+r,n);
 const CAL_DAIS_R=67,CAL_DAIS_H=1.2;
 function calBaseH(x,y){const c=hubById["H-CMD"];return Math.hypot(x-c.x,y-c.y)<=CAL_DAIS_R?CAL_DAIS_H:0}
@@ -399,7 +402,7 @@ function deskFrame(f,b,fs){const op={N:[0,-1],S:[0,1],W:[-1,0],E:[1,0]}[fs];cons
   return{cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:op,L:(horiz?b[2]-b[0]:b[3]-b[1])-0.8,D:(horiz?b[3]-b[1]:b[2]-b[0])}}
 const calConsoleDisplay={};for(const d of D.displays)if(d.place[0]==="console")calConsoleDisplay[d.place[1]]=d;
 // role workstations: WS-standard (CON-003/004/005), WS-heavy (CON-022, the south axis counterpart of the command table)
-const CAL_WS_VARIANT={"CON-022":"heavy","CON-008":"heavy","CON-018":"heavy","CON-006":"compact","CON-002":"compact","CON-027":"compact","CON-012":"compact","CON-029":"compact","CON-023":"compact","CON-019":"compact","CON-020":"compact"};
+const CAL_WS_VARIANT={"CON-021":"compact","CON-022":"heavy","CON-008":"heavy","CON-018":"heavy","CON-006":"compact","CON-002":"compact","CON-027":"compact","CON-012":"compact","CON-029":"compact","CON-023":"compact","CON-019":"compact","CON-020":"compact"};
 function fsToward(f,b){const [cx,cy]=roomCentre(f.room);const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const vert=b[3]-b[1]>b[2]-b[0];return vert?(cx<x?"W":"E"):(cy<y?"N":"S")}
 function calWorkstation(f,b){const fs=frontSide(f,inset(b,1.2))||fsToward(f,b);const fr=deskFrame(f,b,fs);const an=(servesMap[f.label]||[])[0];const ag=an&&agentAt.get(an.name);
   const plate=ag?`${ag.code} · ${ag.name.replace(/\s*\(.*\)/,"").split(" ").pop().toUpperCase()}`:null;const d=calConsoleDisplay[f.label];const lit=ag&&!ag.noProducer;
@@ -477,7 +480,25 @@ function calRack(f,b){const vert=b[3]-b[1]>b[2]-b[0];const fr={cx:(b[0]+b[2])/2,
 function calBoard(f,b){const fr=calWallFrame(f,6);return{h:16,draw(){SV.con.bank(fr,{bays:3,seed:4,kits:["readout","screen","readout"],housingH:15})}}}
 function calBreaker(f,b){const fr=calWallFrame(f,7);fr.L=8;return{h:16,draw(){SV.eq.service(fr,{tone:"steel",h:14})}}}
 function calPedestal(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,1]};return{h:15,draw(){SV.eq.projector(fr)}}}
+// habitat families (SV.hab): warm materials, the same construction language
+const habC=()=>hubById["H-HAB"];const habToward=(x,y)=>{const c=habC();const u=[c.x-x,c.y-y];const L=Math.hypot(...u)||1;return[u[0]/L,u[1]/L]};
+function habFrameFP(b,L,D,f){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const ff=f||habToward(x,y);const ax=Math.abs(ff[0])>Math.abs(ff[1]);const fv=ax?[Math.sign(ff[0]),0]:[0,Math.sign(ff[1])];return{cx:x,cy:y,a:ax?[0,1]:[1,0],f:fv,L,D}}
+function calHabPlanter(f,b){return{h:34,draw(){SV.hab.planter((b[0]+b[2])/2,(b[1]+b[3])/2,14.5)}}}
+function calHabBar(f,b){const fr=habFrameFP(b,b[2]-b[0]-1.6,b[3]-b[1]-1.6);return{h:16,draw(){SV.hab.bar(fr)}}}
+function calHabDispenser(f,b){const fr=habFrameFP(b,7,7);return{h:16,draw(){SV.hab.dispenser(fr)}}}
+function calHabCafeTable(f,b){return{h:8,draw(){SV.hab.cafeTable((b[0]+b[2])/2,(b[1]+b[3])/2)}}}
+function calHabShell(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const tb=D.furniture.filter(q=>q.asset==="TBL-003").map(q=>{const c=fp(q);return[(c[0]+c[2])/2-x,(c[1]+c[3])/2-y]}).sort((p,q)=>Math.hypot(...p)-Math.hypot(...q))[0];const L=Math.hypot(...tb)||1;
+  return{h:9,draw(){SV.hab.shellChair(x,y,[tb[0]/L,tb[1]/L])}}}
+function calHabSofa(f,b){const tbl=fp(D.furniture.find(q=>q.asset==="TBL-004"));const x=(b[0]+b[2])/2;const fr={cx:x,cy:(b[1]+b[3])/2,a:[0,1],f:[Math.sign((tbl[0]+tbl[2])/2-x),0],L:b[3]-b[1]-2,D:9};return{h:10,draw(){SV.hab.sofa(fr)}}}
+function calHabGlass(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[0,1],f:[1,0],L:b[3]-b[1]-4,D:b[2]-b[0]-3};return{h:6,draw(){SV.hab.glassTable(fr)}}}
+function calHabPool(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,1],L:b[2]-b[0]-2,D:b[3]-b[1]-2};return{h:9,draw(){SV.hab.pool(fr)}}}
+function calHabRack(f,b){const fr=f.label.includes("perimeter")?rimFrame(f,6):habFrameFP(b,b[2]-b[0]-1.6,6);if(f.label.includes("perimeter"))fr.L=10;return{h:17,draw(){SV.hab.rack(fr)}}}
+function calHabRest(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const u=habToward(x,y);const fr={cx:x,cy:y,a:[-u[1],u[0]],f:u};return{h:11,draw(){SV.hab.restPod(fr)}}}
+function calHabRecovery(f,b){const vert=b[3]-b[1]>b[2]-b[0];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:vert?[0,1]:[1,0],f:vert?[1,0]:[0,1],L:(vert?b[3]-b[1]:b[2]-b[0])-2,D:(vert?b[2]-b[0]:b[3]-b[1])-1.6};return{h:11,draw(){SV.hab.recoveryPod(fr)}}}
+function calHabBench(f,b){const fr=habFrameFP(b,b[2]-b[0]-1.6,7);return{h:9,draw(){SV.hab.bench(fr)}}}
 const BUILD_CAL={"CON-006":calWorkstation,
+  "PLT-005":calHabPlanter,"LEI-002":calHabBar,"LEI-003":calHabDispenser,"TBL-003":calHabCafeTable,"SEA-007":calHabShell,"SEA-006":calHabSofa,"TBL-004":calHabGlass,"LEI-001":calHabPool,"STO-003":calHabRack,
+  "LEI-005":calHabRest,"EQP-004":calHabRecovery,"SEA-009":calHabBench,"CON-021":calWorkstation,
   "CON-009":calWorkstation,"CON-002":calWorkstation,"CON-016":calWorkstation,"CON-017":calWorkstation,"CON-018":calWorkstation,"CON-019":calWorkstation,"CON-020":calWorkstation,"CON-027":calWorkstation,
   "CON-001":calWorkstation,"CON-013":calWorkstation,"CON-014":calWorkstation,"CON-012":calWorkstation,"CON-029":calWorkstation,"CON-023":calWorkstation,
   "CON-011":calPodium,"CON-015":calBreaker,"CON-010":calPedestal,"TBL-002":calChart,"TBL-007":calStage,"TBL-005":calWorkTable,"EQP-001":calReactor,"EQP-002":calTube,"EQP-003":calBoard,
@@ -644,6 +665,34 @@ function lightsWingCal(pool,WHITE,CYAN,COLD){const LAMP="rgba(246,213,172,A)",AM
   for(const f of D.furniture.filter(q=>CAL_WING.has(q.room)&&q.label.includes("perimeter"))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,9,AMB,0.07)}
   for(const [l,c,r,a] of [["TBL-002 holo chart table",CYAN,30,0.18],["TBL-007 evidence stage",WHITE,30,0.1],["EQP-001 + SCR-006 column",CYAN,26,0.2],["EQP-002 Dispatch Tube",CYAN,18,0.16]]){const f=D.furniture.find(q=>q.label===l);if(f){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,r,c,a)}}
   for(const id of CAL_CORR){const [c0,r0,c1,r1]=D.bbox[id];for(let x=c0*T+20;x<(c1+1)*T;x+=48)pool(x,(r0+r1+1)/2*T,30,WHITE,0.09)}}
+// ================================================================ H-HAB CALIBRATION (docs/STELLAR_HHAB_CALIBRATION_V1.md)
+// warm habitat deck: wood planks over the hull plates, a stone café floor, a clinical recovery bay, a soft rest-zone rug, the lounge
+// rug, a brass-bordered games floor, a brass planter ring and lights, a dark wood service band at the rim, the door runner
+function drawHHABCalFloor(G){const c=hubById["H-HAB"];const detail=cam.z>=1.2;const s=V.P(c.x,c.y);ctx.save();ctx.clip(G.hubs["H-HAB"]);
+  ctx.fillStyle="#7a5636";ctx.fill(G.hubs["H-HAB"]);ctx.strokeStyle="rgba(40,24,12,.45)";ctx.lineWidth=0.4;ctx.stroke(G.planks);
+  if(detail)for(let y=c.y-c.R;y<c.y+c.R;y+=10){const p=V.P(c.x-c.R,y),q=V.P(c.x+c.R,y);ctx.strokeStyle="rgba(255,225,180,.06)";ctx.lineWidth=0.3;ctx.beginPath();ctx.moveTo(p[0],p[1]+0.4);ctx.lineTo(q[0],q[1]+0.4);ctx.stroke()}
+  const zone=(assets,pad)=>{const b=[1e9,1e9,-1e9,-1e9];for(const f of D.furniture.filter(q=>q.room==="H-HAB"&&assets.includes(q.asset))){const e=fp(f);b[0]=Math.min(b[0],e[0]);b[1]=Math.min(b[1],e[1]);b[2]=Math.max(b[2],e[2]);b[3]=Math.max(b[3],e[3])}return[b[0]-pad,b[1]-pad,b[2]+pad,b[3]+pad]};
+  const cham=(b,k)=>[[b[0]+k,b[1]],[b[2]-k,b[1]],[b[2],b[1]+k],[b[2],b[3]-k],[b[2]-k,b[3]],[b[0]+k,b[3]],[b[0],b[3]-k],[b[0],b[1]+k]];
+  {const b=zone(["TBL-003","SEA-007","LEI-002","LEI-003"],8);const q=cham(b,6);ctx.fillStyle="#bdb3a2";ctx.fill(poly2(q,0.02));ctx.save();ctx.clip(poly2(q,0.02));for(let x=b[0];x<b[2];x+=6)line3([x,b[1],0.025],[x,b[3],0.025],"rgba(90,75,60,.35)",0.35);for(let y=b[1];y<b[3];y+=6)line3([b[0],y,0.025],[b[2],y,0.025],"rgba(90,75,60,.35)",0.35);ctx.restore();ctx.strokeStyle=CAL.brass;ctx.lineWidth=0.8;ctx.stroke(poly2(q,0.03))}
+  {const b=zone(["EQP-004","CON-021","STO-006"],7);const q=cham(b,5);ctx.fillStyle="#9ea6ad";ctx.fill(poly2(q,0.02));ctx.save();ctx.clip(poly2(q,0.02));for(let x=b[0];x<b[2];x+=T)line3([x,b[1],0.025],[x,b[3],0.025],"rgba(40,50,60,.35)",0.4);for(let y=b[1];y<b[3];y+=T)line3([b[0],y,0.025],[b[2],y,0.025],"rgba(40,50,60,.35)",0.4);ctx.restore();
+    ctx.strokeStyle="rgba(120,230,250,.75)";ctx.lineWidth=0.7;ctx.stroke(poly2(q,0.03));ctx.strokeStyle="rgba(255,255,255,.35)";ctx.lineWidth=0.3;ctx.stroke(poly2(cham([b[0]+2,b[1]+2,b[2]-2,b[3]-2],4),0.03))}
+  {const b=zone(["LEI-005"],7);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;ell(cx,cy,Math.max(b[2]-b[0],b[3]-b[1])/2,0.02,"#6e5a66");ell(cx,cy,Math.max(b[2]-b[0],b[3]-b[1])/2-2,0.025,null,"#8f7a86",0.8)}
+  {const r=D.furniture.find(f=>f.asset==="LEI-004");if(r)SV.hab.rug(fp(r))}
+  {const cl=D.furniture.find(f=>f.label==="LEI-001 +1 clearance");if(cl){const b=fp(cl);const q=cham(b,4);ctx.fillStyle="#5e4129";ctx.fill(poly2(q,0.02));ctx.strokeStyle=CAL.brass;ctx.lineWidth=0.8;ctx.stroke(poly2(q,0.03))}}
+  {const p=fp(D.furniture.find(f=>f.asset==="PLT-005"));const cx=(p[0]+p[2])/2,cy=(p[1]+p[3])/2;ell(cx,cy,28,0.02,null,CAL.brass,0.8);ell(cx,cy,30,0.02,null,"rgba(255,215,150,.35)",0.5);
+    for(let k=0;k<16;k++){const a=(k+0.5)*TAU/16;const q=V.P(cx+29*Math.cos(a),cy+29*Math.sin(a),0.03);ctx.fillStyle="rgba(255,220,170,.85)";ctx.fillRect(q[0]-0.35,q[1]-0.2,0.7,0.4)}}
+  {const d=D.doors.find(q=>q.id==="DR-CMD-HAB");const f0=d.frames[0];const mx=(f0.p1[0]+f0.p2[0])/2,my=(f0.p1[1]+f0.p2[1])/2;const L=Math.hypot(c.x-mx,c.y-my);const u=[(c.x-mx)/L,(c.y-my)/L],w=[-u[1],u[0]];
+    const a0=[mx+u[0]*3,my+u[1]*3],a1=[mx+u[0]*70,my+u[1]*70];const q=[[a0[0]-w[0]*11,a0[1]-w[1]*11],[a1[0]-w[0]*11,a1[1]-w[1]*11],[a1[0]+w[0]*11,a1[1]+w[1]*11],[a0[0]+w[0]*11,a0[1]+w[1]*11]];ctx.fillStyle="#3b2a1f";ctx.fill(poly2(q,0.02));for(const o of [-11,11])line3([a0[0]+w[0]*o,a0[1]+w[1]*o,0.03],[a1[0]+w[0]*o,a1[1]+w[1]*o,0.03],CAL.brass,0.7)}
+  const g=ctx.createRadialGradient(0,0,c.R*0.8,0,0,c.R);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(30,18,8,.5)");ctx.save();ctx.translate(s[0],s[1]);ctx.scale(V.kx,V.ky);ctx.fillStyle=g;ctx.fillRect(-c.R,-c.R,2*c.R,2*c.R);ctx.restore();ctx.restore()}
+// habitat light: warm ambient, LGT-006 pendants over café tables, the lounge and billiards, planter light, a clinical cool-white recovery
+// bay, cool window spill, warm sconce pools on the rim
+function lightsHHABCal(pool,WHITE,CYAN,WARM,COLD){const c=hubById["H-HAB"];pool(c.x,c.y,175,WARM,0.05);
+  const p=fp(D.furniture.find(f=>f.asset==="PLT-005"));pool((p[0]+p[2])/2,(p[1]+p[3])/2,40,WARM,0.16);
+  for(const f of D.furniture.filter(q=>q.room==="H-HAB")){const b=fp(f);const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;
+    if(f.asset==="TBL-003")pool(x,y,16,WARM,0.22);else if(f.asset==="LEI-001")pool(x,y,32,WARM,0.2);else if(f.asset==="TBL-004")pool(x,y,24,WARM,0.18);else if(f.asset==="LEI-002")pool(x,y,22,WARM,0.14);
+    else if(f.asset==="EQP-004")pool(x,y,14,WHITE,0.14);else if(f.asset==="CON-021")pool(x,y,12,CYAN,0.1)}
+  for(const a of [5.6,6.0,6.4]){const ang=a*Math.PI/6-Math.PI/2;pool(c.x+(c.R-18)*Math.cos(ang),c.y+(c.R-18)*Math.sin(ang),28,COLD,0.1)}
+  {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-12)*Math.cos(a),c.y+(c.R-12)*Math.sin(a),22,WARM,0.1)}}}
 function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";pool(c.x,c.y,95,LAMP,0.05);pool(c.x,c.y,40,CYAN,0.28);
   // wall lamps: a warm pool under each fixture of the wall rhythm (same segment rule as calRimSegment)
   {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-14)*Math.cos(a),c.y+(c.R-14)*Math.sin(a),30,LAMP,0.13)}}
@@ -666,13 +715,14 @@ function calPerimAt(room,am){const c=hubById[room];if(!_calPerim[room])_calPerim
   let best=null,bd=0.045;for(const [a,as] of _calPerim[room]){const d=Math.abs(wrapA(a-am));if(d<bd){bd=d;best=as}}return best}
 // registered rim displays own their stretch of wall: no upper-layer module behind them
 function calUnderRimDisplay(room,am){return D.displays.some(d=>d.place[0]==="rim"&&d.place[1]===room&&Math.abs(wrapA(am-(d.place[2]*Math.PI/6-Math.PI/2)))<d.place[3]/2/(hubById[room].R-1.2)+0.06)}
-function calRimSegment(pts,h,i,hb){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*k,p[1]+(q[1]-p[1])*k];const P4=[pts[0],pts[1],ext(pts[1],pts[2],7/3),ext(pts[0],pts[3],7/3)];
+function calRimSegment(pts,h,i,hb,special){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*k,p[1]+(q[1]-p[1])*k];const P4=[pts[0],pts[1],ext(pts[1],pts[2],7/3),ext(pts[0],pts[3],7/3)];
   const rib=i%4===0;const H=rib&&h>6?h+1.5:h;prismX(P4,0,H,null,rib?"#2a2c30":(i%2?CAL.gun:"#404349"),{seam:"rgba(0,0,0,.4)",lw:0.4,shadow:false,hi:false,mat:h>=10});
   ctx.fillStyle=h>=10?CAL.crown:"#5e5c55";ctx.fill(poly2(P4,H));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(P4,H));
   const q0=pts[0],q1=pts[1];line3([q0[0],q0[1],H],[q1[0],q1[1],H],"rgba(255,245,225,.55)",0.5);
   if(h<10)return;const c=hubById[hb.id];const m=[(q0[0]+q1[0])/2,(q0[1]+q1[1])/2];const n=[c.x-m[0],c.y-m[1]];const nl=Math.hypot(...n);
-  const kind=rib?"rib":SV.wall.BAYS[Math.floor(i/4)%SV.wall.BAYS.length][(i%4)-1];
-  onFace(q0,q1,[n[0]/nl,n[1]/nl],0,H,(W,HH)=>{SV.wall.face(kind,W,HH,i);if(!rib&&i%2===0)SV.wall.tray(W,HH);if(calRimLamp(i))SV.small.lampBox(W/2-2.6,3.2,5.2,3)});
+  const hab=hb.id==="H-HAB";const kind=special==="window"?"viewport":special==="living"?"living":rib?"rib":hab?"warm":SV.wall.BAYS[Math.floor(i/4)%SV.wall.BAYS.length][(i%4)-1];
+  onFace(q0,q1,[n[0]/nl,n[1]/nl],0,H,(W,HH)=>{if(kind==="warm"||kind==="viewport"||kind==="living"){SV.wall[kind](W,HH,i);return}SV.wall.face(kind,W,HH,i);if(!rib&&i%2===0&&!hab)SV.wall.tray(W,HH);if(calRimLamp(i))SV.small.lampBox(W/2-2.6,3.2,5.2,3)});
+  if(hab)return; // habitat: no upper equipment layer
   // HIGH layer, composed with what stands in front: a continuous SCREEN BAND of large dark monitors above console banks (the
   // reference back wall), equipment cabinets above racks and bays, cable boxes above gaps; lockers and ribs keep the bare wall
   if(!rib&&h>=20&&!calUnderRimDisplay(hb.id,Math.atan2(m[1]-c.y,m[0]-c.x))){const front=calPerimAt(hb.id,Math.atan2(m[1]-c.y,m[0]-c.x));const L=Math.hypot(q1[0]-q0[0],q1[1]-q0[1]);const u=[(q1[0]-q0[0])/L,(q1[1]-q0[1])/L],nn=[n[0]/nl,n[1]/nl];
@@ -833,11 +883,10 @@ function drawGround(){
   for(const hb of hubList){ctx.fillStyle=hb.id==="H-HAB"?COL.wood:COL.navy;ctx.fill(G.hubs[hb.id])}
   ctx.strokeStyle="rgba(255,255,255,.035)";ctx.lineWidth=0.4;ctx.stroke(G.seams);
   ctx.strokeStyle="rgba(10,12,16,.55)";ctx.lineWidth=0.45;ctx.stroke(G.grate);
-  ctx.save();ctx.clip(G.hubs["H-HAB"]);ctx.strokeStyle="rgba(70,45,25,.35)";ctx.lineWidth=0.35;ctx.stroke(G.planks);ctx.restore();
+  drawHHABCalFloor(G); // H-HAB calibration: warm habitat deck
   // hub floor features
   drawHCMDCalFloor(G); // H-CMD calibration V1: deck, walkway tread ring, FLR-009 hazard border, raised FLR-002 dais, FLR-010 vents
   drawHLABCalFloor(G); // H-LAB calibration: lab deck composed from SV.floor
-  const rug=D.furniture.find(f=>f.asset==="LEI-004");if(rug){const b=fp(rug);ctx.fillStyle="#8d8378";ctx.fill(poly2(rectPoly(...inset(b,1)),0.05));ctx.strokeStyle="#a69b8e";ctx.lineWidth=0.6;ctx.stroke(poly2(rectPoly(...inset(b,2)),0.05))}
   // room inlays (titanium, walk-over)
   const ti="rgba(185,194,204,.5)";
   const fpL=l=>fp(D.furniture.find(f=>f.label===l));
@@ -854,8 +903,7 @@ function drawLights(){
   lightsHCMDCal(pool,WHITE,CYAN);
   lightsHLABCal(pool,WHITE,CYAN,COLD);
   lightsWingCal(pool,WHITE,CYAN,COLD);
-  const hb=hubById["H-HAB"];pool(hb.x,hb.y,60,WARM,0.16);pool(hb.x,hb.y,175,WARM,0.05);
-  for(const f of D.furniture){if(f.asset==="TBL-003"||f.asset==="LEI-001"){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,f.asset==="LEI-001"?32:16,WARM,0.2)}}
+  lightsHHABCal(pool,WHITE,CYAN,WARM,COLD);
   for(const f of D.furniture.filter(f=>f.room==="L10"&&f.kind==="block")){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,22,COLD,0.12)} // LGT-005 cold panel light
   if(opt.preview){for(const a of D.agents){if(a.noProducer)continue;const an=D.anchors.find(q=>q.name===a.anchor);if(!an||!an.serves)continue;const f=D.furniture.find(q=>q.label===an.serves);if(!f)continue;const b=fp(f);
     pool((b[0]+b[2])/2,(b[1]+b[3])/2,f.asset==="CON-011"?20:16,f.asset==="CON-011"?WHITE:CYAN,0.28)}}

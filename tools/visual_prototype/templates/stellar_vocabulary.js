@@ -23,6 +23,7 @@ const SV={};
 SV.M={deck:"#2a2b2e",plate:"#2f3033",seam:"#121315",gun:"#3d4046",gunHi:"#575a61",gunLo:"#2a2c31",rib:"#1d1f22",panel:"#33363c",
   edge:"#6c7078",cavity:"#141517",olive:"#4a4f3c",oliveHi:"#646b51",oliveLo:"#34382b",steel:"#3b4856",steelHi:"#55677a",steelLo:"#28323d",
   brass:"#b8904e",brassHi:"#e1bb72",amber:"#f08a2c",amberHi:"#ffd08a",ti:"#c3cbd4",glass:"#081016",glassLit:"#0f4655",glassHi:"#3fb7cc",
+  wood:"#6b4a2f",woodHi:"#8c6239",woodLo:"#4a3220",felt:"#1f6f5c",feltHi:"#2a8a72",fabric:"#5b4c4a",fabricHi:"#776361",cream:"#d8cdb8",creamLo:"#b9ad96",leaf:"#3c8048",leafHi:"#5aa765",leafLo:"#2f6a3c",
   red:"#c43a4b",hazard:"#c9922e",leather:"#23262d",leatherHi:"#3a3e48",out:"#08090b",crown:"#7d7a70",yellow:"#c99a2e",rust:"#7e2f25",copper:"#b0663a"};
 const CAL=SV.M; // the calibration rooms' palette is the vocabulary palette
 // ---------------------------------------------------------------- GRAMMAR: geometry primitives
@@ -571,6 +572,73 @@ SV.eq.tube=(fr,o={})=>{const hL=fr.L/2;plinth(fr,-hL,hL,-5,5,1);prismX(frameCham
   onFace(a,b,n,1,4,(W,HH)=>{for(let x=0;x<W;x+=1.6){ctx.fillStyle=Math.floor(x/1.6)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(x,0.5,1.6,HH-1)}});
   ctx.globalAlpha=0.38;cyl(fr.cx,fr.cy,3.8,4,24,"#cfeaf3","#a9d4e3",{n:16});ctx.globalAlpha=1;for(const h of [8,14,20])cyl(fr.cx,fr.cy,4,h,h+0.6,"#4a4d54","#3a3d43",{n:16});
   cyl(fr.cx,fr.cy,4.6,24,27,"#575a61","#3a3d43",{n:16});ell(fr.cx,fr.cy,4.6,27.02,null,CAL.amber,0.5)};
+// ================================================================ HABITAT family (lounge, café, games, rest, recovery)
+// The same construction language (plinths, chamfered castings, brass hardware, wear) with warm materials: wood, fabric, felt,
+// cream. Lounge pieces share one softer edge tint instead of the near-black outline, so the lounge reads as one room.
+SV.hab={};
+const HAB_EDGE="#2a1d16";
+const habX=(pts,h0,h1,top,side,o={})=>prismX(pts,h0,h1,top,side,{...o,lw:o.lw||0.4});
+// bar counter: kick plinth, wood front with brass kick rail and fluted panels, stone top with a lip, back shelf of bottles (decorative)
+SV.hab.bar=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2;plinth(fr,-hL,hL,-hD,hD,0.8);habX(frameCham(fr,-hL,hL,-hD+1,hD,0.8),0.8,9.4,CAL.woodHi,CAL.wood);
+  const [a,b,n]=faces(fr,-hL,hL,-hD+1,hD).front;onFace(a,b,n,0.8,9.4,(W,H)=>{for(let x=1;x<W-1;x+=2.4){ctx.fillStyle="rgba(0,0,0,.18)";ctx.fillRect(x,1,0.5,H-3)}ctx.fillStyle=CAL.brass;ctx.fillRect(0,H-2.2,W,0.5);ctx.fillStyle=CAL.brassHi;ctx.fillRect(0,H-2.2,W,0.15);dWear(W,H,o.seed||2)});
+  habX(frameCham(fr,-hL-0.4,hL+0.4,-hD+0.6,hD+0.5,1),9.4,10.4,"#cfc7b8","#a89f8f",{mat:false});onTop(fr,-hL,hL,-hD+1,hD,10.42,(W,Dd)=>{ctx.fillStyle="rgba(255,255,255,.12)";ctx.fillRect(0.4,0.4,W-0.8,0.4);for(let k=0;k<3;k++){ctx.fillStyle="#e8e1d4";ctx.beginPath();ctx.arc(W*(0.2+k*0.3),Dd*0.5,0.6,0,TAU);ctx.fill()}});
+  const sh=frameRect(fr,-hL+0.6,hL-0.6,-hD-1.6,-hD+0.4);habX(sh,0,15,CAL.woodLo,CAL.woodLo,{mat:false,shadow:false});const [c,d,m]=faces(fr,-hL+0.6,hL-0.6,-hD-1.6,-hD+0.4).front;
+  onFace(c,d,m,10.4,15,(W,H)=>{ctx.fillStyle="#2a1d16";ctx.fillRect(0.4,0.4,W-0.8,H-0.8);const C=["#3c8048","#8c3a2c","#c9a24a","#3c6f9a","#d8cdb8"];for(let x=1;x<W-1;x+=1.1){ctx.fillStyle=C[Math.floor(x*7)%5];ctx.fillRect(x,H*0.35,0.6,H*0.55)}ctx.fillStyle=CAL.brass;ctx.fillRect(0,H*0.92,W,0.3)})};
+// dispenser / brewer: one chamfered column, an overhanging head cap, a lit alcove (the only warm emissive), a waiting mug
+SV.hab.dispenser=(fr,o={})=>{plinth(fr,-3.6,3.6,-3.2,3.2,0.6);habX(frameCham(fr,-3,3,-2.6,2.6,0.9),0.6,13.6,"#4a4c52",CAL.gun);habX(frameCham(fr,-3.6,3.6,-3.2,3.2,1),13.6,15,"#575a61",CAL.gunLo,{mat:false});
+  const [a,b,n]=faces(fr,-3,3,-2.6,2.6).front;onFace(a,b,n,0.6,13.6,(W,H)=>{ctx.fillStyle="#120d0a";ctx.fillRect(0.9,H*0.35,W-1.8,H*0.32);const g=ctx.createLinearGradient(0,H*0.35,0,H*0.67);g.addColorStop(0,"rgba(255,190,120,.85)");g.addColorStop(1,"rgba(255,150,80,.2)");ctx.fillStyle=g;ctx.fillRect(1.1,H*0.37,W-2.2,H*0.28);
+    ctx.fillStyle=CAL.cream;ctx.fillRect(W/2-0.7,H*0.55,1.4,1.2);dButtons(1,H*0.15,3,1,0.9,o.seed||1);dGrille(1,H*0.78,W-2,H*0.14);dWear(W,H,3)})};
+// café table: weighted base, slim column, round wood top with a brass edge
+SV.hab.cafeTable=(x,y)=>{ell(x,y,3.2,0.02,"rgba(0,0,0,.3)");cyl(x,y,2.2,0,0.7,"#3a3d43","#2a2c31",{n:12});cyl(x,y,0.5,0.7,6.2,null,CAL.brass,{n:8});cyl(x,y,4.4,6.2,7,CAL.woodHi,CAL.wood,{n:18});ell(x,y,4.4,7.02,null,CAL.brass,0.35);ell(x,y,1,7.03,"rgba(232,225,212,.85)")};
+// café chair / stool: moulded shell on a swivel pedestal (the pod-chair read: you see INSIDE the shell)
+SV.hab.shellChair=(x,y,u,o={})=>{const fr={cx:x,cy:y,a:[-u[1],u[0]],f:u};ell(x,y,2.6,0.02,"rgba(0,0,0,.3)");cyl(x,y,1.6,0,0.5,"#3a3d43","#2a2c31",{n:10});cyl(x,y,0.4,0.5,3.6,null,"#9aa1a9",{n:6});
+  habX(frameCham(fr,-2.4,2.4,-2.4,2.2,1),3.6,4.8,o.col||CAL.fabricHi,o.colLo||CAL.fabric,{mat:false});habX(frameCham(fr,-2.4,2.4,-2.8,-1.8,0.6),4.8,9,o.col||CAL.fabricHi,o.colLo||CAL.fabric,{mat:false});
+  onTop(fr,-1.9,1.9,-1.8,1.8,4.82,(W,Dd)=>{ctx.fillStyle="rgba(255,240,215,.12)";ctx.beginPath();ctx.ellipse(W/2,Dd/2,W*0.42,Dd*0.4,0,0,TAU);ctx.fill()})};
+// sofa: plinth with feet, frame, two seat cushions, back cushions, arms with brass caps (one softer edge tint)
+SV.hab.sofa=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2;feet(fr,-hL,hL,-hD,hD,0.8);habX(frameCham(fr,-hL,hL,-hD,hD,0.8),0.8,3.6,CAL.fabric,"#4a3d3b");
+  const n=Math.max(1,Math.round(fr.L/9));for(let i=0;i<n;i++){const s0=-hL+1.6+i*(fr.L-3.2)/n,s1=s0+(fr.L-3.2)/n-0.3;habX(frameCham(fr,s0,s1,-hD+2.4,hD-0.4,0.9),3.6,5.4,CAL.fabricHi,CAL.fabric,{mat:false});habX(frameCham(fr,s0,s1,-hD+0.4,-hD+2.6,0.6),3.6,10,CAL.fabricHi,CAL.fabric,{mat:false})}
+  for(const sg of [-1,1]){const s0=sg<0?-hL:hL-1.6;habX(frameCham(fr,s0,s0+1.6,-hD,hD,0.5),3.6,7.4,CAL.fabricHi,CAL.fabric,{mat:false});onTop(fr,s0+0.3,s0+1.3,-hD+0.4,hD-0.4,7.42,(W,Dd)=>{ctx.fillStyle=CAL.brass;ctx.fillRect(0,0,W,0.4);ctx.fillRect(0,Dd-0.4,W,0.4)})}};
+// glass coffee table: steel frame on four legs with a lower shelf seen THROUGH a translucent pane
+SV.hab.glassTable=(fr)=>{const hL=fr.L/2,hD=fr.D/2;for(const [s,d] of [[-hL+0.4,-hD+0.4],[hL-1.2,-hD+0.4],[-hL+0.4,hD-1.2],[hL-1.2,hD-1.2]])habX(frameRect(fr,s,s+0.8,d,d+0.8),0,5,"#9aa1a9","#6a6d73",{mat:false,lw:0.3});
+  habX(frameRect(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6),1.6,2.2,CAL.woodHi,CAL.wood,{mat:false,shadow:false});onTop(fr,-hL+1,hL-1,-hD+1,hD-1,2.22,(W,Dd)=>{ctx.fillStyle="#c9c2b0";ctx.fillRect(W*0.2,Dd*0.3,W*0.3,Dd*0.35);ctx.fillStyle="#3c6f9a";ctx.fillRect(W*0.6,Dd*0.35,W*0.2,Dd*0.25)});
+  const top=frameCham(fr,-hL,hL,-hD,hD,0.8);ctx.fillStyle="rgba(170,215,225,.28)";ctx.fill(poly2(top,5.2));ctx.strokeStyle="rgba(225,245,250,.6)";ctx.lineWidth=0.35;ctx.stroke(poly2(top,5.2))};
+// woven rug: soft bound rim (no black lip), a border band and a pile fleck
+SV.hab.rug=(b)=>{const q=rectPoly(b[0]+1,b[1]+1,b[2]-1,b[3]-1);ctx.fillStyle="#7a5a48";ctx.fill(poly2(q,0.03));ctx.strokeStyle="#a2836a";ctx.lineWidth=1.1;ctx.stroke(poly2(rectPoly(b[0]+2.6,b[1]+2.6,b[2]-2.6,b[3]-2.6),0.035));
+  ctx.strokeStyle="#5a3f30";ctx.lineWidth=0.5;ctx.stroke(poly2(rectPoly(b[0]+4.2,b[1]+4.2,b[2]-4.2,b[3]-4.2),0.035));ctx.fillStyle="rgba(255,235,210,.1)";for(let x=b[0]+3;x<b[2]-3;x+=2.2)for(let y=b[1]+3+((x*7)%3);y<b[3]-3;y+=3){const p=V.P(x,y,0.04);ctx.fillRect(p[0],p[1],0.5,0.5)}};
+// billiard table: four turned legs, wood carcass with brass corner caps, rails, felt bed with pockets and a lit spot
+SV.hab.pool=(fr)=>{const hL=fr.L/2,hD=fr.D/2;for(const [s,d] of [[-hL+1.4,-hD+1.4],[hL-3,-hD+1.4],[-hL+1.4,hD-3],[hL-3,hD-3]])habX(frameCham(fr,s,s+1.6,d,d+1.6,0.4),0,5.4,CAL.woodHi,CAL.wood,{mat:false});
+  habX(frameCham(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,1),5.4,7.4,CAL.woodHi,CAL.wood);habX(frameCham(fr,-hL,hL,-hD,hD,1.2),7.4,8.6,CAL.woodHi,CAL.woodLo,{mat:false});
+  const bed=frameRect(fr,-hL+1.8,hL-1.8,-hD+1.8,hD-1.8);ctx.fillStyle=CAL.felt;ctx.fill(poly2(bed,8.62));ctx.fillStyle="rgba(120,220,180,.12)";ctx.fill(poly2(frameRect(fr,-hL*0.5,hL*0.5,-hD*0.5,hD*0.5),8.63));
+  for(const [s,d] of [[-hL+1.8,-hD+1.8],[0,-hD+1.8],[hL-1.8,-hD+1.8],[-hL+1.8,hD-1.8],[0,hD-1.8],[hL-1.8,hD-1.8]])ell(fr.cx+fr.a[0]*s+fr.f[0]*d,fr.cy+fr.a[1]*s+fr.f[1]*d,0.9,8.64,"#0d1a16");
+  for(const [s,d] of [[-hL+0.6,-hD+0.6],[hL-0.6,-hD+0.6],[-hL+0.6,hD-0.6],[hL-0.6,hD-0.6]]){const p=V.P(fr.cx+fr.a[0]*s+fr.f[0]*d,fr.cy+fr.a[1]*s+fr.f[1]*d,8.64);ctx.fillStyle=CAL.brassHi;ctx.fillRect(p[0]-0.6,p[1]-0.4,1.2,0.8)}};
+// cue / shelf rack: wood frame, two shelves, upright cues in a brass rail
+SV.hab.rack=(fr)=>{const hL=fr.L/2,hD=fr.D/2;habX(frameRect(fr,-hL,hL,-hD,hD),0,1,CAL.woodLo,CAL.woodLo,{mat:false});for(const sg of [-1,1])habX(frameRect(fr,sg<0?-hL:hL-1,sg<0?-hL+1:hL,-hD,hD),1,16,CAL.woodHi,CAL.wood,{mat:false});
+  habX(frameRect(fr,-hL+1,hL-1,-hD,-hD+0.8),1,16,CAL.wood,CAL.woodLo,{mat:false,shadow:false});const [a,b,n]=faces(fr,-hL+1,hL-1,-hD,-hD+0.8).front;onFace(a,b,n,1,16,(W,H)=>{for(let x=1;x<W-0.6;x+=1.4){ctx.fillStyle=Math.floor(x)%3?"#d8b88a":"#7a5230";ctx.fillRect(x,1,0.45,H-3)}ctx.fillStyle=CAL.brass;ctx.fillRect(0,H*0.35,W,0.4);ctx.fillStyle="#2a1d16";ctx.fillRect(0,H-1.8,W,1.8)})};
+// cosmetic rest pod: a reclined moulded shell (lining inset, cushion) on a pedestal; never shows vitals
+SV.hab.restPod=(fr)=>{ell(fr.cx,fr.cy,4.2,0.02,"rgba(0,0,0,.3)");cyl(fr.cx,fr.cy,2.4,0,1.2,"#3a3d43","#2a2c31",{n:12});habX(frameCham(fr,-3.6,3.6,-4,4,1.6),1.2,4.4,CAL.cream,CAL.creamLo);
+  habX(frameCham(fr,-3.6,3.6,-4.4,-1.6,1.2),4.4,10.6,CAL.cream,CAL.creamLo,{mat:false});onTop(fr,-2.8,2.8,-1.4,3.4,4.42,(W,Dd)=>{ctx.fillStyle="#8a6a5a";ctx.beginPath();ctx.ellipse(W/2,Dd/2,W*0.45,Dd*0.45,0,0,TAU);ctx.fill();ctx.fillStyle="rgba(255,240,215,.18)";ctx.beginPath();ctx.ellipse(W/2,Dd*0.3,W*0.3,Dd*0.18,0,0,TAU);ctx.fill()})};
+// recovery pod (REAL cooldown, EQP-004): clinical base with service panels, a cream bed, a glass canopy, a status strip that stays
+// dim (it shows a countdown only from agent.resting events, which this prototype does not have)
+SV.hab.recoveryPod=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2;plinth(fr,-hL,hL,-hD,hD,1);habX(frameCham(fr,-hL+0.4,hL-0.4,-hD+0.4,hD-0.4,1.2),1,5.2,"#cfd4d8","#9aa3aa");
+  const [a,b,n]=faces(fr,-hL+0.4,hL-0.4,-hD+0.4,hD-0.4).front;onFace(a,b,n,1,5.2,(W,H)=>{dHatch(1,0.6,W*0.3,H-1.2);ctx.fillStyle="#0f1c22";ctx.fillRect(W*0.4,H*0.3,W*0.5,H*0.35);ctx.fillStyle="rgba(95,224,160,.25)";ctx.fillRect(W*0.42,H*0.42,W*0.46,0.4)});
+  habX(frameCham(fr,-hL+1.2,hL-1.2,-hD+1.2,hD-1.2,1),5.2,6.2,CAL.cream,CAL.creamLo,{mat:false});const can=frameCham(fr,-hL+1.4,hL-1.4,-hD+1.4,hD-1.4,1.6);
+  ctx.fillStyle="rgba(170,225,240,.16)";ctx.fill(poly2(can,10.2));ctx.strokeStyle="rgba(210,245,250,.6)";ctx.lineWidth=0.4;ctx.stroke(poly2(can,10.2));for(const p of can.filter((_,i)=>i%2===0))line3([p[0],p[1],6.2],[p[0],p[1],10.2],"rgba(210,245,250,.35)",0.3)};
+// central planter (hero): hexagonal bulkhead-built planter: plinth, wood seating ledge, brass rim, soil, a layered tree with lit canopy
+SV.hab.planter=(cx,cy,R)=>{const hex=(r)=>{const p=[];for(let k=0;k<8;k++){const a=k*TAU/8+Math.PI/8;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return p};
+  habX(hex(R+2.4),0,1.2,"#2a2c31","#1d1f23");habX(hex(R+1.6),1.2,4.2,CAL.woodHi,CAL.wood);habX(hex(R),4.2,6.6,"#4a4c52",CAL.gun);ctx.strokeStyle=CAL.brass;ctx.lineWidth=0.6;ctx.stroke(poly2(hex(R),6.62));ctx.fillStyle="#2a2018";ctx.fill(poly2(hex(R-1.2),6.64));
+  cyl(cx,cy,2,6.6,22,"#6b4f36","#5a4230",{n:10});for(const [dx,dy,hh,r,c] of [[0,0,20,13,CAL.leafLo],[-5,3,24,10,CAL.leaf],[5,-3,27,9.5,"#4a9156"],[2,4,23,8,CAL.leaf],[0,0,31,7,CAL.leafHi],[-3,-3,29,6,"#4a9156"]]){const s2=V.P(cx+dx,cy+dy,hh);ctx.fillStyle=c;ctx.beginPath();for(let k=0;k<9;k++){const a=k/9*TAU;const rr=r*(k%2?0.78:1);ctx.lineTo(s2[0]+rr*Math.cos(a)*1.1,s2[1]+rr*Math.sin(a)*0.72)}ctx.closePath();ctx.fill();ctx.strokeStyle="rgba(20,40,20,.35)";ctx.lineWidth=0.3;ctx.stroke()}
+  for(let k=0;k<8;k++){const a=k*TAU/8;const p=V.P(cx+(R+0.6)*Math.cos(a),cy+(R+0.6)*Math.sin(a),6.7);ctx.fillStyle="rgba(255,226,170,.85)";ctx.fillRect(p[0]-0.4,p[1]-0.25,0.8,0.5)}};
+// window bench: upholstered bench on a wood base with a low back
+SV.hab.bench=(fr)=>{const hL=fr.L/2,hD=fr.D/2;habX(frameRect(fr,-hL+0.6,hL-0.6,-hD+0.8,hD-0.8),0,3,CAL.wood,CAL.woodLo);habX(frameCham(fr,-hL,hL,-hD,hD,0.6),3,4.6,CAL.fabricHi,CAL.fabric,{mat:false});habX(frameCham(fr,-hL,hL,-hD,-hD+1.4,0.4),4.6,8.6,CAL.fabricHi,CAL.fabric,{mat:false})};
+// HAB wall faces: warm panel (wood inlay in a bulkhead frame with a brass sconce), viewport (framed windows onto the planet/star
+// view, DEC-001/002), living wall (planted panel, PLT-004)
+SV.wall.warm=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle=CAL.woodLo;ctx.fillRect(1.4,2.4,W-2.8,H-6);for(let x=2;x<W-1.6;x+=2.6){ctx.fillStyle=Math.floor(x)%2?CAL.wood:"#5e4129";ctx.fillRect(x,2.6,2.4,H-6.4)}
+  ctx.fillStyle=CAL.brass;ctx.fillRect(1.4,2.4,W-2.8,0.3);ctx.fillRect(1.4,H-3.9,W-2.8,0.3);ctx.fillStyle="rgba(255,215,150,.35)";ctx.fillRect(W/2-2.4,3,4.8,2.4);ctx.fillStyle="#f6e2bc";ctx.fillRect(W/2-1,3.4,2,1);dWear(W,H-3,seed)};
+SV.wall.viewport=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle="#1d1f23";ctx.fillRect(0.6,2,W-1.2,H-5);const g=ctx.createLinearGradient(0,2.6,0,H-3.6);g.addColorStop(0,"#0a1430");g.addColorStop(1,"#1d3a66");ctx.fillStyle=g;ctx.fillRect(1.4,2.8,W-2.8,H-6.6);
+  ctx.fillStyle="rgba(220,235,255,.8)";for(let k=0;k<6;k++){const x=1.8+((seed*37+k*53)%100)/100*(W-3.6),y=3.2+((seed*11+k*29)%100)/100*(H-7.6);ctx.fillRect(x,y,0.3,0.3)}
+  ctx.fillStyle="rgba(120,180,230,.22)";ctx.beginPath();ctx.ellipse(W*0.7,H-3.2,W*0.5,(H-6)*0.35,0,Math.PI,TAU);ctx.fill();ctx.fillStyle="#2e3137";ctx.fillRect(W/2-0.4,2.8,0.8,H-6.6);ctx.fillStyle="rgba(255,255,255,.08)";ctx.fillRect(1.6,3,W*0.25,H-7);dRivets(0.6,2,W-1.2,H-5)};
+SV.wall.living=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle="#1d1f23";ctx.fillRect(0.8,2.2,W-1.6,H-5.4);ctx.fillStyle="#2a2018";ctx.fillRect(1.4,2.8,W-2.8,H-6.6);const C=[CAL.leafLo,CAL.leaf,CAL.leafHi,"#4a9156"];
+  for(let k=0;k<26;k++){const x=1.6+((seed*13+k*41)%100)/100*(W-3.2),y=3+((seed*7+k*61)%100)/100*(H-7.4);ctx.fillStyle=C[k%4];ctx.beginPath();ctx.ellipse(x,y,1.3,0.9,(k%5)*0.6,0,TAU);ctx.fill()}ctx.fillStyle=CAL.brass;ctx.fillRect(0.8,H-3.6,W-1.6,0.35)};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -608,6 +676,12 @@ const SV_CATALOGUE=[
   {name:"EQ-reactor",w:14,d:14,draw:(fr)=>SV.eq.reactor(fr.cx,fr.cy)},
   {name:"EQ-podium",w:12,d:12,draw:(fr)=>SV.eq.podium({...fr})},
   {name:"EQ-tube",w:14,d:14,draw:(fr)=>SV.eq.tube({...fr,L:10})},
+  {name:"HAB bar + dispenser",w:44,d:14,draw:(fr)=>{SV.hab.bar({...fr,cx:fr.cx-5,L:30,D:9});SV.hab.dispenser({...fr,cx:fr.cx+16})}},
+  {name:"HAB café table + shells",w:20,d:14,draw:(fr)=>{SV.hab.shellChair(fr.cx-7,fr.cy,[1,0]);SV.hab.cafeTable(fr.cx,fr.cy);SV.hab.shellChair(fr.cx+7,fr.cy,[-1,0])}},
+  {name:"HAB sofa + glass table",w:44,d:14,draw:(fr)=>{SV.hab.sofa({...fr,cx:fr.cx-8,L:22,D:9});SV.hab.glassTable({...fr,cx:fr.cx+14,L:12,D:8})}},
+  {name:"HAB pool table",w:44,d:28,draw:(fr)=>SV.hab.pool({...fr,L:34,D:22})},
+  {name:"HAB rest pod / recovery pod",w:36,d:16,draw:(fr)=>{SV.hab.restPod({...fr,cx:fr.cx-10,f:[0,1],a:[1,0]});SV.hab.recoveryPod({...fr,cx:fr.cx+8,L:12,D:20})}},
+  {name:"HAB planter (hero)",w:44,d:44,draw:(fr)=>SV.hab.planter(fr.cx,fr.cy,13)},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);
