@@ -341,6 +341,339 @@ def build_geometry():
     A_("H-CMD", "command.bench_2", (cc + 11, cr + 10), serves="SEA-005 bench")
     A_("H-CMD", "command.visitor_1", (cc + 9, cr + 8))
     A_("H-CMD", "command.visitor_2", (cc + 12, cr + 8))
+    # ---- H-CMD calibration room V1 (StarNet visual adaptation; docs/STELLAR_HCMD_CALIBRATION_V1.md)
+    # Approved H-CMD items above are unchanged. Additions: seats at the consoles and the table
+    # (SEA-002), a perimeter bank of console modules on the rim ring (CON-030, dark glass, no data,
+    # no anchors), wall lockers flanking the doors (STO-001) and floor markings (FLR-009, FLR-010).
+    for an in (
+        "command.console_ops",
+        "command.console_trader",
+        "command.console_proposal",
+        "command.console_budget",
+        "command.table_head",
+        "command.table_n1",
+        "command.table_n2",
+        "command.table_s1",
+        "command.table_s2",
+    ):
+        t = next(a["tile"] for a in anchors if a["name"] == an)
+        F("H-CMD", "SEA-002", [t], f"SEA-002 chair {an.split('.')[1]}", kind="seat")
+    hcx, hcy, hcr = HUBS["H-CMD"]
+    door_mids = []
+    for did in ("DR-N-CMD", "DR-S-CMD", "DR-CMD-HAB"):
+        lane_tiles = [t for ch in door_info[did]["lanes"] for t in ch]
+        door_mids.append(
+            (
+                sum(cen(t[0]) for t in lane_tiles) / len(lane_tiles),
+                sum(cen(t[1]) for t in lane_tiles) / len(lane_tiles),
+            )
+        )
+    ring = []
+    for t, n in region.items():
+        if n != "H-CMD":
+            continue
+        if all(
+            region.get((t[0] + dc, t[1] + dr)) == "H-CMD"
+            for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))
+        ):
+            continue
+        if min(math.hypot(cen(t[0]) - x, cen(t[1]) - y) for x, y in door_mids) < 4.5 * T:
+            continue
+        ring.append(t)
+    ring.sort(key=lambda t: math.atan2(cen(t[1]) - hcy, cen(t[0]) - hcx))
+    runs, cur = [], []
+    for t in ring:
+        if cur and max(abs(t[0] - cur[-1][0]), abs(t[1] - cur[-1][1])) > 1:
+            runs.append(cur)
+            cur = []
+        cur.append(t)
+    if cur:
+        if runs and max(abs(cur[-1][0] - runs[0][0][0]), abs(cur[-1][1] - runs[0][0][1])) <= 1:
+            runs[0] = cur + runs[0]  # the run that wraps past -pi joins the first run
+        else:
+            runs.append(cur)
+    # calibration V5: the perimeter is composed with a rhythm instead of identical 3-tile chunks: bank modules of
+    # 3 / 2 / 1 tiles (wide / double / single), a tall relay rack between groups, and an occasional gap where the
+    # wall system shows through. The cycle restarts at every run so each run reads as a designed group
+    # calibration V5.1: the cycle also carries ring-mounted equipment bays ("B", STO-005, 2 tiles) and
+    # service cabinets ("S", STO-006), so the perimeter alternates consoles, racks, bays, storage and gaps
+    rhythm = (3, 2, "R", "B", 3, "G", 1, "S", 2, "R")
+    ring_gaps = []
+    for run in runs:
+        ends = (run[0], run[-1])
+        body = run[1:-1] if len(run) > 4 else run
+        for e in ends if len(run) > 4 else ():
+            F("H-CMD", "STO-001", [e], "STO-001 wall locker", tall=True)
+        i = k = 0
+        while i < len(body):
+            step = rhythm[k % len(rhythm)]
+            k += 1
+            if step == "G":
+                ring_gaps.append(body[i])
+                i += 1
+            elif step == "S":
+                F("H-CMD", "STO-006", [body[i]], f"STO-006 perimeter service cabinet {len(furn)}")
+                i += 1
+            elif step == "B" and i + 1 < len(body):
+                F(
+                    "H-CMD",
+                    "STO-005",
+                    body[i : i + 2],
+                    f"STO-005 perimeter equipment bay {len(furn)}",
+                )
+                i += 2
+            elif step == "B":
+                i += 1
+            elif step == "R":
+                F("H-CMD", "SRV-005", [body[i]], f"SRV-005 perimeter rack {len(furn)}", tall=True)
+                i += 1
+            else:
+                F("H-CMD", "CON-030", body[i : i + step], f"CON-030 perimeter bank {len(furn)}")
+                i += step
+    # ---- calibration V2: secondary consoles, operations clusters, bank seating, deck markings
+    used = {t for f in furn for t in f["tiles"]} | {a["tile"] for a in anchors}
+
+    def free(tiles):
+        return all(
+            region.get(t) == "H-CMD"
+            and t not in used
+            and not 6.6 <= math.hypot(t[0] - cc, t[1] - cr) <= 9.4
+            for t in tiles
+        )
+
+    def place(asset, tiles, label, kind="block", tall=False):
+        if not free(tiles):
+            issues.append(f"H-CMD calibration: {label} {tiles} not placeable")
+            return
+        F("H-CMD", asset, tiles, label, kind=kind, tall=tall)
+        used.update(tiles)
+
+    for i, (c, r, face) in enumerate(
+        ((cc - 4, cr - 14, 1), (cc + 3, cr - 14, 1), (cc - 5, cr + 14, -1), (cc + 4, cr + 14, -1))
+    ):
+        place("CON-031", absrect(c, r, 2, 1), f"CON-031 secondary console {i + 1}")
+        for dc in (0, 1):
+            place("SEA-002", [(c + dc, r + face)], f"SEA-002 chair secondary {i + 1}", kind="seat")
+    for i, t in enumerate(
+        (
+            (cc - 15, cr - 3),
+            (cc - 15, cr - 1),
+            (cc - 15, cr + 1),
+            (cc - 15, cr + 3),
+            (cc + 14, cr - 7),
+            (cc + 14, cr - 5),
+        )
+    ):
+        place("SRV-005", [t], f"SRV-005 relay stack {i + 1}", tall=True)
+    for i, (c, r) in enumerate(((cc - 14, cr + 6), (cc + 12, cr + 4), (cc + 11, cr - 11))):
+        place("STO-005", absrect(c, r, 2, 1), f"STO-005 equipment bay {i + 1}")
+    banks = [f for f in furn if f["asset"] == "CON-030"]
+    for i, f in enumerate(banks):
+        if i % 2:
+            continue
+        mid = f["tiles"][len(f["tiles"]) // 2]
+        dx, dy = cc - mid[0], cr - mid[1]
+        step = (round(dx / max(abs(dx), abs(dy))), round(dy / max(abs(dx), abs(dy))))
+        seat = (mid[0] + step[0], mid[1] + step[1])
+        if (
+            free([seat])
+            and min(math.hypot(seat[0] - a["tile"][0], seat[1] - a["tile"][1]) for a in anchors)
+            >= 2
+        ):
+            F("H-CMD", "SEA-002", [seat], f"SEA-002 chair bank {i}", kind="seat")
+            used.add(seat)
+    # ---- calibration V3: layered second row (planters PLT-001 at the rim, STO-006 service cabinets), more deck detail
+    cand = []
+    for i, f in enumerate(banks):
+        if not i % 2:
+            continue
+        mid = f["tiles"][len(f["tiles"]) // 2]
+        dx, dy = cc - mid[0], cr - mid[1]
+        step = (round(dx / max(abs(dx), abs(dy))), round(dy / max(abs(dx), abs(dy))))
+        t = (mid[0] + step[0], mid[1] + step[1])
+        if (
+            free([t])
+            and min(math.hypot(t[0] - a["tile"][0], t[1] - a["tile"][1]) for a in anchors) >= 2
+        ):
+            cand.append((math.atan2(t[0] - cc, -(t[1] - cr)) % (2 * math.pi), t))
+    planters = set()
+    for clock in (11.2, 12.8 % 12, 5.2, 6.8):
+        if cand:
+            ang = clock * math.pi / 6
+            best = min(
+                (c for c in cand if c[1] not in planters),
+                key=lambda c: abs(math.atan2(math.sin(c[0] - ang), math.cos(c[0] - ang))),
+            )
+            planters.add(best[1])
+    for i, (_, t) in enumerate(cand):
+        if t in planters:
+            place(
+                "PLT-001",
+                [t],
+                f"PLT-001 planter {len([p for p in furn if p['asset'] == 'PLT-001']) + 1}",
+            )
+        else:
+            place("STO-006", [t], f"STO-006 service cabinet {i + 1}")
+    # ---- calibration V3b: east operations bay (the reference station's paired desks + rack pair on the
+    # side wall), so the outer deck reads as layered equipment on every side; the centre stays clear
+    for i, (c, r, face) in enumerate(((cc + 11, cr - 5, 1), (cc + 11, cr + 6, -1)), 5):
+        place("CON-031", absrect(c, r, 2, 1), f"CON-031 secondary console {i}")
+        for dc in (0, 1):
+            place("SEA-002", [(c + dc, r + face)], f"SEA-002 chair secondary {i}", kind="seat")
+    for i, t in enumerate(((cc + 15, cr + 5), (cc + 15, cr + 7)), 7):
+        place("SRV-005", [t], f"SRV-005 relay stack {i}", tall=True)
+    # ---- calibration V5.1: whole-room composition. Equipment GROUPS instead of isolated objects: rack pairs
+    # beside the role workstations, a south command group around the budget console, a west engineering island
+    # between the two door approaches, a north-east rack / bay / rack line and a south operations arc; every group
+    # cabled to the perimeter by a conduit. Door approaches keep a 3-tile corridor to the walkway ring.
+    corridor = set()
+    for x, y in door_mids:
+        L = math.hypot(cen(cc) - x, cen(cr) - y)
+        for k in range(0, int(L / T * 2) + 1):
+            px_ = x + (cen(cc) - x) * k / (L / T * 2)
+            py_ = y + (cen(cr) - y) * k / (L / T * 2)
+            if math.hypot(px_ - cen(cc), py_ - cen(cr)) < 9.4 * T:
+                break
+            for dc in range(-2, 3):
+                for dr in range(-2, 3):
+                    t = (int(px_ // T) + dc, int(py_ // T) + dr)
+                    if math.hypot(cen(t[0]) - px_, cen(t[1]) - py_) <= 1.6 * T:
+                        corridor.add(t)
+
+    def all_reachable(extra):
+        blocked_ = {t for f in furn if f["kind"] == "block" for t in f["tiles"]} | set(extra)
+        open_ = {t for t, n in region.items() if n == "H-CMD" and t not in blocked_}
+        start = next(iter(open_))
+        seen, todo = {start}, [start]
+        while todo:
+            c0, r0 = todo.pop()
+            for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                u = (c0 + dc, r0 + dr)
+                if u in open_ and u not in seen:
+                    seen.add(u)
+                    todo.append(u)
+        return len(seen) == len(open_)
+
+    def try_place(asset, tiles, label, kind="block", tall=False):
+        if not free(tiles) or any(t in corridor for t in tiles):
+            return False
+        if kind == "block" and not all_reachable(tiles):
+            return False
+        F("H-CMD", asset, tiles, label, kind=kind, tall=tall)
+        used.update(tiles)
+        return True
+
+    groups = []  # (tile, label) group centres, cabled to the perimeter below
+    for sg in (-1, 1):  # rack pairs on the outer side of the north and south role workstations
+        for base in (cr - 13, cr + 13):
+            out = 1 if base > cr else -1
+            for row in (base, base + out, base - out):
+                pair = [(cc + sg * 11, row), (cc + sg * 12, row)]
+                if free(pair) and not any(t in corridor for t in pair) and all_reachable(pair):
+                    for t in pair:
+                        F("H-CMD", "SRV-005", [t], f"SRV-005 group rack {len(furn)}", tall=True)
+                        used.add(t)
+                    groups.append(pair[1])
+                    break
+    for sg in (
+        -1,
+        1,
+    ):  # south command group: secondary desk | service cabinet | budget console | ...
+        try_place("STO-006", [(cc + sg * 3, cr + 15)], f"STO-006 command group cabinet {len(furn)}")
+    west = [
+        ("CON-031", absrect(cc - 13, cr - 3, 1, 2), [(cc - 12, cr - 3), (cc - 12, cr - 2)]),
+        ("STO-005", absrect(cc - 13, cr - 1, 1, 2), []),
+        ("CON-031", absrect(cc - 13, cr + 1, 1, 2), [(cc - 12, cr + 1), (cc - 12, cr + 2)]),
+    ]
+    for i, (asset, tiles, chairs) in enumerate(west, 9):
+        if try_place(asset, tiles, f"{asset} west engineering {i}"):
+            for t in chairs:
+                try_place("SEA-002", [t], f"SEA-002 chair west engineering {i}", kind="seat")
+    groups.append((cc - 13, cr))
+    ne = [
+        ("SRV-005", [(cc + 7, cr - 9)]),
+        ("STO-005", absrect(cc + 8, cr - 9, 2, 1)),
+        ("SRV-005", [(cc + 10, cr - 9)]),
+    ]
+    for asset, tiles in ne:
+        try_place(asset, tiles, f"{asset} north-east line {len(furn)}", tall=asset == "SRV-005")
+    groups.append((cc + 10, cr - 9))
+    for i, (c, face) in enumerate(((cc - 6, -1), (cc + 5, -1)), 11):  # south operations arc
+        if try_place("CON-031", absrect(c, cr + 10, 2, 1), f"CON-031 south arc {i}"):
+            for dc in (0, 1):
+                try_place(
+                    "SEA-002",
+                    [(c + dc, cr + 10 + face)],
+                    f"SEA-002 chair south arc {i}",
+                    kind="seat",
+                )
+            groups.append((c, cr + 10))
+    more_vents = [
+        (cc + dc, cr + dr)
+        for dc, dr in (
+            (-11, -4),
+            (11, -4),
+            (-11, 5),
+            (11, 5),
+            (-5, -11),
+            (5, -11),
+            (-6, 10),
+            (6, 10),
+        )
+    ]
+    F(
+        "H-CMD",
+        "FLR-010",
+        [t for t in more_vents if free([t])],
+        "FLR-010 floor vents (outer deck)",
+        kind="floor",
+    )
+    aprons = []
+    for lab in ("CON-003 ops", "CON-004 trader", "CON-005 proposal", "CON-022 budget"):
+        ts = next(f["tiles"] for f in furn if f["label"] == lab)
+        c0, r0 = min(t[0] for t in ts), min(t[1] for t in ts)
+        aprons += [
+            (c, r) for c in range(c0 - 1, c0 + 4) for r in range(r0 - 1, r0 + 2) if (c, r) not in ts
+        ]
+    F("H-CMD", "FLR-009", aprons, "FLR-009 hazard border (console aprons)", kind="floor")
+    conduits = [(cc, r) for r in range(cr - 13, cr - 3)]  # from the back bank to the dais
+    for lab in ("CON-003 ops", "CON-004 trader", "CON-005 proposal", "CON-022 budget"):
+        ts = next(f["tiles"] for f in furn if f["label"] == lab)
+        mc = sum(t[0] for t in ts) / len(ts)
+        mr = sum(t[1] for t in ts) / len(ts)
+        L = math.hypot(mc - cc, mr - cr)
+        for k in range(1, 8):  # outward to the rim bank
+            t = (round(mc + (mc - cc) / L * k), round(mr + (mr - cr) / L * k))
+            if region.get(t) != "H-CMD" or any(
+                t in f["tiles"] for f in furn if f["asset"] in ("CON-030", "STO-001")
+            ):
+                break
+            conduits.append(t)
+    blocking = {t for f in furn if f["kind"] != "floor" for t in f["tiles"]}
+    for t0 in (
+        groups + ring_gaps
+    ):  # V5.1: every equipment group (and each perimeter gap) cabled outward
+        L = math.hypot(t0[0] - cc, t0[1] - cr) or 1
+        for k in range(1, 9):
+            t = (round(t0[0] + (t0[0] - cc) / L * k), round(t0[1] + (t0[1] - cr) / L * k))
+            if t0 in ring_gaps:
+                t = t0
+            if region.get(t) != "H-CMD" or t in blocking or t in corridor:
+                break
+            if t not in conduits:
+                conduits.append(t)
+            if t0 in ring_gaps:
+                break
+    F("H-CMD", "FLR-011", conduits, "FLR-011 cable conduit", kind="floor")
+    dais = [
+        (c, r)
+        for c in range(cc - 7, cc + 8)
+        for r in range(cr - 7, cr + 8)
+        if 5.7 <= math.hypot(c - cc, r - cr) <= 6.4
+    ]
+    F("H-CMD", "FLR-009", dais, "FLR-009 hazard border (dais)", kind="floor")
+    vents = [(cc + dc, cr + dr) for dc, dr in ((0, -8), (8, 0), (0, 8), (-8, 0))]
+    F("H-CMD", "FLR-010", vents, "FLR-010 floor vents", kind="floor")
     # H-LAB (circle, 30 tiles across)
     lc, lr = math.floor(280 / T), math.floor(689 / T)
     F("H-LAB", "CON-008", absrect(lc - 1, lr - 12, 3, 1), "CON-008 driver board")
@@ -539,6 +872,10 @@ def build_geometry():
     for t in clr:
         if t in blocked and not blocked[t].startswith("LEI-001"):
             issues.append(f"billiards clearance {t} blocked by {blocked[t]}")
+    # H-CMD circulation ring (calibration room V1): the walkway between the dais and the consoles stays clear
+    for t, n in region.items():
+        if n == "H-CMD" and 6.6 <= math.hypot(t[0] - cc, t[1] - cr) <= 9.4 and t in blocked:
+            issues.append(f"H-CMD circulation ring {t} blocked by {blocked[t]}")
 
     # two-agent passing: a tile supports passing if it sits in a free 2x2 block of one region
     def pass2(t):

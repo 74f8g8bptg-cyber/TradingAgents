@@ -5,12 +5,20 @@ from pathlib import Path
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 PLACEHOLDER = "/*DATA*/null"
+# The reusable Stellar visual vocabulary (construction families) lives in its own file and is inlined
+# into the page at this marker, so every room composition shares one construction language.
+VOCABULARY = "/*VOCABULARY*/"
+VOCABULARY_FILE = "stellar_vocabulary.js"
 
 
 def _fill(template_name, data):
     html = (TEMPLATES / template_name).read_text(encoding="utf-8")
     if PLACEHOLDER not in html:
         raise ValueError(f"{template_name}: data placeholder missing")
+    if VOCABULARY in html:
+        html = html.replace(
+            VOCABULARY, (TEMPLATES / VOCABULARY_FILE).read_text(encoding="utf-8").rstrip("\n")
+        )
     return html.replace(PLACEHOLDER, json.dumps(data, separators=(",", ":")))
 
 

@@ -63,25 +63,25 @@
 | Prefix | Category | IDs | Retired | Active types |
 |---|---|---|---|---|
 | `CHR` | Characters (Character Registry) | 46 | 1 | 45 (3 FUTURE, 1 DEFERRED) |
-| `CON` | Consoles and workstations | 29 | 2 | 27 (2 FUTURE) |
+| `CON` | Consoles and workstations | 31 | 2 | 29 (2 FUTURE) |
 | `SCR` | Screen hardware | 12 | 1 | 11 |
 | `DOR` | Doors | 9 | 6 | 3 |
 | `COR` | Corridor modules | 9 | 6 | 3 |
 | `LFT` | Lifts | 5 | 5 | **0 (category retired)** |
 | `TBL` | Tables | 8 | 0 | 8 (2 FUTURE) |
 | `SEA` | Seating | 9 | 0 | 9 |
-| `LGT` | Lighting | 9 | 1 | 8 |
-| `DEC` | Decoration | 7 | 0 | 7 |
-| `SRV` | Servers and conduits | 4 | 0 | 4 |
-| `WAL` | Walls and structure | 10 | 1 | 9 |
-| `FLR` | Floors | 8 | 1 | 7 |
-| `STO` | Storage | 4 | 0 | 4 |
+| `LGT` | Lighting | 10 | 1 | 9 |
+| `DEC` | Decoration | 8 | 0 | 8 |
+| `SRV` | Servers and conduits | 5 | 0 | 5 |
+| `WAL` | Walls and structure | 11 | 1 | 10 |
+| `FLR` | Floors | 11 | 1 | 10 |
+| `STO` | Storage | 6 | 0 | 6 |
 | `PLT` | Plants | 5 | 0 | 5 |
-| `SGN` | Signage | 7 | 2 | 5 |
+| `SGN` | Signage | 8 | 2 | 6 |
 | `LEI` | Leisure furniture | 6 | 0 | 6 |
 | `EQP` | Hero equipment | 5 | 0 | 5 |
 | `PRP` | Hand-held and moving props | 8 | 0 | 8 |
-| **Total** | **19 prefixes (18 in use)** | **200** | **26** | **174** |
+| **Total** | **19 prefixes (18 in use)** | **212** | **26** | **186** |
 
 ---
 
@@ -125,6 +125,8 @@ Interaction: they occupy anchors. Navigation: dynamic bodies with traffic and se
 | `CON-027` | Reconciliation console | Reconciliation view | L4 | work anchor | blocks | Y | no | moved from the Execution Bay |
 | `CON-028` | Coaching console | Coach | R1 | work anchor | blocks | FUT | no | **new** |
 | `CON-029` | Risk outbox counter | Approved order pickup | L10 | pickup anchor (R: E1) | blocks | Y | no | **new** (replaces the airlock hand-off) |
+| `CON-030` | Perimeter console bank module (H-CMD calibration V1) | Bridge-style equipment band on the hub rim; **unassigned, dark glass, no data, no anchor** | `H-CMD` rim ring | none | blocks (1–3 rim tiles) | Y | yes | **new** |
+| `CON-031` | Secondary console (H-CMD calibration V2) | Unassigned bridge console with two monitors; **dark glass, no data, no anchor** | `H-CMD` back and south banks | none (unclaimed chairs) | blocks (2 × 1) | Y | yes | **new** |
 
 ### `SCR` — Screen hardware
 Display instances (`DSP-…`) are defined in the Screen Registry. Every screen is `wall` or mounted
@@ -211,6 +213,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LGT-007` | Podium spotlight (neutral light; side icon + text; no side colour) | L3 | Y | kept |
 | `LGT-008` | Airlock status lamp | — | — | **RETIRED** |
 | `LGT-009` | Dome light | `H-LAB` | Y | room changed |
+| `LGT-010` | Wall utility fixture (cool white in command; never a status light) | `H-CMD` rim (calibration V1) | Y | **new** |
 
 ### `DEC` — Decoration (Nav `none`, or `wall`)
 
@@ -223,6 +226,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `DEC-005` | Hull rib trim | L9, L10, corridors | Y | reused |
 | `DEC-006` | Department emblem plaque (shape icons only) | room doors | Y | kept |
 | `DEC-007` | Holo globe (**decorative only**: no real data, no fake system status, no charts or metrics) | `H-CMD`, `H-LAB` centres | opt | **new** |
+| `DEC-008` | Wall equipment panel (vents, cable trays, junction boxes; **no data**) | `H-CMD` rim segments (calibration V1) | Y | **new** |
 
 ### `SRV` — Servers and conduits
 
@@ -232,6 +236,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SRV-002` | Journal archive rack | L4, L6 | blocks | Y | kept |
 | `SRV-003` | Data conduit trunk | **only inside non-walkable gap space**; must read as solid, never as a passage | solid | opt | re-scoped (was a vertical deck conduit) |
 | `SRV-004` | Overhead cable tray | ceilings | none | opt | kept |
+| `SRV-005` | Relay stack (decorative hardware tower; constant hardware lights, **never status or data**) | `H-CMD` operations clusters (calibration V2) perimeter racks between bank groups (calibration V5) and rack pairs in the equipment groups (calibration V5.1) | blocks (1 × 1) | Y | **new** |
 
 ### `WAL` — Walls and structure
 
@@ -247,6 +252,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `WAL-008` | Cutaway wall cap | camera-facing walls | solid | Y | kept |
 | `WAL-009` | Structural gap infill | The non-walkable hull between small rooms and between the L-block and the hubs (Q4). Must read as solid mass, never as a corridor | solid | Y | **new** |
 | `WAL-010` | Radial junction collar | Where a rotated R room meets the `H-HAB` rim around `DOR-009` | solid | Y | **new** |
+| `WAL-011` | Segmented bulkhead rim (gunmetal panels, ribs, titanium cap) | `H-CMD` rim (calibration V1) | solid | Y | **new** |
 
 ### `FLR` — Floors
 
@@ -260,15 +266,20 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `FLR-006` | Tier steps | L3 (optional) | walk-over | opt | kept |
 | `FLR-007` | Lift landing plate | — | — | — | **RETIRED** |
 | `FLR-008` | Launch-deck marking | L9 | walk-over | Y | kept |
+| `FLR-009` | Hazard-stripe border marking (amber / charcoal) | `H-CMD` dais edge (calibration V1) | walk-over | Y | **new** |
+| `FLR-010` | Floor vent grille (decal) | `H-CMD` walkway (calibration V1) | walk-over | Y | **new** |
+| `FLR-011` | Cable conduit (floor channel, decal) | `H-CMD` back bank to the dais (calibration V2) | walk-over | Y | **new** |
 
 ### `STO` — Storage (kept)
 
 | ID | Name | Where | Nav | V1 |
 |---|---|---|---|---|
-| `STO-001` | Wall locker | L9, L10, `H-LAB` | wall / blocks | opt |
+| `STO-001` | Wall locker | L9, L10, `H-LAB`, `H-CMD` (rim, flanking the doors; calibration V1) | wall / blocks | opt |
 | `STO-002` | Crate stack | L4 | blocks | opt |
 | `STO-003` | Shelf / cue rack | `H-HAB` | blocks | Y |
 | `STO-004` | Crystal archive shelf | L6 | blocks | Y |
+| `STO-005` | Equipment bay cabinet (low, vented) | `H-CMD` operations clusters (calibration V2), perimeter rhythm and equipment groups (calibration V5.1) | blocks (2 × 1; 1 × 2 when side-facing) | Y |
+| `STO-006` | Service cabinet (1 × 1; hazard-marked door, vents) | `H-CMD` second row behind the rim bank (calibration V3), perimeter rhythm and the south command group (calibration V5.1) | blocks (1 × 1) | Y |
 
 ### `PLT` — Plants
 
@@ -291,6 +302,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SGN-005` | One-way airlock placard | — | — | **RETIRED** |
 | `SGN-006` | Restricted-area marking | `DR-L9`, `DR-L10` | Y | reused (was the Vault marking) |
 | `SGN-007` | "RESERVED" plate | doors of L5, L8, R1–R6 | Y | **new** |
+| `SGN-008` | Workstation name plate (role code + role; static text, never data) | assigned `H-CMD` workstations (calibration V1) | Y | **new** |
 
 ### `LEI` — Leisure (all in `H-HAB`, kept)
 

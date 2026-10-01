@@ -18,6 +18,7 @@ These are **design tools, not production code**. Nothing here is imported by `st
 | `render.py` | Fills the two HTML templates with the JSON data (**generation**) |
 | `check_visual.py` | **Visual consistency validation.** Checks the data and the page against the registries (see "What the checks cover" below) |
 | `templates/geometry_preview.html`, `templates/visual_prototype.html` | The page templates (renderer code). The data is injected at `/*DATA*/null` |
+| `templates/stellar_vocabulary.js` | The reusable **Stellar Visual Vocabulary** (`docs/STELLAR_VISUAL_VOCABULARY_V1.md`): construction grammar, materials, screens, and the workstation, console, equipment, chair, table, wall, floor and small-prop families. `render.py` inlines it into the prototype at `/*VOCABULARY*/`. Rooms compose these families; they do not redefine them. The page's **Vocabulary** button (`?vocab=1`) renders every family on its own |
 | `smoke_test.js` | Optional browser smoke test (Node + Playwright) |
 
 ## Rebuild
@@ -46,7 +47,7 @@ Optional browser smoke test:
 NODE_PATH="$(npm root -g)" node tools/visual_prototype/smoke_test.js [screenshot-dir]
 ```
 
-It opens the committed page in every camera view and on the key room focuses. It fails on any page error, and it confirms that the default camera is Iso · right.
+It opens the committed page in every camera view, on the key room focuses and in the vocabulary catalogue. It fails on any page error, and it confirms that the default camera is Iso · right.
 
 ## What the checks cover
 

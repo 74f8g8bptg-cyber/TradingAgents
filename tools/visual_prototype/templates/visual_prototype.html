@@ -60,6 +60,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
   <div class="row">
     <button id="v-isoR" class="on" title="Default presentation view (frozen): isometric, camera from the north-east">Iso · right</button>
     <button id="v-iso" title="Alternative / debug view: isometric, camera from the south-east">Iso · left</button>
+    <button id="v-obl" title="High overhead oblique camera (comparison; not frozen)">Oblique</button>
     <button id="v-plan" title="Top-down plan view (Floor Plan orientation)">Plan</button>
     <button id="t-labels" class="on">Labels</button>
     <button id="t-grid" title="Geometry debug grid (G)">Grid</button>
@@ -69,6 +70,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
     <button id="t-preview" title="Design sample of the working state; not telemetry">State preview</button>
     <button id="t-legend">Legend</button>
     <button id="t-theme" title="Panel theme">Theme</button>
+    <button id="t-vocab" title="Stellar visual vocabulary: every construction family on its own">Vocabulary</button>
   </div>
 </div>
 <div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · agents at home anchors</div>
@@ -103,10 +105,11 @@ const VIEWS={
        P:(x,y,h=0)=>[(x-y)*0.8944,(x+y)*0.4472-h],inv:(sx,sy)=>{const a=sx/0.8944,b=sy/0.4472;return[(a+b)/2,(b-a)/2]},depth:(x,y)=>x+y},
   isoR:{id:"isoR",kx:1.2649,ky:0.6325,cam:[Math.SQRT1_2,-Math.SQRT1_2],
        P:(x,y,h=0)=>[(-x-y)*0.8944,(x-y)*0.4472-h],inv:(sx,sy)=>{const a=sx/0.8944,b=sy/0.4472;return[(b-a)/2,(-a-b)/2]},depth:(x,y)=>x-y},
+  obl:{id:"obl",kx:1,ky:0.82,cam:[0,1],P:(x,y,h=0)=>[x,y*0.82-h*0.95],inv:(sx,sy)=>[sx,sy/0.82],depth:(x,y)=>y},
   plan:{id:"plan",kx:1,ky:0.8,cam:[0,1],P:(x,y,h=0)=>[x,y*0.8-h],inv:(sx,sy)=>[sx,sy/0.8],depth:(x,y)=>y}};
 let V=VIEWS.isoR;
 const cam={z:2,cx:0,cy:0}; const MINZ=0.5,MAXZ=6;
-const opt={labels:true,grid:false,anchors:false,preview:false};
+const opt={labels:true,grid:false,anchors:false,preview:false};let VOCAB_MODE=false;
 // ---------------------------------------------------------------- palette (Visual Bible C1, room sheets)
 const COL={navy:"#1b2640",navyLight:"#283a5e",corr:"#1f2b45",grate:"#272b33",wood:"#9a7350",threshold:"#2a3039",reserved:"#11141a",hull:"#0d1119",
   wall:"#e7e1d4",wallTop:"#c4cbd3",gunmetal:"#5b626d",ti:"#b9c2cc",graphite:"#2e333b",graphiteTop:"#3a4049",glass:"#121a27",niche:"#3a404a",resWall:"#3b414b"};
@@ -201,6 +204,7 @@ function buildScene(){
       const pm=[hb.x+hb.R*Math.cos(am),hb.y+hb.R*Math.sin(am)];
       if(other.some(o=>insideHub(o,pm[0],pm[1])))continue;
       if(gaps.some(g=>{const ac=Math.atan2(Math.sin(g.a0)+Math.sin(g.a1),Math.cos(g.a0)+Math.cos(g.a1));const half=Math.abs(wrapA(g.a1-g.a0))/2;return Math.abs(wrapA(am-ac))<half+0.012}))continue;
+      if(calInDoorZone(pm))continue; // the door assembly owns this stretch of rim
       const R0=hb.R,R1=hb.R+3;const pts=[[hb.x+R0*Math.cos(a0),hb.y+R0*Math.sin(a0)],[hb.x+R0*Math.cos(a1),hb.y+R0*Math.sin(a1)],[hb.x+R1*Math.cos(a1),hb.y+R1*Math.sin(a1)],[hb.x+R1*Math.cos(a0),hb.y+R1*Math.sin(a0)]];
       const h=wallHeight(pts[0],pts[1]);const clk=((am+Math.PI/2)/(Math.PI/6)+12)%12;
       let col=COL.wall,special=null;
@@ -210,6 +214,7 @@ function buildScene(){
       add({kind:"rim",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h,draw(){
         if(special==="window"){prism(pts,0,h,"#c4cbd3","#1a2b48",{seam:COL.ti});return}
         if(special==="living"){prism(pts,0,Math.max(h,6),"#4d8a56","#3c7a48",{seam:"#2f5f38"});return}
+        if(hb.id==="H-CMD"){calRimSegment(pts,h,i,hb);return}
         prism(pts,0,h,COL.wallTop,i%2?col:"#e2dccf",{seam:"rgba(0,0,0,.12)"});
         if(h>=16){const q0=pts[0],q1=pts[1];line3([q0[0],q0[1],h-1.6],[q1[0],q1[1],h-1.6],"rgba(190,245,255,.85)",0.7)}}});
     }
@@ -217,7 +222,7 @@ function buildScene(){
   // H-CMD / H-HAB junction collar (closes the lens between the touching rims, except the door)
   {const c=hubById["H-CMD"],hh=hubById["H-HAB"];const x=1200;const half=Math.sqrt(Math.max(0,c.R*c.R-(x-c.x)**2));
     for(const [ya,yb] of [[c.y-half,684],[708,c.y+half]]){const b=[x-1.5,ya,x+1.5,yb];const h=wallHeight([x,ya],[x,yb]);
-      add({kind:"wall",b,h,draw(){box(b,0,h,COL.wallTop,COL.graphite)}})}}
+      add({kind:"wall",b,h,draw(){prismX(rectPoly(...b),0,h,CAL.crown,CAL.gun,{lw:0.4,shadow:false})}})}} // dark bulkhead: part of the H-CMD door wall
   // reserved radial rooms R1-R6 (dark unlit shells)
   for(const rr of rRooms){for(let i=0;i<4;i++){const a=rr.pts[i],b2=rr.pts[(i+1)%4];const nx=b2[1]-a[1],ny=a[0]-b2[0];const L=Math.hypot(nx,ny);
       const o=[nx/L*2,ny/L*2];const pts=[a,b2,[b2[0]+o[0],b2[1]+o[1]],[a[0]+o[0],a[1]+o[1]]];
@@ -225,13 +230,16 @@ function buildScene(){
       const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
       add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h:LOW+1,draw(){prism(pts,0,LOW+1,"#4a505b",COL.resWall)}})}}
   // doors
-  for(const d of D.doors){for(const f of d.frames){addDoorFrame(add,d,f.p1,f.p2,f.region)}}
+  // ONE OPENING = ONE DOOR: calibration-room doors are one SV.door assembly built into the rim; a door through a thick wall
+  // (two frame records, one per wall face) is drawn as ONE deep doorway, never as two doors
+  for(const d of D.doors){const cz=calDoorZone(d);if(cz){addCalDoor(add,cz);continue}
+    if(d.frames.length===2){const [f0,f1]=d.frames;addDoorFrame(add,d,f0.p1,f0.p2,f0.region,f1.p1,f1.p2)}else for(const f of d.frames)addDoorFrame(add,d,f.p1,f.p2,f.region)}
   for(const rd of D.rDoors){const hb=hubById["H-HAB"];const R=hb.R+1.5,half=12/R;
     const p1=[hb.x+R*Math.cos(rd.ang-half),hb.y+R*Math.sin(rd.ang-half)],p2=[hb.x+R*Math.cos(rd.ang+half),hb.y+R*Math.sin(rd.ang+half)];
     addDoorFrame(add,{id:rd.id,status:"reserved",kind:"DOR-009",restricted:false,A:"H-HAB",B:rd.room,collar:true},p1,p2,"H-HAB")}
   // furniture
-  for(const f of D.furniture){if(f.kind==="floor")continue;const b=fp(f);const fn=BUILD[f.asset]||BUILD._console;
-    const it=fn(f,b);if(it)add(Object.assign({kind:"furn",f,b,hit:{type:"furn",f}},it))}
+  for(const f of D.furniture){if(f.kind==="floor")continue;const b=fp(f);const fn=(CAL_ROOMS.has(f.room)&&BUILD_CAL[f.asset])||BUILD[f.asset]||BUILD._console;
+    const it=fn(f,b);if(it){add(Object.assign({kind:"furn",f,b,hit:{type:"furn",f}},it));for(const ex of it.extra||[])add(Object.assign({kind:"furn",hit:{type:"furn",f}},ex))}}
   // agents
   for(const a of D.agents){const x=a.tile[0]*T+6,y=a.tile[1]*T+6;add({kind:"agent",a,b:[x-4,y-4,x+4,y+4],h:21,bias:0.6,draw(){drawAgent(a,x,y)},hit:{type:"agent",a}})}
   // displays
@@ -260,12 +268,14 @@ function sortItems(items){
     if(used[bi])continue;used[bi]=1;out.push(items[bi]);for(const t of adj[bi]){if(--indeg[t]===0&&!used[t])ready.push(t)}}
   return out}
 // ---------------------------------------------------------------- doors
-function addDoorFrame(add,d,p1,p2,reg){
-  const horiz=Math.abs(p1[1]-p2[1])<Math.abs(p1[0]-p2[0]);const b=[Math.min(p1[0],p2[0])-1.5,Math.min(p1[1],p2[1])-1.5,Math.max(p1[0],p2[0])+1.5,Math.max(p1[1],p2[1])+1.5];
+function addDoorFrame(add,d,p1,p2,reg,q1,q2){
+  const horiz=Math.abs(p1[1]-p2[1])<Math.abs(p1[0]-p2[0]);const xs=[p1[0],p2[0],...(q1?[q1[0],q2[0]]:[])],ys=[p1[1],p2[1],...(q1?[q1[1],q2[1]]:[])];
+  const b=[Math.min(...xs)-1.5,Math.min(...ys)-1.5,Math.max(...xs)+1.5,Math.max(...ys)+1.5];
   const H=20;const res=d.status!=="open";
+  if(q1){const m=[(p1[0]+q1[0])/2,(p1[1]+q1[1])/2],n2=[(p2[0]+q2[0])/2,(p2[1]+q2[1])/2];p1=m;p2=n2} // one deep doorway: the sign and lintel sit mid-depth
   add({kind:"door",b,h:H+3,hit:{type:"door",d},draw(){
-    const post=(p)=>box([p[0]-1.5,p[1]-1.5,p[0]+1.5,p[1]+1.5],0,H,COL.ti,d.collar?COL.graphite:"#a9b2bc");
-    post(p1);post(p2);
+    const post=(p,q)=>box([Math.min(p[0],q[0])-1.5,Math.min(p[1],q[1])-1.5,Math.max(p[0],q[0])+1.5,Math.max(p[1],q[1])+1.5],0,H,COL.ti,d.collar?COL.graphite:"#a9b2bc");
+    if(q1){post(d.frames[0].p1,d.frames[1].p1);post(d.frames[0].p2,d.frames[1].p2)}else{post(p1,p1);post(p2,p2)}
     if(res){ // closed leaf + SGN-007 plate
       const leaf=horiz?[p1[0]+1.5,p1[1]-1,p2[0]-1.5,p1[1]+1]:[p1[0]-1,p1[1]+1.5,p1[0]+1,p2[1]-1.5];
       if(Math.abs(p1[0]-p2[0])>0.5&&Math.abs(p1[1]-p2[1])>0.5){prism([[p1[0],p1[1]],[p2[0],p2[1]],[p2[0]+0.5,p2[1]+0.5],[p1[0]+0.5,p1[1]+0.5]],0,H-2,"#4a505b","#3a414c")}
@@ -287,6 +297,27 @@ function addDoorFrame(add,d,p1,p2,reg){
       ctx.fillStyle="#f3e2c0";ctx.font="700 2.3px system-ui";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText("RESTRICTED",-5,0.1);ctx.restore()}
   }})}
 // ---------------------------------------------------------------- furniture builders (Stellar forms; room-sheet materials)
+// ---- calibration-room doors (SV.door): one assembly per opening, built into the rim with bulkhead returns
+function calDoorZone(d){if(!D.hubs)return null;const room=[d.A,d.B].find(r=>CAL_ROOMS.has(r));if(!room||!d.frames.length)return null;const f=d.frames[0];const c=hubById[room];
+  const W=Math.hypot(f.p2[0]-f.p1[0],f.p2[1]-f.p1[1]);const u=[(f.p2[0]-f.p1[0])/W,(f.p2[1]-f.p1[1])/W];const m=[(f.p1[0]+f.p2[0])/2,(f.p1[1]+f.p2[1])/2];let n=[-u[1],u[0]];if(n[0]*(c.x-m[0])+n[1]*(c.y-m[1])<0)n=[-n[0],-n[1]];
+  const type=d.restricted?"restricted":d.kind==="DOR-009"?"hub":"standard";const sp=SV.door.SPEC[type];
+  return{d,type,sp,m,u,n,W,fr:{cx:m[0],cy:m[1],a:u,f:n,L:W},plate:(d.A===room?d.B:d.A),closed:d.status!=="open"}}
+let _calDZ=null;const calDoorZones=()=>_calDZ||(_calDZ=D.doors.map(calDoorZone).filter(Boolean));
+function calInDoorZone(p){return calDoorZones().some(z=>{const r=[p[0]-z.m[0],p[1]-z.m[1]];const al=Math.abs(r[0]*z.u[0]+r[1]*z.u[1]),dn=r[0]*z.n[0]+r[1]*z.n[1];return al<=z.W/2+z.sp.jw+0.5&&dn>=-z.sp.depth/2-14&&dn<=z.sp.depth/2+10})}
+// kept rim endpoints (inner face) of a hub, with the same skip rules as the rim pass
+function rimKeptEnds(hb){const gaps=(D.hubGaps[hb.id]||[]);const other=hubList.filter(o=>o!==hb);const N=Math.round(hb.R*TAU/14);const out=[];
+  for(let i=0;i<N;i++){const a0=i/N*TAU-Math.PI,a1=(i+1)/N*TAU-Math.PI,am=(a0+a1)/2;const pm=[hb.x+hb.R*Math.cos(am),hb.y+hb.R*Math.sin(am)];
+    if(other.some(o=>insideHub(o,pm[0],pm[1])))continue;if(gaps.some(g=>{const ac=Math.atan2(Math.sin(g.a0)+Math.sin(g.a1),Math.cos(g.a0)+Math.cos(g.a1));const half=Math.abs(wrapA(g.a1-g.a0))/2;return Math.abs(wrapA(am-ac))<half+0.012}))continue;
+    if(calInDoorZone(pm))continue;for(const a of [a0,a1])out.push([hb.x+(hb.R+1.5)*Math.cos(a),hb.y+(hb.R+1.5)*Math.sin(a)])}return out}
+function addCalDoor(add,z){const {fr,type,sp,m,u,n,W}=z;const ext=W/2+sp.jw;const dD=sp.depth/2;
+  const corners=[[-ext,-dD-1],[ext,-dD-1],[ext,dD+1],[-ext,dD+1]].map(([s,d])=>[m[0]+u[0]*s+n[0]*d,m[1]+u[1]*s+n[1]*d]);
+  add({kind:"door",b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed})}});
+  // bulkhead returns: close the wall from each jamb back to the nearest kept rim end (no white stubs, no second frame)
+  const ends=hubList.filter(h=>Math.hypot(h.x-m[0],h.y-m[1])<h.R+40).flatMap(rimKeptEnds);
+  for(const sg of [-1,1]){const C=[m[0]+u[0]*sg*(ext-0.4),m[1]+u[1]*sg*(ext-0.4)];let best=null,bd=46;for(const e of ends){const dd=Math.hypot(e[0]-C[0],e[1]-C[1]);if(dd<bd){bd=dd;best=e}}
+    if(!best||bd<1.5)continue;const v=[(best[0]-C[0])/bd,(best[1]-C[1])/bd],w=[-v[1]*1.6,v[0]*1.6];const q=[[C[0]-w[0],C[1]-w[1]],[best[0]-w[0],best[1]-w[1]],[best[0]+w[0],best[1]+w[1]],[C[0]+w[0],C[1]+w[1]]];
+    const h=Math.min(sp.H-1,wallHeight(C,best));add({kind:"wall",b:calBounds(q),h,draw(){prismX(q,0,h,CAL.crown,CAL.gun,{lw:0.4,shadow:false});if(h>=10){const L=Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1]);
+      for(const [a,b,nn] of [[q[0],q[1],[w[0]/1.6,w[1]/1.6]],[q[3],q[2],[-w[0]/1.6,-w[1]/1.6]]])onFace(a,b,[-nn[0],-nn[1]],0,h,(WW,HH)=>{SV.wall.band(WW,HH);ctx.fillStyle="#34373c";ctx.fillRect(WW/2-1.2,1.8,2.4,HH-4.6);dRivets(0,1.8,WW,HH-4.6)})}}})}}
 function frontSide(f,b){const an=(servesMap[f.label]||[])[0];if(!an)return null;const x=an.tile[0]*T+6,y=an.tile[1]*T+6;
   if(x<b[0])return"W";if(x>b[2])return"E";if(y<b[1])return"N";if(y>b[3])return"S";return null}
 function consoleForm(h,top){return(f,b)=>{const bb=inset(b,1.5);const acc=ACC[deptOf(f.room)]||ACC.NEU;const dormant=/CON-006 R[3-6]/.test(f.label);const fs=frontSide(f,bb);
@@ -344,6 +375,184 @@ function chairForm(b,backSide,col,raised){const bb=inset(b,raised?2:3);const h0=
   const bk={N:[bb[0],bb[1],bb[2],bb[1]+1.8],S:[bb[0],bb[3]-1.8,bb[2],bb[3]]}[backSide];box(bk,h0+4,h0+(raised?13:9),shade(col,1.1),col);if(raised)topLine(bk,"S",h0+13,ACC.CMD,0.5)}}}
 function benchForm(b,col){const bb=[b[0]+1,b[1]+3,b[2]-1,b[3]-3];return{h:5,draw(){box(bb,0,4,shade(col,1.15),col)}}}
 function rackForm(b){const bb=[b[0]+4,b[1]+1,b[2]-0.5,b[3]-1];return{h:13,draw(){box(bb,0,13,"#ddd8cc",COL.graphite);ctx.fillStyle="#e9f7fb";const s=V.P(bb[0],(bb[1]+bb[3])/2,10);ctx.fillRect(s[0]-0.5,s[1]-0.5,1,1)}}}
+// ================================================================ H-CMD CALIBRATION ROOM V5: composition with the Stellar visual vocabulary
+// The construction vocabulary (stellar_vocabulary.js, inlined below) is room-agnostic. This block is H-CMD's COMPOSITION only:
+// which family each registered asset uses, the perimeter and wall rhythm, the deck plan and the local light. Geometry
+// comes from geometry.py; display identities and content from the registries.
+/*VOCABULARY*/
+const CAL_ROOMS=new Set(["H-CMD"]);
+const CAL_DAIS_R=67,CAL_DAIS_H=1.2;
+function calBaseH(x,y){const c=hubById["H-CMD"];return Math.hypot(x-c.x,y-c.y)<=CAL_DAIS_R?CAL_DAIS_H:0}
+function roomCentre(room){const h=hubById[room];if(h)return[h.x,h.y];const b=D.bbox[room];return b?[(b[0]+b[2]+1)/2*T,(b[1]+b[3]+1)/2*T]:[0,0]}
+function deskFrame(f,b,fs){const op={N:[0,-1],S:[0,1],W:[-1,0],E:[1,0]}[fs];const horiz=fs==="N"||fs==="S";
+  return{cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:op,L:(horiz?b[2]-b[0]:b[3]-b[1])-0.8,D:(horiz?b[3]-b[1]:b[2]-b[0])}}
+const calConsoleDisplay={};for(const d of D.displays)if(d.place[0]==="console")calConsoleDisplay[d.place[1]]=d;
+// role workstations: WS-standard (CON-003/004/005), WS-heavy (CON-022, the south axis counterpart of the command table)
+function calWorkstation(f,b){const fs=frontSide(f,inset(b,1.2))||"S";const fr=deskFrame(f,b,fs);const an=(servesMap[f.label]||[])[0];const ag=an&&agentAt.get(an.name);
+  const plate=ag?`${ag.code} · ${ag.name.replace(/\s*\(.*\)/,"").split(" ").pop().toUpperCase()}`:null;const d=calConsoleDisplay[f.label];const lit=ag&&!ag.noProducer;
+  const content=d?((w,h)=>screenContent(d,w,h,cam.z)):null;const variant=f.asset==="CON-022"?"heavy":"standard";
+  return{h:22,draw(){SV.ws.build(fr,{variant,lit,plate,content,seed:hash(f.label)%7})}}}
+function calSecondary(f,b){const [cx,cy]=roomCentre(f.room);const vert=b[3]-b[1]>b[2]-b[0];const fr=deskFrame(f,b,vert?((b[0]+b[2])/2<cx?"E":"W"):((b[1]+b[3])/2<cy?"S":"N"));return{h:16,draw(){SV.ws.build(fr,{variant:"compact",seed:hash(f.label)%7})}}}
+function rimFrame(f,D2){const c=hubById[f.room];const xs=f.tiles.map(t=>t[0]*T+6),ys=f.tiles.map(t=>t[1]*T+6);const mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;
+  const ang=Math.atan2(my-c.y,mx-c.x);const inn=[-Math.cos(ang),-Math.sin(ang)],tan=[-Math.sin(ang),Math.cos(ang)];const L=Math.max(11,f.tiles.length*11.6);const D=D2||10;
+  const rc=c.R-1-D/2;return{cx:c.x+Math.cos(ang)*rc,cy:c.y+Math.sin(ang)*rc,a:tan,f:inn,L,D}}
+// perimeter bank modules: CON-single/double/wide by run length, bays with unlike kit; pilasters with lamp columns between modules
+function calBank(f){const fr=rimFrame(f);const n=f.tiles.length;const sd=hash(f.label)%7;return{h:17,draw(){SV.con.bank(fr,{bays:n,seed:sd,housingH:n===1?16.5:n===2?15:15.5});
+  for(const sg of [-1,1]){const s=sg*fr.L/2;const pil=frameCham(fr,s-1,s+1,-fr.D/2+0.1,fr.D/2-1.8,0.35);prismX(pil,0,16.6,CAL.gunHi,"#2f3237");
+    prismX(frameRect(fr,s-1.2,s+1.2,-fr.D/2,fr.D/2-1.6),16.6,17.3,"#4a4d54",CAL.gunLo,{lw:0.3,hi:false,mat:false});
+    const r=frameRect(fr,s-1,s+1,-fr.D/2+0.1,fr.D/2-1.8);onFace(r[3],r[2],fr.f,0,16.6,(W,H)=>{ctx.fillStyle="#1b1c1f";ctx.fillRect(W/2-0.7,1.4,1.4,H*0.42);dLampCol(W/2-0.4,1.9,5,1.2);
+      ctx.fillStyle=CAL.brass;for(const v of [H*0.62,H*0.8]){ctx.beginPath();ctx.arc(W/2,v,0.3,0,TAU);ctx.fill()}ctx.fillRect(0,H-1.2,W,0.4);dWear(W,H,7)})}}}}
+function calLocker(f){const fr=rimFrame(f,9);fr.L=10.5;fr.D=7;return{h:21,draw(){SV.eq.locker(fr,{seed:hash(f.label)%7})}}}
+// STO-005 equipment bays: free-standing (along their long axis, facing the room centre) or ring-mounted in the perimeter rhythm
+function calEquipBay(f,b){let fr;if(f.label.includes("perimeter")){fr=rimFrame(f,8);fr.L=f.tiles.length*11.6-1.6}
+  else{const [cx,cy]=roomCentre(f.room);const vert=b[3]-b[1]>b[2]-b[0];const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;
+    fr=vert?{cx:x,cy:y,a:[0,1],f:[x<cx?1:-1,0],L:b[3]-b[1]-1.4,D:b[2]-b[0]-2.4}:{cx:x,cy:y,a:[1,0],f:[0,y<cy?1:-1],L:b[2]-b[0]-1.4,D:b[3]-b[1]-2.4}}
+  return{h:11,draw(){SV.eq.bay(fr,{seed:hash(f.label)%7})}}}
+function calServiceCab(f,b){const [cx0,cy0]=roomCentre(f.room);const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,L:7.6,D:7};const u=[cx0-fr.cx,cy0-fr.cy];const L=Math.hypot(...u);fr.f=[u[0]/L,u[1]/L];fr.a=[-fr.f[1],fr.f[0]];
+  return{h:16,draw(){SV.eq.service(fr,{tone:"red",seed:hash(f.label)%7})}}}
+// SRV-005 relay stacks alternate the two relay constructions: an open patch frame and a blade rack
+function calRelay(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,1],L:8,D:8};const sd=hash(f.label);const kind=sd%2?"rack":"relay";return{h:24,draw(){SV.eq[kind](fr,{seed:sd%7})}}}
+function calPlanter(f,b){const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;const fr={cx,cy,a:[1,0],f:[0,1]};return{h:16,draw(){
+  prismX(frameCham(fr,-5,5,-3.6,3.6,1.6),0,1.2,"#1d2a33","#1d2a33",{hi:false});prismX(frameCham(fr,-5.4,5.4,-4,4,1.8),1.2,5.2,"#2f4552","#263844");
+  ctx.strokeStyle=CAL.copper;ctx.lineWidth=0.7;ctx.stroke(poly2(frameCham(fr,-5.4,5.4,-4,4,1.8),5.2));ctx.fillStyle="#2a2018";ctx.fill(poly2(frameCham(fr,-4.6,4.6,-3.2,3.2,1.4),5.25));
+  const L=[["#2f6a3c",0,0,8.6,4.8],["#3c8048",-2.4,-1,10.5,3.6],["#4d9a58",2.2,0.6,11,3.4],["#5aa765",-0.6,-1.4,12.6,2.6],["#3c8048",3,-1.2,9.6,2.8],["#4d9a58",-3.2,1,9.2,2.6]];
+  for(const [c,dx,dy,h,r] of L){const p=V.P(cx+dx,cy+dy,h);ctx.fillStyle=c;ctx.beginPath();for(let k=0;k<7;k++){const a=k/7*TAU;const rr=r*(k%2?0.6:1);ctx.lineTo(p[0]+rr*Math.cos(a)*1.2,p[1]+rr*Math.sin(a)*0.75)}ctx.closePath();ctx.fill();ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=0.25;ctx.stroke()}}}}
+// ---- chairs: CH-operator at the role consoles, CH-standard elsewhere; the back is its own item for correct sorting, and a seated
+// operator seen from behind is drawn with the back in front of them (calChairBack)
+const calChairBack={};
+function calChair(f){const t=f.tiles[0];const x=t[0]*T+6,y=t[1]*T+6;const [rcx,rcy]=roomCentre(f.room);const an=D.anchors.find(a=>a.tile[0]===t[0]&&a.tile[1]===t[1]);
+  let u;const sv=an&&D.furniture.find(q=>q.label===an.serves);
+  if(sv){const b=fp(sv);u=[(b[0]+b[2])/2-x,(b[1]+b[3])/2-y]}else{const near=D.furniture.filter(q=>q.room===f.room&&/CON-03[01]/.test(q.asset)).map(q=>{const b=fp(q);return[(b[0]+b[2])/2-x,(b[1]+b[3])/2-y]}).sort((p,q)=>Math.hypot(...p)-Math.hypot(...q))[0];u=near||[x-rcx,y-rcy]}
+  const L=Math.hypot(u[0],u[1])||1;u=[u[0]/L,u[1]/L];const atCon=sv&&/CON-/.test(sv.asset);const pull=atCon?2.6:1.2;const sx=x+u[0]*pull,sy=y+u[1]*pull;const h0=calBaseH(x,y);
+  const c=SV.chair.build(sx,sy,h0,u,{variant:atCon?"operator":"standard",occupied:!!(an&&agentAt.get(an.name))});
+  return{h:h0+5,draw(){c.base();c.seat()},extra:[{b:calBounds(c.back),h:c.top,bias:0.2,draw:calChairBack[t[0]+","+t[1]]=c.backPart}]}}
+function calTable(f,b){const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;return SV.table.tactical(cx,cy,calBaseH(cx,cy))}
+function calCommandChair(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const h0=calBaseH(x,y);const c=SV.chair.build(x,y,h0,[0,1],{variant:"command"});
+  return{h:h0+8,draw(){c.base();c.seat()},extra:[{b:calBounds(c.back),h:c.top,bias:0.2,draw:c.backPart}]}}
+function calBench(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[0,-1]};const hL=(b[2]-b[0])/2-1;return{h:10,draw(){
+  for(const s of [-hL+1.5,hL-1.5])prismX(frameRect(fr,s-0.7,s+0.7,-2,2),0,3,CAL.brass,"#8a6a36",{hi:false});prismX(frameCham(fr,-hL,hL,-2.6,2.2,0.6),3,4.6,CAL.leatherHi,CAL.leather);
+  prismX(frameCham(fr,-hL,hL,-3.2,-2.2,0.3),4.6,9.4,CAL.leatherHi,CAL.leather);onTop(fr,-hL,hL,-2.6,2.2,4.62,(W,Dd)=>{ctx.strokeStyle="rgba(0,0,0,.4)";ctx.lineWidth=0.25;for(let x=W/3;x<W-0.1;x+=W/3){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,Dd);ctx.stroke()}})}}}
+const BUILD_CAL={"CON-030":calBank,"CON-031":calSecondary,"STO-001":calLocker,"STO-005":calEquipBay,"STO-006":calServiceCab,"PLT-001":calPlanter,"SRV-005":calRelay,"CON-003":calWorkstation,"CON-004":calWorkstation,"CON-005":calWorkstation,"CON-022":calWorkstation,"SEA-002":calChair,"TBL-001":calTable,"SEA-001":calCommandChair,"SEA-005":calBench};
+// console displays of the four role workstations render inside the workstation; this item keeps hover/inspect on the display
+function calConsoleDisplayItem(d,f){const b=fp(f);return{b:inset(b,2),h:17,bias:0.3,draw(){}}}
+// ---- H-CMD deck plan, composed from SV.floor: staggered panels with structural beams, a treadway walkway ring, grilles and
+// access hatches, conduit channels ending in junction plates, hazard aprons and relay pads, a service strip along the
+// perimeter, dashed door lanes, rim occlusion, the hazard ring and the raised dais
+function drawHCMDCalFloor(G){const c=hubById["H-CMD"];const detail=cam.z>=1.2,fine=cam.z>=2.2;const s=V.P(c.x,c.y);
+  ctx.fillStyle=CAL.deck;ctx.fill(G.hubs["H-CMD"]);ctx.save();ctx.clip(G.hubs["H-CMD"]);
+  const walkR0=6.6*T,walkR1=9.4*T;
+  const marked=new Set();for(const f of D.furniture)if(f.room==="H-CMD"&&f.kind==="floor")for(const q of f.tiles)marked.add(q[0]+","+q[1]);
+  for(const [tc,tr,n] of D.tiles){if(n!=="H-CMD")continue;const X=tc*T,Y=tr*T;const dist=Math.hypot(X+6-c.x,Y+6-c.y);const hsh=(tc*73856093^tr*19349663)>>>0;
+    if(dist>walkR0&&dist<walkR1){ctx.fillStyle="#26272a";ctx.fill(poly2(rectPoly(X+0.4,Y+0.4,X+T-0.4,Y+T-0.4),0));
+      if(detail){const lean=(tc+tr)%2?1:-1;for(let i=0;i<3;i++)for(let j=0;j<3;j++){const bx=X+2+i*3.6,by=Y+2+j*3.6;line3([bx,by+1.2+lean*0.6,0.02],[bx+2.4,by+1.2-lean*0.6,0.02],"rgba(150,140,120,.28)",0.6)}}
+      ctx.strokeStyle=CAL.seam;ctx.lineWidth=0.55;ctx.stroke(poly2(rectPoly(X,Y,X+T,Y+T),0));continue}
+    SV.floor.panel(tc,tr,X,Y,fine,detail);
+    if(detail&&hsh%13===0&&!marked.has(tc+","+tr))SV.floor.grille(X,Y);
+    if(detail&&dist>walkR1+8&&hsh%17===5&&!marked.has(tc+","+tr))SV.floor.hatch(X,Y,fine);
+    if(detail&&dist>walkR1+3){if(tc%4===0)SV.floor.beam(X,Y,"W",fine);if(tr%4===0)SV.floor.beam(X,Y,"N",fine)}}
+  ctx.strokeStyle="rgba(195,203,212,.45)";ctx.lineWidth=0.6;for(const r of [walkR0,walkR1]){const p=new Path2D();p.ellipse(s[0],s[1],V.kx*r,V.ky*r,0,0,TAU);ctx.stroke(p)}
+  {const per=new Set();for(const f of D.furniture)if(f.room==="H-CMD"&&(f.asset==="CON-030"||f.asset==="STO-001"||(/SRV-005|STO-005|STO-006/.test(f.asset)&&f.label.includes("perimeter"))))for(const t of f.tiles)per.add(t[0]+","+t[1]);
+    for(const [tc,tr,n] of D.tiles){if(n!=="H-CMD"||per.has(tc+","+tr))continue;let near=false;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(per.has((tc+dx)+","+(tr+dy)))near=true;if(!near)continue;
+      const q=rectPoly(tc*T,tr*T,tc*T+T,tr*T+T);ctx.fillStyle="#1f2023";ctx.fill(poly2(q,0.01));if(detail)for(let k=1.5;k<12;k+=2.4)line3([tc*T+0.5,tr*T+k,0.02],[tc*T+11.5,tr*T+k,0.02],"rgba(0,0,0,.4)",0.45);
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){if(per.has((tc+dx)+","+(tr+dy)))continue;const e=dx===1?[[tc*T+T,tr*T],[tc*T+T,tr*T+T]]:dx===-1?[[tc*T,tr*T],[tc*T,tr*T+T]]:dy===1?[[tc*T,tr*T+T],[tc*T+T,tr*T+T]]:[[tc*T,tr*T],[tc*T+T,tr*T]];line3([...e[0],0.03],[...e[1],0.03],"rgba(214,156,52,.55)",0.6,[2,1.4])}}}
+  // designed circulation: each door approach is a treadway runner (ribbed tread, lit hazard edges, inbound chevrons) to the ring
+  for(const d of ["DR-N-CMD","DR-S-CMD","DR-CMD-HAB"]){const fr2=D.doors.find(q=>q.id===d).frames[0];const mx=(fr2.p1[0]+fr2.p2[0])/2,my=(fr2.p1[1]+fr2.p2[1])/2;const L=Math.hypot(mx-c.x,my-c.y);const u=[(mx-c.x)/L,(my-c.y)/L],w=[-u[1],u[0]];
+    const a0=[c.x+u[0]*walkR1,c.y+u[1]*walkR1],a1=[mx-u[0]*3,my-u[1]*3];const q=[[a0[0]-w[0]*12,a0[1]-w[1]*12],[a1[0]-w[0]*12,a1[1]-w[1]*12],[a1[0]+w[0]*12,a1[1]+w[1]*12],[a0[0]+w[0]*12,a0[1]+w[1]*12]];
+    ctx.fillStyle="rgba(20,21,23,.55)";ctx.fill(poly2(q,0.015));const len=Math.hypot(a1[0]-a0[0],a1[1]-a0[1]);
+    if(detail)for(let k=3;k<len-2;k+=2.6)for(const o of [-8,-3,2,7]){const p0=[a0[0]-u[0]*k+w[0]*o,a0[1]-u[1]*k+w[1]*o];line3([p0[0],p0[1],0.02],[p0[0]+w[0]*3.2-u[0]*0.8,p0[1]+w[1]*3.2-u[1]*0.8,0.02],"rgba(150,140,120,.22)",0.55)}
+    for(const off of [-12,12])line3([a0[0]+w[0]*off,a0[1]+w[1]*off,0.03],[a1[0]+w[0]*off,a1[1]+w[1]*off,0.03],"rgba(214,156,52,.85)",0.9);
+    if(detail)for(let k=10;k<len-6;k+=16){const p0=[a0[0]-u[0]*k,a0[1]-u[1]*k];for(const sg of [-1,1])line3([p0[0]+w[0]*sg*5,p0[1]+w[1]*sg*5,0.03],[p0[0]+u[0]*3.5,p0[1]+u[1]*3.5,0.03],"rgba(214,156,52,.6)",0.8)}}
+  {const cond=D.furniture.find(f=>f.asset==="FLR-011");if(cond){const ks=new Set(cond.tiles.map(t=>t[0]+","+t[1]));for(const [tc,tr] of cond.tiles){const X=tc*T,Y=tr*T;SV.floor.conduit(X,Y,cond.tiles.some(t=>t[0]===tc&&Math.abs(t[1]-tr)===1),detail);
+      let nb=0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])if(ks.has((tc+dx)+","+(tr+dy)))nb++;if(nb<=1&&Math.hypot(X+6-c.x,Y+6-c.y)>walkR1)SV.floor.junction(X,Y)}}}
+  {const ap=D.furniture.find(f=>f.label.includes("console aprons"));if(ap)for(const [tc,tr] of ap.tiles)SV.floor.hazard(tc*T,tr*T,tc*T+0.5,tr*T+0.5,tc*T+11.5,tr*T+11.5)}
+  for(const f of D.furniture.filter(f=>f.room==="H-CMD"&&f.asset==="SRV-005"&&!f.label.includes("perimeter"))){const [tc,tr]=f.tiles[0];const X=tc*T,Y=tr*T;SV.floor.hazard(X,Y,X-1,Y-1,X+T+1,Y+T+1);ctx.fillStyle=CAL.plate;ctx.fill(poly2(rectPoly(X+1,Y+1,X+T-1,Y+T-1),0.03))}
+  for(const f of D.furniture.filter(f=>f.room==="H-CMD"&&f.asset==="FLR-010"))for(const [tc,tr] of f.tiles)SV.floor.vent(tc*T,tr*T);
+  // group zones: equipment that works together sits inside one hazard-bordered deck zone (the reference's deck-perimeter decal)
+  for(const z of calGroupZones()){const [x0,y0,x1,y1]=z,k=3;const q=[[x0+k,y0],[x1-k,y0],[x1,y0+k],[x1,y1-k],[x1-k,y1],[x0+k,y1],[x0,y1-k],[x0,y0+k]];
+    ctx.fillStyle="rgba(10,10,12,.16)";ctx.fill(poly2(q,0.012));ctx.save();ctx.lineWidth=1.3;ctx.strokeStyle="#1a1b1d";ctx.stroke(poly2(q,0.02));ctx.setLineDash([1.6,1.6]);ctx.strokeStyle="rgba(201,146,46,.85)";ctx.stroke(poly2(q,0.025));ctx.restore()}
+  const g=ctx.createRadialGradient(0,0,c.R*0.62,0,0,c.R);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.34)");ctx.save();ctx.translate(s[0],s[1]);ctx.scale(V.kx,V.ky);ctx.fillStyle=g;ctx.fillRect(-c.R,-c.R,2*c.R,2*c.R);ctx.restore();
+  ctx.restore();
+  // FLR-009 hazard ring and the raised FLR-002 dais (bevel edge, brass studs, command-red line)
+  ctx.save();const hz=new Path2D();hz.ellipse(s[0],s[1],V.kx*77,V.ky*77,0,0,TAU);hz.ellipse(s[0],s[1],V.kx*69,V.ky*69,0,0,TAU,true);ctx.clip(hz);ctx.fillStyle="#18191b";ctx.fill(hz);for(let k=-220;k<=220;k+=5)line3([c.x+k-95,c.y-95,0.02],[c.x+k+95,c.y+95,0.02],CAL.hazard,1.5);ctx.restore();
+  ell(c.x,c.y,77,0.03,null,CAL.out,0.5);ell(c.x,c.y,69,0.03,null,CAL.out,0.5);
+  prismX(circPoly(c.x,c.y,CAL_DAIS_R,48),0,CAL_DAIS_H,"#35363a","#202124",{shadow:false});
+  for(let k=0;k<16;k++){const a=k*TAU/16;line3([c.x+30*Math.cos(a),c.y+30*Math.sin(a),CAL_DAIS_H],[c.x+64*Math.cos(a),c.y+64*Math.sin(a),CAL_DAIS_H],"rgba(0,0,0,.4)",0.45);const p=V.P(c.x+65.5*Math.cos(a),c.y+65.5*Math.sin(a),CAL_DAIS_H);ctx.fillStyle=CAL.brass;ctx.fillRect(p[0]-0.45,p[1]-0.45,0.9,0.9)}
+  for(const r of [30,46])ell(c.x,c.y,r,CAL_DAIS_H,null,"rgba(0,0,0,.4)",0.45);ell(c.x,c.y,CAL_DAIS_R,CAL_DAIS_H,null,CAL.ti,1.2);ell(c.x,c.y,64.5,CAL_DAIS_H,null,CAL.red,0.55);
+  // central command area: four technical channels from the table base to the dais edge with flush service plates, and
+  // deck lights in the dais rim (structure and light only; the circulation ring stays clear)
+  for(let k=0;k<4;k++){const a=Math.PI/4+k*Math.PI/2;const u=[Math.cos(a),Math.sin(a)],w=[-u[1],u[0]];const h=CAL_DAIS_H+0.02;
+    const q=[[c.x+u[0]*36-w[0]*2.4,c.y+u[1]*36-w[1]*2.4],[c.x+u[0]*58-w[0]*2.4,c.y+u[1]*58-w[1]*2.4],[c.x+u[0]*58+w[0]*2.4,c.y+u[1]*58+w[1]*2.4],[c.x+u[0]*36+w[0]*2.4,c.y+u[1]*36+w[1]*2.4]];
+    ctx.fillStyle="#141517";ctx.fill(poly2(q,h));["#a8402e","#c99a2e","#3c6f9a"].forEach((cl,j)=>line3([c.x+u[0]*36+w[0]*(j-1)*1.3,c.y+u[1]*36+w[1]*(j-1)*1.3,h+0.01],[c.x+u[0]*58+w[0]*(j-1)*1.3,c.y+u[1]*58+w[1]*(j-1)*1.3,h+0.01],cl,0.7));
+    for(let r=40;r<58;r+=6)line3([c.x+u[0]*r-w[0]*2.7,c.y+u[1]*r-w[1]*2.7,h+0.02],[c.x+u[0]*r+w[0]*2.7,c.y+u[1]*r+w[1]*2.7,h+0.02],"#6a6d73",0.9);
+    const pc=[c.x+u[0]*61,c.y+u[1]*61];const pq=[[pc[0]-u[0]*3-w[0]*4.5,pc[1]-u[1]*3-w[1]*4.5],[pc[0]+u[0]*3-w[0]*4.5,pc[1]+u[1]*3-w[1]*4.5],[pc[0]+u[0]*3+w[0]*4.5,pc[1]+u[1]*3+w[1]*4.5],[pc[0]-u[0]*3+w[0]*4.5,pc[1]-u[1]*3+w[1]*4.5]];
+    ctx.fillStyle="#2a2b2f";ctx.fill(poly2(pq,h));ctx.strokeStyle="rgba(0,0,0,.6)";ctx.lineWidth=0.35;ctx.stroke(poly2(pq,h));for(const pp of pq){const s2=V.P(pp[0]*0.82+pc[0]*0.18,pp[1]*0.82+pc[1]*0.18,h);ctx.fillStyle="#8a7448";ctx.fillRect(s2[0]-0.3,s2[1]-0.3,0.6,0.6)}
+    const s3=V.P(pc[0],pc[1],h);ctx.fillStyle=CAL.amber;ctx.fillRect(s3[0]-0.8,s3[1]-0.25,1.6,0.5)}
+  for(let k=0;k<32;k++){const a=(k+0.5)*TAU/32;const p=V.P(c.x+66*Math.cos(a),c.y+66*Math.sin(a),CAL_DAIS_H+0.03);ctx.fillStyle=k%2?"rgba(120,230,250,.75)":"rgba(255,220,170,.8)";ctx.fillRect(p[0]-0.35,p[1]-0.2,0.7,0.4)}}
+// equipment groups for the deck zones: midground furniture (not the perimeter, not the dais) clustered by proximity
+let _calZones=null;
+function calGroupZones(){if(_calZones)return _calZones;const c=hubById["H-CMD"];const items=D.furniture.filter(f=>f.room==="H-CMD"&&f.kind!=="floor"&&!f.label.includes("perimeter")&&!/CON-030|STO-001|PLT-001/.test(f.asset)).map(f=>({f,b:fp(f)})).filter(o=>Math.hypot((o.b[0]+o.b[2])/2-c.x,(o.b[1]+o.b[3])/2-c.y)>80);
+  const par=items.map((_,i)=>i);const find=i=>par[i]===i?i:(par[i]=find(par[i]));
+  for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){const a=items[i].b,b=items[j].b;const gx=Math.max(0,a[0]-b[2],b[0]-a[2]),gy=Math.max(0,a[1]-b[3],b[1]-a[3]);if(Math.max(gx,gy)<=12)par[find(i)]=find(j)}
+  const groups={};items.forEach((o,i)=>{(groups[find(i)]=groups[find(i)]||[]).push(o)});
+  _calZones=Object.values(groups).filter(g=>g.filter(o=>o.f.kind==="block").length>=3).map(g=>{const b=[1e9,1e9,-1e9,-1e9];for(const o of g){b[0]=Math.min(b[0],o.b[0]);b[1]=Math.min(b[1],o.b[1]);b[2]=Math.max(b[2],o.b[2]);b[3]=Math.max(b[3],o.b[3])}return[b[0]-4,b[1]-4,b[2]+4,b[3]+4]});return _calZones}
+// ---- lighting: warm tungsten pools under the rim fixtures (reference bridge lamp tone), cyan spill from glass, amber at clusters
+function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";pool(c.x,c.y,95,LAMP,0.05);pool(c.x,c.y,40,CYAN,0.28);
+  // wall lamps: a warm pool under each fixture of the wall rhythm (same segment rule as calRimSegment)
+  {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-14)*Math.cos(a),c.y+(c.R-14)*Math.sin(a),30,LAMP,0.13)}}
+  // screen glow at lit role consoles, warm task pool at every operator position
+  for(const lab of ["CON-003 ops","CON-004 trader","CON-005 proposal","CON-022 budget"]){const f=D.furniture.find(q=>q.label===lab);const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,24,CYAN,0.18)}
+  for(const a of D.anchors.filter(q=>q.room==="H-CMD"&&/console_/.test(q.name)))pool(a.tile[0]*T+6,a.tile[1]*T+6,16,LAMP,0.12);
+  // amber equipment light: relay/rack indicators, equipment bays, service cabinets, bank pilaster lamp columns, secondary desks
+  for(const f of D.furniture.filter(q=>q.room==="H-CMD"&&/SRV-005|STO-005|STO-006/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,11,AMB,0.08)}
+  for(const f of D.furniture.filter(q=>q.room==="H-CMD"&&q.asset==="CON-030")){const fr=rimFrame(f);for(const sg of [-1,1])pool(fr.cx+fr.a[0]*sg*fr.L/2+fr.f[0]*6,fr.cy+fr.a[1]*sg*fr.L/2+fr.f[1]*6,8,AMB,0.07)}
+  for(const f of D.furniture.filter(q=>q.room==="H-CMD"&&q.asset==="CON-031")){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,13,LAMP,0.07)}
+  // V5.1: every equipment group zone gets one soft warm pool, so a group reads as one lit working area
+  for(const z of calGroupZones())pool((z[0]+z[2])/2,(z[1]+z[3])/2,Math.max(z[2]-z[0],z[3]-z[1])*0.6,LAMP,0.06)}
+// ---- rim WAL-011 / DEC-008 / LGT-010, composed from SV.wall: a rib every fourth segment, and between ribs a BAY of three faces
+// read as one group (flanking panels around one feature), cycling through SV.wall.BAYS; cable trays on alternate segments,
+// a lamp fixture over the centre of every other bay (calRimLamp: shared with the light pass)
+const calRimLamp=i=>i%4===2&&Math.floor(i/4)%2===0;
+function calRimSegment(pts,h,i,hb){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*k,p[1]+(q[1]-p[1])*k];const P4=[pts[0],pts[1],ext(pts[1],pts[2],7/3),ext(pts[0],pts[3],7/3)];
+  const rib=i%4===0;const H=rib&&h>6?h+1.5:h;prismX(P4,0,H,null,rib?"#2a2c30":(i%2?CAL.gun:"#404349"),{seam:"rgba(0,0,0,.4)",lw:0.4,shadow:false,hi:false,mat:h>=10});
+  ctx.fillStyle=h>=10?CAL.crown:"#5e5c55";ctx.fill(poly2(P4,H));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(P4,H));
+  const q0=pts[0],q1=pts[1];line3([q0[0],q0[1],H],[q1[0],q1[1],H],"rgba(255,245,225,.55)",0.5);
+  if(h<10)return;const c=hubById[hb.id];const m=[(q0[0]+q1[0])/2,(q0[1]+q1[1])/2];const n=[c.x-m[0],c.y-m[1]];const nl=Math.hypot(...n);
+  const kind=rib?"rib":SV.wall.BAYS[Math.floor(i/4)%SV.wall.BAYS.length][(i%4)-1];
+  onFace(q0,q1,[n[0]/nl,n[1]/nl],0,H,(W,HH)=>{SV.wall.face(kind,W,HH,i);if(!rib&&i%2===0)SV.wall.tray(W,HH);if(calRimLamp(i))SV.small.lamp(W/2-2.2,2.4,4.4)});
+  // HIGH layer: wall-hung upper modules over the flanking faces of two bays in three
+  if(!rib&&h>=20&&i%4!==2&&Math.floor(i/4)%3!==1){const L=Math.hypot(q1[0]-q0[0],q1[1]-q0[1]);const u=[(q1[0]-q0[0])/L,(q1[1]-q0[1])/L],nn=[n[0]/nl,n[1]/nl];
+    const fr={cx:m[0]+nn[0]*2.2,cy:m[1]+nn[1]*2.2,a:u,f:nn,L:L*0.82,D:3.4};SV.wall.upper(fr,["cabinet","monitor","cable"][(i+Math.floor(i/4))%3],20.5,26,i)}}
+// ---- compact crew (reference construction: large head ~40 % of height, strong outline) in Stellar uniforms, integrated seating
+function drawAgentCal(a,x,y){
+  const hsh=hash(a.chr);const skin=SKIN[hsh%SKIN.length],hair=HAIR[(hsh>>3)%HAIR.length],style=(hsh>>9)%4;
+  const seated=seatTiles.has(a.tile[0]+","+a.tile[1]);const atDesk=seated&&/console/.test(a.anchor);let ox=0,oy=0;
+  if(seated){const L=Math.hypot(a.face[0],a.face[1])||1;const pull=atDesk?2.6:1.2;ox=a.face[0]/L*pull;oy=a.face[1]/L*pull}
+  const X=x+ox,Y=y+oy;const h0=calBaseH(x,y);const s=V.P(X,Y,h0);const fw=V.P(X+a.face[0],Y+a.face[1],0),f0=V.P(X,Y,0);let tx=fw[0]-f0[0];tx/=Math.hypot(tx,fw[1]-f0[1])||1;
+  const away=(V.cam[0]*a.face[0]+V.cam[1]*a.face[1])<-0.05;const active=opt.preview&&!a.noProducer;const dc=DEPT[a.dept];const O=CAL.out,OW=0.8;
+  ctx.save();if(a.noProducer)ctx.filter="saturate(0.35) brightness(0.85)";if(!seated)ell(X,Y,4.2,h0,"rgba(0,0,0,.45)");if(active)ell(X,Y,5.8,h0+0.1,null,"rgba(79,209,227,.85)",0.6);
+  ctx.translate(s[0],s[1]);ctx.lineJoin="round";ctx.strokeStyle=O;ctx.lineWidth=OW;
+  const seatH=a.anchor==="command.chair"?5.4:4.7;const hip=seated?-seatH:-5.2,sh=hip-5.4,W=2.9;
+  const path=(pts)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke()};
+  ctx.fillStyle="#24272d";
+  if(seated){const k=tx*2.4;path([[-W*0.72,hip],[W*0.72,hip],[W*0.72+k,hip+1.5],[-W*0.72+k,hip+1.5]]);path([[-W*0.66+k,hip+1.3],[-W*0.1+k,hip+1.3],[-W*0.1+k,-0.6],[-W*0.66+k,-0.6]]);path([[W*0.1+k,hip+1.3],[W*0.66+k,hip+1.3],[W*0.66+k,-0.6],[W*0.1+k,-0.6]])}
+  else{path([[-W*0.74,hip],[-W*0.06,hip],[-W*0.1,-0.8],[-W*0.74,-0.8]]);path([[W*0.06,hip],[W*0.74,hip],[W*0.74,-0.8],[W*0.1,-0.8]])}
+  ctx.fillStyle="#0f1013";ctx.fillRect(-W*0.8+tx*0.5,-1.2,W*0.76,1.2);ctx.fillRect(W*0.04+tx*0.5,-1.2,W*0.76,1.2);
+  ctx.fillStyle="#2e3239";path([[-W*0.95,hip],[W*0.95,hip],[W*1.05,sh+1],[W*0.8,sh],[-W*0.8,sh],[-W*1.05,sh+1]]);
+  ctx.fillStyle=dc;ctx.beginPath();ctx.moveTo(-W*1.05,sh+1.7);ctx.lineTo(W*1.05,sh+1.7);ctx.lineTo(W*1.05,sh+1);ctx.lineTo(W*0.8,sh);ctx.lineTo(-W*0.8,sh);ctx.lineTo(-W*1.05,sh+1);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="#16181c";ctx.fillRect(-W*0.95,hip-0.8,1.9*W,0.8);ctx.fillStyle=CAL.ti;ctx.fillRect(-0.45+tx*0.5,hip-0.85,0.9,0.85);
+  for(const sx of [-1,1]){ctx.save();ctx.translate(sx*(W+0.4),sh+0.8);ctx.rotate(atDesk||active?-sx*0.65+tx*0.35:sx*0.07);ctx.fillStyle="#2e3239";path([[-0.85,0],[0.85,0],[0.7,4.6],[-0.7,4.6]]);ctx.fillStyle=dc;ctx.fillRect(-0.7,3.7,1.4,0.9);ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,5.2,0.75,0,TAU);ctx.fill();ctx.lineWidth=0.45;ctx.stroke();ctx.lineWidth=OW;ctx.restore()}
+  if(!away){icon(a.dept,-W*0.4+tx*0.4,sh+2.9,0.85,dc);ctx.strokeStyle=O;ctx.lineWidth=0.3;ctx.stroke();ctx.lineWidth=OW}
+  const hr=3.75,hy=sh-hr+0.4;ctx.fillStyle=skin;ctx.beginPath();ctx.arc(0,hy,hr,0,TAU);ctx.fill();
+  ctx.fillStyle="rgba(0,0,0,.12)";ctx.beginPath();ctx.arc(hr*0.25,hy+hr*0.2,hr*0.85,0,TAU);ctx.fill();
+  ctx.fillStyle=hair;ctx.beginPath();
+  if(away){ctx.arc(0,hy,hr-0.05,0,TAU);ctx.fill();if(style===1)ctx.fillRect(-hr+0.3,hy,2*hr-0.6,hr*0.9);if(style===2){ctx.beginPath();ctx.arc(0,hy-hr*0.1,1.3,0,TAU);ctx.fill()}}
+  else{ctx.arc(-tx*0.6,hy-0.55,hr-0.02,Math.PI*1.03,Math.PI*1.97);ctx.lineTo(hr*0.92-tx*0.6,hy-1.05);ctx.closePath();ctx.fill();
+    if(style===1){ctx.fillRect(-hr,hy-0.9,1.15,3.8);ctx.fillRect(hr-1.15,hy-0.9,1.15,3.8)}if(style===2){ctx.beginPath();ctx.arc(-tx*1.9,hy-hr+0.1,1.25,0,TAU);ctx.fill()}
+    ctx.fillStyle="#111113";ctx.fillRect(-1.45+tx*1.3,hy+0.3,0.65,0.9);ctx.fillRect(0.8+tx*1.3,hy+0.3,0.65,0.9)}
+  ctx.beginPath();ctx.arc(0,hy,hr,0,TAU);ctx.stroke();
+  if(atDesk&&!a.noProducer){ctx.strokeStyle="rgba(110,225,245,.38)";ctx.lineWidth=0.45;ctx.beginPath();ctx.arc(0,hy,hr-0.25,Math.PI*1.15,Math.PI*1.85);ctx.stroke()} // screen-light rim
+  ctx.restore();
+  if(seated&&away&&calChairBack[a.tile[0]+","+a.tile[1]])calChairBack[a.tile[0]+","+a.tile[1]]()}
 // ---------------------------------------------------------------- agents (simple forms; department colour + shape icon)
 const SKIN=["#f1d2b6","#e2b691","#c68e64","#a26a45","#7b4c2f","#5a3622"],HAIR=["#2a1d16","#5b3b23","#a87c4f","#d9c08a","#8a8f96","#1d1d22","#7a2f1f"];
 function icon(shape,x,y,r,fill){ctx.fillStyle=fill;ctx.beginPath();
@@ -351,6 +560,7 @@ function icon(shape,x,y,r,fill){ctx.fillStyle=fill;ctx.beginPath();
   else if(shape==="SCI")ctx.arc(x,y,r,0,TAU);else if(shape==="OPS")ctx.rect(x-r*0.85,y-r*0.85,r*1.7,r*1.7);else{ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y)}
   ctx.closePath();ctx.fill()}
 function drawAgent(a,x,y){
+  if(CAL_ROOMS.has(a.room))return drawAgentCal(a,x,y);
   const s=V.P(x,y,0);const hsh=hash(a.chr);const skin=SKIN[hsh%SKIN.length],hair=HAIR[(hsh>>3)%HAIR.length],build=0.9+((hsh>>6)%5)*0.05,style=(hsh>>9)%3;
   const fx=a.face[0],fy=a.face[1];const away=(V.cam[0]*fx+V.cam[1]*fy)<-0.05;const seated=seatTiles.has(a.tile[0]+","+a.tile[1]);
   const active=opt.preview&&!a.noProducer;const dc=DEPT[a.dept];
@@ -390,8 +600,8 @@ function displayItem(d){
   else if(kind==="rim"){const hb=hubById[p[1]];const R=hb.R-1.2,ang=p[2]*Math.PI/6,half=p[3]/2/R;
     const a=clockPt(hb.x,hb.y,R,p[2]-half*6/Math.PI),b=clockPt(hb.x,hb.y,R,p[2]+half*6/Math.PI);const nin=[-Math.sin(ang),Math.cos(ang)];
     it=wallPanel(d,a,b,nin,p[4],p[5])}
-  else if(kind==="console"){const f=D.furniture.find(q=>q.label===p[1]);if(!f)return null;const b=fp(f);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;
-    const hw={"SCR-005":[18,4.5],"SCR-006":[11,7]}[d.hw]||[16,9];it=billboard(d,cx,cy,(d.hw==="SCR-006"?(f.asset==="EQP-001"?31:17):12),hw[0],hw[1])}
+  else if(kind==="console"){const f=D.furniture.find(q=>q.label===p[1]);if(!f)return null;if(CAL_ROOMS.has(f.room)&&/^CON-0(03|04|05|22)$/.test(f.asset))it=calConsoleDisplayItem(d,f);else{const b=fp(f);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;
+    const hw={"SCR-005":[18,4.5],"SCR-006":[11,7]}[d.hw]||[16,9];it=billboard(d,cx,cy,(d.hw==="SCR-006"?(f.asset==="EQP-001"?31:17):12),hw[0],hw[1])}}
   else if(kind==="surface"){const [lab,room]=p[1].split("@");const f=D.furniture.find(q=>q.label===lab&&(!room||q.room===room));if(!f)return null;const b=inset(fp(f),3);
     const hh=f.asset==="TBL-007"?4.2:7.2;it={b:[b[0],b[1],b[2],b[3]],h:hh,bias:0.2,draw(){surfacePanel(d,b,hh)}}}
   else if(kind==="door"){const dr=D.doors.find(q=>q.id===p[1]);const f=dr.frames[dr.frames.length-1];const x=Math.max(f.p1[0],f.p2[0])+8,y=f.p1[1]-4;it=billboard(d,x,y,12,13,8)}
@@ -469,7 +679,7 @@ function drawGround(){
   ctx.strokeStyle="rgba(10,12,16,.55)";ctx.lineWidth=0.45;ctx.stroke(G.grate);
   ctx.save();ctx.clip(G.hubs["H-HAB"]);ctx.strokeStyle="rgba(70,45,25,.35)";ctx.lineWidth=0.35;ctx.stroke(G.planks);ctx.restore();
   // hub floor features
-  const c=hubById["H-CMD"];ell(c.x,c.y,96,0,null,"rgba(185,194,204,.45)",0.6);ell(c.x,c.y,67,0,COL.navyLight,COL.ti,1.6);ell(c.x,c.y,64.5,0,null,ACC.CMD,0.6); // walkway inlay, FLR-002 dais, command-red line
+  drawHCMDCalFloor(G); // H-CMD calibration V1: deck, walkway tread ring, FLR-009 hazard border, raised FLR-002 dais, FLR-010 vents
   const l=hubById["H-LAB"];const dome=D.furniture.find(f=>f.asset==="EQP-005");const db=fp(dome);const dx=(db[0]+db[2])/2,dy=(db[1]+db[3])/2;ell(dx,dy,30,0,COL.navyLight);ell(dx,dy,44,0,null,"rgba(185,194,204,.45)",0.6);
   const rug=D.furniture.find(f=>f.asset==="LEI-004");if(rug){const b=fp(rug);ctx.fillStyle="#8d8378";ctx.fill(poly2(rectPoly(...inset(b,1)),0.05));ctx.strokeStyle="#a69b8e";ctx.lineWidth=0.6;ctx.stroke(poly2(rectPoly(...inset(b,2)),0.05))}
   // room inlays (titanium, walk-over)
@@ -493,7 +703,7 @@ function drawLights(){
   ctx.save();ctx.globalCompositeOperation="lighter";
   const pool=(x,y,r,col,a)=>{const s=V.P(x,y);ctx.save();ctx.translate(s[0],s[1]);ctx.scale(V.kx,V.ky);const g=ctx.createRadialGradient(0,0,0,0,0,r);g.addColorStop(0,col.replace("A",a));g.addColorStop(1,col.replace("A",0));ctx.fillStyle=g;ctx.fillRect(-r,-r,2*r,2*r);ctx.restore()};
   const WHITE="rgba(235,242,255,A)",CYAN="rgba(110,215,240,A)",WARM="rgba(255,205,150,A)",COLD="rgba(190,215,255,A)";
-  const c=hubById["H-CMD"];pool(c.x,c.y,140,WHITE,0.13);
+  lightsHCMDCal(pool,WHITE,CYAN);
   const dome=fp(D.furniture.find(f=>f.asset==="EQP-005"));pool((dome[0]+dome[2])/2,(dome[1]+dome[3])/2,80,CYAN,0.16);const l=hubById["H-LAB"];pool(l.x,l.y,170,COLD,0.05);
   const hb=hubById["H-HAB"];pool(hb.x,hb.y,60,WARM,0.16);pool(hb.x,hb.y,175,WARM,0.05);
   for(const f of D.furniture){if(f.asset==="TBL-003"||f.asset==="LEI-001"){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,f.asset==="LEI-001"?32:16,WARM,0.2)}}
@@ -515,6 +725,7 @@ function draw(){
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#05070d");g.addColorStop(1,"#0a1222");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   for(const [sx,sy,s] of stars){const x=((sx*W*1.3-cam.cx*cam.z*0.04)%(W*1.3)+W*1.3)%(W*1.3)-W*0.15,y=((sy*H*1.3-cam.cy*cam.z*0.04)%(H*1.3)+H*1.3)%(H*1.3)-H*0.15;ctx.fillStyle=`rgba(200,215,255,${0.15*s})`;ctx.fillRect(x,y,s*0.7,s*0.7)}
   const z=cam.z;ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR);
+  if(VOCAB_MODE){drawVocabCatalogue();ctx.setTransform(DPR,0,0,DPR,0,0);return}
   drawGround();drawLights();
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;hits=[];badges=[];
   for(const it of scene.items){const b=it.sb;if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1)continue;it.draw();if(it.hit)hits.push([b,it.hit,it]);if(it.kind==="agent")badges.push(it)}
@@ -567,7 +778,7 @@ function buildMini(){miniBase=document.createElement("canvas");miniBase.width=44
 function drawMini(){if(!miniBase)buildMini();mx.clearRect(0,0,440,230);mx.drawImage(miniBase,0,0);
   const corners=[[0,0],[W,0],[W,H],[0,H]].map(([sx,sy])=>{const px=(sx-W/2)/cam.z+cam.cx,py=(sy-H/2)/cam.z+cam.cy;return V.inv(px,py)});
   mx.strokeStyle="#4fd1e3";mx.lineWidth=2;mx.beginPath();corners.forEach((c,i)=>{const p=m2(c[0],c[1]);i?mx.lineTo(p[0],p[1]):mx.moveTo(p[0],p[1])});mx.closePath();mx.stroke();
-  mx.fillStyle="rgba(79,209,227,.08)";mx.fill();$("#mz").textContent=`${cam.z.toFixed(2)}× · ${{iso:"iso · left",isoR:"iso · right",plan:"plan"}[V.id]}`}
+  mx.fillStyle="rgba(79,209,227,.08)";mx.fill();$("#mz").textContent=`${cam.z.toFixed(2)}× · ${{iso:"iso · left",isoR:"iso · right",obl:"oblique",plan:"plan"}[V.id]}`}
 mc.addEventListener("click",e=>{const r=mc.getBoundingClientRect();const x=(e.clientX-r.left)*(440/r.width)/ms+MB.x0,y=(e.clientY-r.top)*(230/r.height)/ms+MB.y0;flyTo(x,y,cam.z,520,false)});
 // ---------------------------------------------------------------- camera control
 let anim=null;
@@ -584,7 +795,7 @@ function focusRoom(id){selectedRoom=id;document.querySelectorAll("#rooms button"
   if(!D.bbox[id])return;
   const [c0,r0,c1,r1]=D.bbox[id];const x0=c0*T,y0=r0*T,x1=(c1+1)*T,y1=(r1+1)*T;flyTo((x0+x1)/2,(y0+y1)/2,id.startsWith("COR")?Math.max(1.2,fitBox(x0,y0,x1,y1)):fitBox(x0-24,y0-24,x1+24,y1+24))}
 function updateZoomUI(){$("#zoomv").textContent=`${cam.z.toFixed(2)}× · tile ${(T*cam.z).toFixed(0)}px`;document.querySelectorAll("[data-z]").forEach(b=>b.classList.toggle("on",Math.abs(+b.dataset.z-cam.z)<0.01))}
-function viewButtons(){for(const k of ["iso","isoR","plan"])$("#v-"+k).classList.toggle("on",V.id===k)}
+function viewButtons(){for(const k of ["iso","isoR","obl","plan"])$("#v-"+k).classList.toggle("on",V.id===k)}
 function setView(id){const c=V.inv(cam.cx,cam.cy);V=VIEWS[id];viewButtons();buildScene();const p=V.P(c[0],c[1]);cam.cx=p[0];cam.cy=p[1];dirty=true}
 // ---------------------------------------------------------------- input
 let drag=null;const pts=new Map();
@@ -618,7 +829,7 @@ addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;const k=e.ke
 function toggle(k,sel){opt[k]=!opt[k];$(sel).classList.toggle("on",opt[k]);if(k==="preview")$("#preview").style.display=opt.preview?"block":"none";dirty=true}
 $("#zin").onclick=()=>setZoom(cam.z*1.25);$("#zout").onclick=()=>setZoom(cam.z/1.25);
 document.querySelectorAll("[data-z]").forEach(b=>b.onclick=()=>{anim=null;setZoom(+b.dataset.z)});
-$("#v-iso").onclick=()=>setView("iso");$("#v-isoR").onclick=()=>setView("isoR");$("#v-plan").onclick=()=>setView("plan");
+$("#v-iso").onclick=()=>setView("iso");$("#v-obl").onclick=()=>setView("obl");$("#v-isoR").onclick=()=>setView("isoR");$("#v-plan").onclick=()=>setView("plan");
 $("#t-labels").onclick=()=>toggle("labels","#t-labels");$("#t-grid").onclick=()=>toggle("grid","#t-grid");$("#t-anchors").onclick=()=>toggle("anchors","#t-anchors");
 $("#t-preview").onclick=()=>toggle("preview","#t-preview");$("#preview").onclick=()=>toggle("preview","#t-preview");
 $("#t-legend").onclick=e=>{const l=$("#legend");const on=l.style.display!=="block";l.style.display=on?"block":"none";e.target.classList.toggle("on",on)};
@@ -636,6 +847,8 @@ for(const k of ["grid","anchors","preview"])if(q.get(k)==="1")toggle(k,"#t-"+k);
 buildScene();
 {const p=V.P(+(q.get("x")||700),+(q.get("y")||600));cam.cx=p[0];cam.cy=p[1];cam.z=+(q.get("z")||2)}
 if(q.get("focus")){const f=q.get("focus");focusRoom(f);if(anim){anim(performance.now()+1e6)}if(q.get("z"))setZoom(+q.get("z"))}
+function vocabMode(on){VOCAB_MODE=on;document.querySelector("#t-vocab").classList.toggle("on",on);if(on){const p=V.P(+(q.get("x")||0),+(q.get("y")||-40));cam.cx=p[0];cam.cy=p[1];cam.z=+(q.get("z")||3.2)}dirty=true}
+document.querySelector("#t-vocab").onclick=()=>vocabMode(!VOCAB_MODE);if(q.get("vocab")==="1")vocabMode(true);
 updateZoomUI();
 let lastSec=-1;
 function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec!==lastSec){lastSec=sec;dirty=true}if(dirty)draw();requestAnimationFrame(loop)}
