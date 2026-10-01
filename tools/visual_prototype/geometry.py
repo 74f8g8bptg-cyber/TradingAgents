@@ -1138,6 +1138,77 @@ def build_geometry():
         if t in hab and t not in hab_used and t not in hab_keep:
             F("H-HAB", asset, [t], f"{asset} H-HAB accent {len(furn)}")
             hab_used.add(t)
+    # ---- H-HAB enrichment (docs/STELLAR_HHAB_PARK_V1.md): a small indoor park around the central tree (habitat.plants), with
+    # a central fountain, park trees, planted beds and benches; a resident-dog corner beside it. Same keep rules as the rest of
+    # H-HAB (anchors and neighbours, R-door approaches, billiards clearance, door lanes) and every walkable tile stays reachable
+    park_used = {t for f in furn for t in f["tiles"]}
+
+    def hab_reach(extra):
+        blk = {t for f in furn if f["kind"] == "block" for t in f["tiles"]} | set(extra)
+        open_ = [t for t in hab if t not in blk]
+        seen, todo = {open_[0]}, [open_[0]]
+        while todo:
+            c0, r0 = todo.pop()
+            for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                u = (c0 + dc, r0 + dr)
+                if u in hab and u not in blk and u not in seen:
+                    seen.add(u)
+                    todo.append(u)
+        return len(seen) == len(open_)
+
+    def park_place(asset, offs, label, kind="block", tall=False):
+        tiles = [(hc + dc, hr + dr) for dc, dr in offs]
+        if any(t not in hab or t in park_used or t in hab_keep for t in tiles):
+            return False
+        if any(
+            math.hypot(cen(t[0]) - rx, cen(t[1]) - ry) <= 30 + T
+            for t in tiles
+            for rx, ry in R_DOORS.values()
+        ):
+            return False
+        if kind == "block" and not hab_reach(tiles):
+            return False
+        F("H-HAB", asset, tiles, label, kind=kind, tall=tall)
+        park_used.update(tiles)
+        return True
+
+    park_place(
+        "LEI-007", [(dc, dr) for dc in (4, 5, 6) for dr in (-1, 0, 1)], "LEI-007 park fountain"
+    )
+    for i, offs in enumerate(([(4, -3), (5, -3)], [(4, 3), (5, 3)]), 1):
+        park_place("SEA-009", offs, f"SEA-009 park bench {i}", kind="seat")
+    for i, o in enumerate(((-4, -3), (-4, 3), (7, -3), (7, 3), (9, 0)), 1):
+        park_place("PLT-007", [o], f"PLT-007 park tree {i}", tall=True)
+    for i, offs in enumerate(
+        (
+            [(-3, -3), (-2, -3)],
+            [(-3, 3), (-2, 3)],
+            [(1, -3), (2, -3)],
+            [(1, 3), (2, 3)],
+            [(8, -2), (8, -1)],
+            [(8, 1), (8, 2)],
+        ),
+        1,
+    ):
+        park_place("PLT-006", offs, f"PLT-006 garden bed {i}")
+    ground = [
+        (dc, dr)
+        for dc in range(-6, 11)
+        for dr in range(-4, 5)
+        if ((dc - 2) / 8.6) ** 2 + (dr / 4.6) ** 2 <= 1
+    ]
+    park_ground = [
+        (hc + dc, hr + dr)
+        for dc, dr in ground
+        if (hc + dc, hr + dr) in hab and (hc + dc, hr + dr) not in hab_keep
+    ]
+    F("H-HAB", "FLR-012", park_ground, "FLR-012 park ground and paths", kind="floor")
+    for offs in ([(6, 5), (7, 5)], [(5, 5), (6, 5)], [(9, 4), (10, 4)]):
+        if park_place("LEI-008", offs, "LEI-008 dog corner"):
+            break
+    for o in ((7, 4), (6, 4), (8, 4), (5, 4)):
+        if park_place("DEC-009", [o], "DEC-009 resident station dog"):
+            break
     # ---------------- checks ----------------
     blocked = {}
     for f in furn:

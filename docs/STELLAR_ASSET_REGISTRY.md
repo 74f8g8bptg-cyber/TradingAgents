@@ -71,17 +71,17 @@
 | `TBL` | Tables | 8 | 0 | 8 (2 FUTURE) |
 | `SEA` | Seating | 9 | 0 | 9 |
 | `LGT` | Lighting | 10 | 1 | 9 |
-| `DEC` | Decoration | 8 | 0 | 8 |
+| `DEC` | Decoration | 9 | 0 | 9 |
 | `SRV` | Servers and conduits | 5 | 0 | 5 |
 | `WAL` | Walls and structure | 11 | 1 | 10 |
-| `FLR` | Floors | 11 | 1 | 10 |
+| `FLR` | Floors | 12 | 1 | 11 |
 | `STO` | Storage | 7 | 0 | 7 |
-| `PLT` | Plants | 5 | 0 | 5 |
+| `PLT` | Plants | 7 | 0 | 7 |
 | `SGN` | Signage | 8 | 2 | 6 |
-| `LEI` | Leisure furniture | 6 | 0 | 6 |
+| `LEI` | Leisure furniture | 8 | 0 | 8 |
 | `EQP` | Hero equipment | 7 | 0 | 7 |
 | `PRP` | Hand-held and moving props | 8 | 0 | 8 |
-| **Total** | **19 prefixes (18 in use)** | **216** | **26** | **190** |
+| **Total** | **19 prefixes (18 in use)** | **222** | **26** | **196** |
 
 ---
 
@@ -199,7 +199,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SEA-006` | Lounge sofa | `H-HAB` | seat | Y | yes |
 | `SEA-007` | Café chair | `H-HAB` | seat | Y | yes |
 | `SEA-008` | Bar stool | `H-HAB` | seat | Y | yes |
-| `SEA-009` | Window bench | `H-HAB` outer rim (was the Observation Deck bench) | seat | Y | yes |
+| `SEA-009` | Window bench | `H-HAB` outer rim (was the Observation Deck bench); park benches facing the fountain (H-HAB park V1) | seat | Y | yes |
 
 ### `LGT` — Lighting
 
@@ -228,6 +228,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `DEC-006` | Department emblem plaque (shape icons only) | room doors | Y | kept |
 | `DEC-007` | Holo globe (**decorative only**: no real data, no fake system status, no charts or metrics) | `H-CMD`, `H-LAB` centres | opt | **new** |
 | `DEC-008` | Wall equipment panel (vents, cable trays, junction boxes; **no data**) | `H-CMD` rim segments (calibration V1); `H-LAB` rim (H-LAB calibration V1) | Y | **new** |
+| `DEC-009` | Resident station dog (world-building only: a visual resident of the habitat; **no AI, no behaviour, carries no data**) | `H-HAB` dog corner (H-HAB park V1) | Y | **new** |
 
 ### `SRV` — Servers and conduits
 
@@ -270,6 +271,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `FLR-009` | Hazard-stripe border marking (amber / charcoal) | `H-CMD` dais edge (calibration V1) | walk-over | Y | **new** |
 | `FLR-010` | Floor vent grille (decal) | `H-CMD` walkway (calibration V1); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
 | `FLR-011` | Cable conduit (floor channel, decal) | `H-CMD` back bank to the dais (calibration V2); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
+| `FLR-012` | Park ground and garden paths (decal) | `H-HAB` park (H-HAB park V1) | walk-over | Y | **new** |
 
 ### `STO` — Storage (kept)
 
@@ -292,6 +294,8 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `PLT-003` | Desk plant | on desks | none | opt | kept |
 | `PLT-004` | Living wall panel | `H-HAB` | wall | Y | kept |
 | `PLT-005` | Central planter / tree (hero) | `H-HAB` centre (`habitat.plants`) | blocks | Y | **new** |
+| `PLT-006` | Garden bed (low planted bed, stone edge) | `H-HAB` park | blocks | Y | **new** |
+| `PLT-007` | Park tree (planted tree in a stone ring) | `H-HAB` park | blocks | Y | **new** |
 
 ### `SGN` — Signage (static; never a data display)
 
@@ -316,6 +320,8 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `LEI-004` | Lounge rug | walk-over | Y |
 | `LEI-005` | Cosmetic rest pod (no countdown, no vitals) | seat | Y |
 | `LEI-006` | Bookshelf nook | blocks | opt |
+| `LEI-007` | Park fountain (hero: stone basin, central column, water; **decorative, no data**) | blocks | Y |
+| `LEI-008` | Dog corner (dog bed, food and water bowls, toy basket, small storage) | blocks | Y |
 
 ### `EQP` — Hero equipment
 

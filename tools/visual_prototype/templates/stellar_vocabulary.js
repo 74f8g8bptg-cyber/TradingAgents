@@ -639,6 +639,47 @@ SV.wall.viewport=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle="#1d1f23";ctx.fill
   ctx.fillStyle="rgba(120,180,230,.22)";ctx.beginPath();ctx.ellipse(W*0.7,H-3.2,W*0.5,(H-6)*0.35,0,Math.PI,TAU);ctx.fill();ctx.fillStyle="#2e3137";ctx.fillRect(W/2-0.4,2.8,0.8,H-6.6);ctx.fillStyle="rgba(255,255,255,.08)";ctx.fillRect(1.6,3,W*0.25,H-7);dRivets(0.6,2,W-1.2,H-5)};
 SV.wall.living=(W,H,seed)=>{SV.wall.band(W,H);ctx.fillStyle="#1d1f23";ctx.fillRect(0.8,2.2,W-1.6,H-5.4);ctx.fillStyle="#2a2018";ctx.fillRect(1.4,2.8,W-2.8,H-6.6);const C=[CAL.leafLo,CAL.leaf,CAL.leafHi,"#4a9156"];
   for(let k=0;k<26;k++){const x=1.6+((seed*13+k*41)%100)/100*(W-3.2),y=3+((seed*7+k*61)%100)/100*(H-7.4);ctx.fillStyle=C[k%4];ctx.beginPath();ctx.ellipse(x,y,1.3,0.9,(k%5)*0.6,0,TAU);ctx.fill()}ctx.fillStyle=CAL.brass;ctx.fillRect(0.8,H-3.6,W-1.6,0.35)};
+// ---- HABITAT PARK: fountain, park tree, garden bed, dog corner, resident dog (the same construction language, organic materials)
+// fountain (hero): a stone-capped octagonal basin with a bolted metal skirt and recessed lights, water with a lit surface and ripple
+// rings, a two-tier central column (lower bowl, upper bowl, finial) with falling water arcs. Decorative; no data
+SV.hab.fountain=(cx,cy,R,t)=>{const oct=(r)=>{const p=[];for(let k=0;k<8;k++){const a=k*TAU/8+Math.PI/8;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return p};const ph=((t||0)/900)%1;
+  prismX(oct(R+1.4),0,0.8,"#2a2c31","#1d1f23",{lw:0.4});prismX(oct(R+0.6),0.8,3.6,"#3d4046","#2f3237");for(let k=0;k<8;k++){const a=k*TAU/8+Math.PI/8+TAU/16;const p=V.P(cx+(R+0.62)*Math.cos(a),cy+(R+0.62)*Math.sin(a),2.2);ctx.fillStyle="rgba(150,230,240,.8)";ctx.fillRect(p[0]-0.4,p[1]-0.25,0.8,0.5)}
+  prismX(oct(R+0.9),3.6,4.6,"#cfc7b8","#a89f8f",{mat:false});ctx.fillStyle="#0e3a44";ctx.fill(poly2(oct(R-0.6),3.9));
+  ctx.save();ctx.clip(poly2(oct(R-0.6),3.95));const s=V.P(cx,cy,3.95);const g=ctx.createRadialGradient(s[0],s[1],0,s[0],s[1],V.kx*R);g.addColorStop(0,"rgba(120,225,235,.55)");g.addColorStop(1,"rgba(30,110,125,.35)");ctx.fillStyle=g;ctx.fillRect(s[0]-R*1.5,s[1]-R*1.5,R*3,R*3);
+  for(let k=0;k<3;k++){const rr=(k/3+ph)%1*(R-1);ell(cx,cy,rr,3.96,null,`rgba(220,250,255,${0.55*(1-rr/R)})`,0.35)}ctx.restore();ctx.strokeStyle="rgba(230,250,255,.6)";ctx.lineWidth=0.35;ctx.stroke(poly2(oct(R-0.6),3.97));
+  cyl(cx,cy,1.6,3.9,6.6,"#cfc7b8","#a89f8f",{n:12});cyl(cx,cy,R*0.42,6.6,7.4,"#cfc7b8","#a89f8f",{n:16});ell(cx,cy,R*0.38,7.42,"rgba(120,220,232,.7)");cyl(cx,cy,0.8,7.4,10.4,"#b8904e","#8a6a36",{n:10});cyl(cx,cy,1.6,10.4,10.9,"#cfc7b8","#a89f8f",{n:12});cyl(cx,cy,0.5,10.9,12.4,null,"#e1bb72",{n:8});
+  ctx.strokeStyle="rgba(210,245,250,.7)";ctx.lineWidth=0.35;for(let k=0;k<8;k++){const a=k*TAU/8;const p0=V.P(cx,cy,12.2),p1=V.P(cx+R*0.42*Math.cos(a),cy+R*0.42*Math.sin(a),7.6);ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.quadraticCurveTo((p0[0]+p1[0])/2,p0[1]-1.2,p1[0],p1[1]);ctx.stroke();
+    const q1=V.P(cx+R*0.6*Math.cos(a),cy+R*0.6*Math.sin(a),4.1);ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.quadraticCurveTo((p1[0]+q1[0])/2,p1[1]+0.2,q1[0],q1[1]);ctx.stroke()}};
+// park tree: a stone ring with soil, a tapering trunk, and a layered canopy (lit top, darker underside)
+SV.hab.tree=(x,y,o={})=>{const sd=o.seed||0;cyl(x,y,4.2,0,1.6,"#cfc7b8","#a89f8f",{n:12});ell(x,y,3.6,1.62,"#2a2018");cyl(x,y,0.9,1.6,12,null,"#6b4f36",{n:8});
+  const C=["#2f6a3c","#3c8048","#4d9a58","#5aa765"];for(const [dx,dy,h,r,c] of [[0,0,12,6.4,0],[-2,1.4,14.5,4.8,1],[2,-1.2,15.5,4.6,2],[0.4,0.2,18,3.6,3],[-1,-1.6,16.6,3.2,2]]){const p=V.P(x+dx,y+dy,h+(sd%3)*0.4);ctx.fillStyle=C[c];ctx.beginPath();for(let k=0;k<9;k++){const a=k/9*TAU;const rr=r*(k%2?0.8:1);ctx.lineTo(p[0]+rr*Math.cos(a)*1.05,p[1]+rr*Math.sin(a)*0.75)}ctx.closePath();ctx.fill();ctx.strokeStyle="rgba(20,40,20,.35)";ctx.lineWidth=0.3;ctx.stroke()}};
+// garden bed: a low stone-edged planter with soil and mixed low planting (ferns, grasses, a few flowers)
+SV.hab.bed=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,sd=o.seed||0;prismX(frameCham(fr,-hL,hL,-hD,hD,1.2),0,2.2,"#cfc7b8","#a89f8f");ctx.fillStyle="#2a2018";ctx.fill(poly2(frameCham(fr,-hL+0.8,hL-0.8,-hD+0.8,hD-0.8,0.9),2.22));
+  const C=["#2f6a3c","#3c8048","#4d9a58","#5aa765"],F=["#e0b25a","#c86a5a","#d8cdb8","#9fb8e8"];let r=(sd*16807+11)%2147483647;const R=()=>{r=(r*16807)%2147483647;return r/2147483647};
+  for(let k=0;k<14;k++){const s0=(R()*2-1)*(hL-1.4),d0=(R()*2-1)*(hD-1.2);const p=V.P(fr.cx+fr.a[0]*s0+fr.f[0]*d0,fr.cy+fr.a[1]*s0+fr.f[1]*d0,2.4+R()*2.6);ctx.fillStyle=C[k%4];ctx.beginPath();ctx.ellipse(p[0],p[1],1.4+R(),0.9+R()*0.6,R()*3,0,TAU);ctx.fill()}
+  for(let k=0;k<5;k++){const s0=(R()*2-1)*(hL-1.6),d0=(R()*2-1)*(hD-1.4);const p=V.P(fr.cx+fr.a[0]*s0+fr.f[0]*d0,fr.cy+fr.a[1]*s0+fr.f[1]*d0,4.6);ctx.fillStyle=F[k%4];ctx.beginPath();ctx.arc(p[0],p[1],0.45,0,TAU);ctx.fill()}};
+// dog corner: a cushioned dog bed in a wood frame, food and water bowls on a mat, a toy basket, and a small two-door storage cabinet
+SV.hab.dogCorner=(fr)=>{const hL=fr.L/2,hD=fr.D/2;const s0=-hL+0.6,s1=s0+5.6;
+  prismX(frameCham(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2,0.5),0,7.2,"#8c6239","#6b4a2f");{const [a,b,n]=faces(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2).front;onFace(a,b,n,0,7.2,(W,H)=>{ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=0.25;ctx.strokeRect(0.6,0.6,W/2-0.9,H-1.2);ctx.strokeRect(W/2+0.3,0.6,W/2-0.9,H-1.2);ctx.fillStyle="#b8904e";ctx.fillRect(W/2-1,H*0.45,0.5,1.4);ctx.fillRect(W/2+0.5,H*0.45,0.5,1.4)})}
+  capTop(fr,hL-6.8,hL-0.6,-hD+0.6,-hD+4.2,7.2,3);
+  prismX(frameCham(fr,s0,s1,-hD+0.6,hD-0.6,1.4),0,1.6,"#8c6239","#6b4a2f",{lw:0.35});prismX(frameCham(fr,s0+0.6,s1-0.6,-hD+1.2,hD-1.2,1.2),1.6,2.4,"#8a6a5a","#6e5446",{mat:false,lw:0.3});
+  onTop(fr,s0+1.2,s1-1.2,-hD+1.8,hD-1.8,2.42,(W,Dd)=>{ctx.fillStyle="#a2836a";ctx.beginPath();ctx.ellipse(W/2,Dd/2,W*0.42,Dd*0.4,0,0,TAU);ctx.fill()});
+  const mat={cx:fr.cx+fr.a[0]*(hL-3.6)+fr.f[0]*(hD-2.2),cy:fr.cy+fr.a[1]*(hL-3.6)+fr.f[1]*(hD-2.2),a:fr.a,f:fr.f};ctx.fillStyle="#3c6f9a";ctx.fill(poly2(frameCham(mat,-2.8,2.8,-1.4,1.4,0.6),0.04));
+  for(const [ds,c] of [[-1.3,"#c9a24a"],[1.3,"#7fd0e0"]]){const x=mat.cx+fr.a[0]*ds,y=mat.cy+fr.a[1]*ds;cyl(x,y,1,0.05,0.9,"#d8d2c2","#9aa1a9",{n:10});ell(x,y,0.7,0.92,c)}
+  const bx=fr.cx+fr.a[0]*(s1+0.9)+fr.f[0]*(hD-1.6),by=fr.cy+fr.a[1]*(s1+0.9)+fr.f[1]*(hD-1.6);cyl(bx,by,1.2,0,2.2,"#c9a77c","#8c6239",{n:10});for(const [dx,dy,c] of [[-0.4,0,"#c86a5a"],[0.5,0.3,"#e0b25a"],[0,-0.5,"#5aa765"]]){const p=V.P(bx+dx,by+dy,2.6);ctx.fillStyle=c;ctx.beginPath();ctx.arc(p[0],p[1],0.45,0,TAU);ctx.fill()}
+  const tp=V.P(fr.cx+fr.a[0]*(s0+1)+fr.f[0]*(hD+0.6),fr.cy+fr.a[1]*(s0+1)+fr.f[1]*(hD+0.6),0.5);ctx.fillStyle="#c86a5a";ctx.beginPath();ctx.arc(tp[0],tp[1],0.55,0,TAU);ctx.fill();ctx.strokeStyle="#8a4a3a";ctx.lineWidth=0.15;ctx.stroke()};
+// resident station dog: compact, outlined like the crew (large head, strong outline), sitting, tan coat, a teal collar with a tag
+SV.hab.dog=(x,y,o={})=>{const s=V.P(x,y,0);ell(x,y,2.8,0.02,"rgba(0,0,0,.35)");ctx.save();ctx.translate(s[0],s[1]);const O="#2a1d16",coat=o.coat||"#c9965a",dark="#8a5e34",lw=0.55;ctx.lineJoin="round";ctx.strokeStyle=O;ctx.lineWidth=lw;
+  ctx.fillStyle=coat;ctx.beginPath();ctx.ellipse(0.8,-2.4,2.4,2.2,0,0,TAU);ctx.fill();ctx.stroke(); // haunch
+  ctx.beginPath();ctx.moveTo(2.6,-2.6);ctx.quadraticCurveTo(4.8,-3.2,4.6,-5.4);ctx.lineWidth=0.9;ctx.stroke();ctx.strokeStyle=coat;ctx.lineWidth=0.5;ctx.stroke();ctx.strokeStyle=O;ctx.lineWidth=lw; // tail
+  ctx.fillStyle=coat;ctx.beginPath();ctx.moveTo(-1.6,-1);ctx.lineTo(-1.2,-5.6);ctx.lineTo(1.2,-5.8);ctx.lineTo(1,-1);ctx.closePath();ctx.fill();ctx.stroke(); // chest
+  ctx.fillStyle="#efe0c4";ctx.beginPath();ctx.ellipse(-0.2,-3.4,0.9,1.4,0,0,TAU);ctx.fill();
+  for(const px of [-1.2,0.4]){ctx.fillStyle=coat;ctx.fillRect(px,-1.8,0.9,1.8);ctx.strokeRect(px,-1.8,0.9,1.8);ctx.fillStyle="#efe0c4";ctx.fillRect(px,-0.5,0.9,0.5)}
+  ctx.fillStyle="#3fb7cc";ctx.fillRect(-1.4,-5.9,2.7,0.6);ctx.fillStyle="#e1bb72";ctx.beginPath();ctx.arc(0,-5.1,0.35,0,TAU);ctx.fill(); // collar + tag
+  ctx.fillStyle=coat;ctx.beginPath();ctx.ellipse(-0.2,-7.6,2.1,1.9,0,0,TAU);ctx.fill();ctx.stroke(); // head
+  ctx.fillStyle="#efe0c4";ctx.beginPath();ctx.ellipse(-1.4,-7,1.2,0.85,0,0,TAU);ctx.fill();ctx.strokeStyle=O;ctx.lineWidth=0.35;ctx.stroke();ctx.fillStyle="#1a1a1a";ctx.beginPath();ctx.arc(-2.4,-7.2,0.35,0,TAU);ctx.fill(); // muzzle + nose
+  ctx.fillStyle=dark;for(const ex of [-1.2,1.3]){ctx.beginPath();ctx.ellipse(ex,-8.6,0.7,1.5,ex<0?0.5:-0.5,0,TAU);ctx.fill();ctx.lineWidth=0.4;ctx.stroke()}
+  ctx.fillStyle="#1a1a1a";ctx.beginPath();ctx.arc(-0.9,-8,0.28,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(0.5,-8,0.28,0,TAU);ctx.fill();ctx.restore()};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -682,6 +723,9 @@ const SV_CATALOGUE=[
   {name:"HAB pool table",w:44,d:28,draw:(fr)=>SV.hab.pool({...fr,L:34,D:22})},
   {name:"HAB rest pod / recovery pod",w:36,d:16,draw:(fr)=>{SV.hab.restPod({...fr,cx:fr.cx-10,f:[0,1],a:[1,0]});SV.hab.recoveryPod({...fr,cx:fr.cx+8,L:12,D:20})}},
   {name:"HAB planter (hero)",w:44,d:44,draw:(fr)=>SV.hab.planter(fr.cx,fr.cy,13)},
+  {name:"HAB fountain (hero)",w:44,d:40,draw:(fr)=>SV.hab.fountain(fr.cx,fr.cy,14,0)},
+  {name:"HAB park tree + bed",w:34,d:16,draw:(fr)=>{SV.hab.bed({...fr,cx:fr.cx-6,L:18,D:8},{seed:2});SV.hab.tree(fr.cx+12,fr.cy)}},
+  {name:"HAB dog corner + dog",w:30,d:14,draw:(fr)=>{SV.hab.dogCorner({...fr,cx:fr.cx-3,L:22,D:10});SV.hab.dog(fr.cx+12,fr.cy+2)}},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

@@ -496,8 +496,14 @@ function calHabPool(f,b){const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:[1,0],f:[
 function calHabRack(f,b){const fr=f.label.includes("perimeter")?rimFrame(f,6):habFrameFP(b,b[2]-b[0]-1.6,6);if(f.label.includes("perimeter"))fr.L=10;return{h:17,draw(){SV.hab.rack(fr)}}}
 function calHabRest(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const u=habToward(x,y);const fr={cx:x,cy:y,a:[-u[1],u[0]],f:u};return{h:11,draw(){SV.hab.restPod(fr)}}}
 function calHabRecovery(f,b){const vert=b[3]-b[1]>b[2]-b[0];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:vert?[0,1]:[1,0],f:vert?[1,0]:[0,1],L:(vert?b[3]-b[1]:b[2]-b[0])-2,D:(vert?b[2]-b[0]:b[3]-b[1])-1.6};return{h:11,draw(){SV.hab.recoveryPod(fr)}}}
-function calHabBench(f,b){const fr=habFrameFP(b,b[2]-b[0]-1.6,7);return{h:9,draw(){SV.hab.bench(fr)}}}
-const BUILD_CAL={"CON-006":calWorkstation,
+function calHabBench(f,b){let fr=habFrameFP(b,b[2]-b[0]-1.6,7);if(f.label.includes("park")){const ft=fp(D.furniture.find(q=>q.asset==="LEI-007"));fr.f=[0,Math.sign((ft[1]+ft[3])/2-(b[1]+b[3])/2)];fr.a=[1,0]}return{h:9,draw(){SV.hab.bench(fr)}}}
+// habitat park and resident dog
+function calHabFountain(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:13,draw(){SV.hab.fountain(x,y,15.5,0)}}}
+function calHabTree(f,b){return{h:19,draw(){SV.hab.tree((b[0]+b[2])/2,(b[1]+b[3])/2,{seed:hash(f.label)%7})}}}
+function calHabBed(f,b){const horiz=b[2]-b[0]>=b[3]-b[1];const fr={cx:(b[0]+b[2])/2,cy:(b[1]+b[3])/2,a:horiz?[1,0]:[0,1],f:horiz?[0,1]:[1,0],L:(horiz?b[2]-b[0]:b[3]-b[1])-1,D:(horiz?b[3]-b[1]:b[2]-b[0])-2};return{h:6,draw(){SV.hab.bed(fr,{seed:hash(f.label)%9})}}}
+function calHabDogCorner(f,b){const fr=habFrameFP(b,b[2]-b[0]-1,b[3]-b[1]-1);fr.f=[0,-1];fr.a=[1,0];return{h:8,draw(){SV.hab.dogCorner(fr)}}}
+function calHabDog(f,b){const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;return{h:10,draw(){SV.hab.dog(x,y)}}}
+const BUILD_CAL={"CON-006":calWorkstation,"LEI-007":calHabFountain,"PLT-007":calHabTree,"PLT-006":calHabBed,"LEI-008":calHabDogCorner,"DEC-009":calHabDog,
   "PLT-005":calHabPlanter,"LEI-002":calHabBar,"LEI-003":calHabDispenser,"TBL-003":calHabCafeTable,"SEA-007":calHabShell,"SEA-006":calHabSofa,"TBL-004":calHabGlass,"LEI-001":calHabPool,"STO-003":calHabRack,
   "LEI-005":calHabRest,"EQP-004":calHabRecovery,"SEA-009":calHabBench,"CON-021":calWorkstation,
   "CON-009":calWorkstation,"CON-002":calWorkstation,"CON-016":calWorkstation,"CON-017":calWorkstation,"CON-018":calWorkstation,"CON-019":calWorkstation,"CON-020":calWorkstation,"CON-027":calWorkstation,
@@ -687,6 +693,12 @@ function drawHHABCalFloor(G){const c=hubById["H-HAB"];const detail=cam.z>=1.2;co
   {const b=zone(["LEI-005"],7);const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;ell(cx,cy,Math.max(b[2]-b[0],b[3]-b[1])/2,0.02,"#6e5a66");ell(cx,cy,Math.max(b[2]-b[0],b[3]-b[1])/2-2,0.025,null,"#8f7a86",0.8)}
   {const r=D.furniture.find(f=>f.asset==="LEI-004");if(r)SV.hab.rug(fp(r))}
   {const cl=D.furniture.find(f=>f.label==="LEI-001 +1 clearance");if(cl){const b=fp(cl);const q=cham(b,4);ctx.fillStyle="#5e4129";ctx.fill(poly2(q,0.02));ctx.strokeStyle=CAL.brass;ctx.lineWidth=0.8;ctx.stroke(poly2(q,0.03))}}
+  // park: a soft green ground over the park tiles, gravel paths ringing the tree and the fountain and joining them, lit path edges
+  {const pg=D.furniture.find(f=>f.asset==="FLR-012");if(pg){for(const [tc,tr] of pg.tiles){const X=tc*T,Y=tr*T;ctx.fillStyle=((tc+tr)%3?"#3f6a3e":"#46743f");ctx.fill(poly2(rectPoly(X,Y,X+T,Y+T),0.015))}
+    const ft=fp(D.furniture.find(f=>f.asset==="LEI-007"));const fx=(ft[0]+ft[2])/2,fy=(ft[1]+ft[3])/2;const p=fp(D.furniture.find(f=>f.asset==="PLT-005"));const tx=(p[0]+p[2])/2,ty=(p[1]+p[3])/2;
+    for(const [x,y,r] of [[tx,ty,24],[fx,fy,23]]){ell(x,y,r,0.02,null,"#b9ad96",5.2);ell(x,y,r+2.6,0.025,null,"rgba(255,226,170,.35)",0.4)}
+    line3([tx+24,ty,0.02],[fx-23,fy,0.02],"#b9ad96",5.2);for(const dy of [-1,1])line3([tx,ty+dy*24,0.02],[tx,ty+dy*(4.6*T),0.02],"#b9ad96",4.4);line3([fx+23,fy,0.02],[fx+40,fy,0.02],"#b9ad96",4.4);
+    if(cam.z>=1.2){ctx.fillStyle="rgba(90,75,60,.35)";for(let k=0;k<160;k++){const a=k*2.399,r=22+(k%5);const q=V.P((k%2?tx:fx)+r*Math.cos(a),(k%2?ty:fy)+r*Math.sin(a),0.03);ctx.fillRect(q[0],q[1],0.4,0.4)}}}}
   {const p=fp(D.furniture.find(f=>f.asset==="PLT-005"));const cx=(p[0]+p[2])/2,cy=(p[1]+p[3])/2;ell(cx,cy,28,0.02,null,CAL.brass,0.8);ell(cx,cy,30,0.02,null,"rgba(255,215,150,.35)",0.5);
     for(let k=0;k<16;k++){const a=(k+0.5)*TAU/16;const q=V.P(cx+29*Math.cos(a),cy+29*Math.sin(a),0.03);ctx.fillStyle="rgba(255,220,170,.85)";ctx.fillRect(q[0]-0.35,q[1]-0.2,0.7,0.4)}}
   {const d=D.doors.find(q=>q.id==="DR-CMD-HAB");const f0=d.frames[0];const mx=(f0.p1[0]+f0.p2[0])/2,my=(f0.p1[1]+f0.p2[1])/2;const L=Math.hypot(c.x-mx,c.y-my);const u=[(c.x-mx)/L,(c.y-my)/L],w=[-u[1],u[0]];
@@ -699,6 +711,8 @@ function lightsHHABCal(pool,WHITE,CYAN,WARM,COLD){const c=hubById["H-HAB"];pool(
   for(const f of D.furniture.filter(q=>q.room==="H-HAB")){const b=fp(f);const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;
     if(f.asset==="TBL-003")pool(x,y,16,WARM,0.22);else if(f.asset==="LEI-001")pool(x,y,32,WARM,0.2);else if(f.asset==="TBL-004")pool(x,y,24,WARM,0.18);else if(f.asset==="LEI-002")pool(x,y,22,WARM,0.14);
     else if(f.asset==="EQP-004")pool(x,y,14,WHITE,0.14);else if(f.asset==="CON-021")pool(x,y,12,CYAN,0.1)}
+  {const ft=D.furniture.find(f=>f.asset==="LEI-007");if(ft){const b=fp(ft);pool((b[0]+b[2])/2,(b[1]+b[3])/2,30,CYAN,0.16);pool((b[0]+b[2])/2,(b[1]+b[3])/2,46,WARM,0.08)}
+    for(const f of D.furniture.filter(q=>/PLT-007|LEI-008/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,14,WARM,0.1)}}
   for(const a of [5.6,6.0,6.4]){const ang=a*Math.PI/6-Math.PI/2;pool(c.x+(c.R-18)*Math.cos(ang),c.y+(c.R-18)*Math.sin(ang),28,COLD,0.1)}
   {const N=Math.round(c.R*TAU/14);for(let i=0;i<N;i++){if(!calRimLamp(i))continue;const a=(i+0.5)/N*TAU-Math.PI;pool(c.x+(c.R-12)*Math.cos(a),c.y+(c.R-12)*Math.sin(a),22,WARM,0.1)}}}
 function lightsHCMDCal(pool,WHITE,CYAN){const c=hubById["H-CMD"];const LAMP="rgba(246,213,172,A)",AMB="rgba(255,170,90,A)";pool(c.x,c.y,95,LAMP,0.05);pool(c.x,c.y,40,CYAN,0.28);

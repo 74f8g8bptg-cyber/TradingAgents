@@ -18,6 +18,7 @@ const cases = [
   ["wing_oblique", "?view=obl&x=600&y=660&z=1.6"],
   ["L10_restricted", "?x=744&y=924&z=4"],
   ["H-HAB_oblique", "?view=obl&focus=H-HAB"],
+  ["H-HAB_park", "?x=1420&y=692&z=5"],
   ["vocabulary", "?vocab=1"],
   ["vocabulary_oblique", "?vocab=1&view=obl"],
   ["L2", "?focus=L2"],
