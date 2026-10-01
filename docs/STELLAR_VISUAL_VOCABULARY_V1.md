@@ -149,3 +149,8 @@ A room is composed in five depths: **large structure → medium objects → smal
 | Corridors | WALL faces (panel, rib, grille, service door, junction), FLR treadway and conduits, lamp fixtures; no furniture beyond the approved repeaters |
 
 Rule: rooms change **composition and function**, never the construction language. A new variant is added only when a room needs a silhouette the families cannot make.
+
+## 8. Global visual audit (station-wide)
+
+- **Displays:** every wall, rim and standing display (`wall`, `wallx`, `rim`, `door`, non-workstation `console` placements) is a physical screen module: housing, bezel, recessed glass, corner bolts, indicator row, reflection. Wall and rim panels get a housing slab and wall brackets; standing displays get a base plate and a column. Display IDs, positions, content, states and the approved-data rules are unchanged. The hardware never lights a screen.
+- **Reserved shells** (L5, L8, R1–R6) use a sealed dark bulkhead: framed plates, ribs and bolts, with no lamps, equipment or lit details. They stay empty, dark and reserved. Their doors are closed `SV.door` assemblies.

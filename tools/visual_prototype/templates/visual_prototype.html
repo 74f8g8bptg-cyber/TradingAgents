@@ -191,6 +191,7 @@ function buildScene(){
     if(own==="L10"&&kind==="panel"&&(((x1+y1)/T)%2===0))col=COL.gunmetal;
     if(own&&own.startsWith("COR")&&(((x1+y1)/T)%3===0))col="#d7d2c6";
     if(calWallOwner(w,own,kind)){add({kind:"wall",b,h,draw(){calWallSegment(w,b,h)}});continue}
+    if(kind==="reserved"){add({kind:"wall",b,h,draw(){calSealedWall(rectPoly(...b),h,Math.round((y1===y2?x1:y1)/T))}});continue}
     add({kind:"wall",b,h,draw(){box(b,0,h,kind==="reserved"?"#4a505b":COL.wallTop,col,{seam:"rgba(0,0,0,.18)"});
       if(h>=16&&kind!=="reserved"){ // cove light LGT-001 + titanium base trim on the room-side face
         const fs=y1===y2?(n[1]>0?"N":"S"):(n[0]>0?"W":"E");const face=y1===y2?[x1,y1,x2,y1]:[x1,y1,x1,y2];
@@ -229,7 +230,7 @@ function buildScene(){
       const o=[nx/L*2,ny/L*2];const pts=[a,b2,[b2[0]+o[0],b2[1]+o[1]],[a[0]+o[0],a[1]+o[1]]];
       const cxp=(a[0]+b2[0])/2-rr.cx,cyp=(a[1]+b2[1])/2-rr.cy;if(o[0]*cxp+o[1]*cyp<0){pts[2]=[b2[0]-o[0],b2[1]-o[1]];pts[3]=[a[0]-o[0],a[1]-o[1]]}
       const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
-      add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h:LOW+1,draw(){prism(pts,0,LOW+1,"#4a505b",COL.resWall)}})}}
+      add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h:LOW+1,draw(){calSealedWall(pts,LOW+1,i)}})}}
   // doors
   // ONE OPENING = ONE DOOR: calibration-room doors are one SV.door assembly built into the rim; a door through a thick wall
   // (two frame records, one per wall face) is drawn as ONE deep doorway, never as two doors
@@ -406,7 +407,7 @@ const CAL_WS_VARIANT={"CON-021":"compact","CON-022":"heavy","CON-008":"heavy","C
 function fsToward(f,b){const [cx,cy]=roomCentre(f.room);const x=(b[0]+b[2])/2,y=(b[1]+b[3])/2;const vert=b[3]-b[1]>b[2]-b[0];return vert?(cx<x?"W":"E"):(cy<y?"N":"S")}
 function calWorkstation(f,b){const fs=frontSide(f,inset(b,1.2))||fsToward(f,b);const fr=deskFrame(f,b,fs);const an=(servesMap[f.label]||[])[0];const ag=an&&agentAt.get(an.name);
   const plate=ag?`${ag.code} · ${ag.name.replace(/\s*\(.*\)/,"").split(" ").pop().toUpperCase()}`:null;const d=calConsoleDisplay[f.label];const lit=ag&&!ag.noProducer;
-  const content=d?((w,h)=>screenContent(d,w,h,cam.z)):null;const variant=CAL_WS_VARIANT[f.asset]||"standard";
+  const content=d?((w,h)=>screenContent(d,w,h,cam.z,false,true)):null;const variant=CAL_WS_VARIANT[f.asset]||"standard";
   return{h:22,draw(){SV.ws.build(fr,{variant,lit,plate,content,seed:hash(f.label)%7})}}}
 function calSecondary(f,b){const [cx,cy]=roomCentre(f.room);const vert=b[3]-b[1]>b[2]-b[0];const fr=deskFrame(f,b,vert?((b[0]+b[2])/2<cx?"E":"W"):((b[1]+b[3])/2<cy?"S":"N"));return{h:16,draw(){SV.ws.build(fr,{variant:"compact",seed:hash(f.label)%7})}}}
 function rimFrame(f,D2){const c=hubById[f.room];const xs=f.tiles.map(t=>t[0]*T+6),ys=f.tiles.map(t=>t[1]*T+6);const mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;
@@ -614,6 +615,13 @@ function lightsHLABCal(pool,WHITE,CYAN,COLD){const c=hubById["H-LAB"];const LAMP
   for(const a of D.agents.filter(q=>q.room==="H-LAB"&&!q.noProducer&&/feed|driver/.test(q.anchor))){const an=D.anchors.find(q=>q.name===a.anchor);if(an)pool(an.tile[0]*T+6,an.tile[1]*T+6,18,CYAN,0.12)}
   for(const f of D.furniture.filter(q=>q.room==="H-LAB"&&/SRV-005|STO-005|STO-006|EQP-007|SCR-013/.test(q.asset))){const b=fp(f);pool((b[0]+b[2])/2,(b[1]+b[3])/2,10,AMB,0.07)}
   for(const z of calGroupZones("H-LAB",20))pool((z[0]+z[2])/2,(z[1]+z[3])/2,Math.max(z[2]-z[0],z[3]-z[1])*0.6,LAMP,0.06)}
+// ================================================================ RESERVED SHELLS (global audit): L5, L8, R1-R6 stay empty, dark and sealed. Their walls are
+// the same dark bulkhead as the station, but with no lamps, no equipment and no lit details: framed plates, ribs and bolts only
+function calSealedWall(pts,h,idx){prismX(pts,0,h,"#3a3a38","#26282c",{lw:0.4,shadow:false,hi:false,mat:h>=10});ctx.fillStyle="#3a3a38";ctx.fill(poly2(pts,h));
+  if(h<10)return;let cx=0,cy=0;for(const q of pts){cx+=q[0];cy+=q[1]}cx/=pts.length;cy/=pts.length;
+  for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];let n=[b[1]-a[1],a[0]-b[0]];const L=Math.hypot(...n);if(L<6)continue;n=[n[0]/L,n[1]/L];if(n[0]*((a[0]+b[0])/2-cx)+n[1]*((a[1]+b[1])/2-cy)<0)n=[-n[0],-n[1]];
+    onFace(a,b,n,0,h,(W,H)=>{ctx.fillStyle="#1a1b1e";ctx.fillRect(0,H-2.8,W,2.8);ctx.fillStyle="#2a2c31";ctx.fillRect(0,0.5,W,1.3);ctx.strokeStyle="#16171a";ctx.lineWidth=0.5;
+      const k=Math.max(1,Math.round(W/12));for(let j=0;j<k;j++){const x=j*W/k;ctx.strokeRect(x+0.8,2.4,W/k-1.6,H-5.8);if((idx+j)%4===0){ctx.fillStyle="#2e3035";ctx.fillRect(x+W/k/2-1.4,1.8,2.8,H-4.6)}dRivets(x+0.8,2.4,W/k-1.6,H-5.8,"#5a5040")}})}}
 // ================================================================ WING CALIBRATION: department rooms L1-L4, L6, L7, L9, L10 and corridors
 // Composition with the Stellar Visual Vocabulary (docs/STELLAR_WING_CALIBRATION_V1.md). Walls become dark bulkheads whose faces
 // follow the same bay rhythm as the hubs, with an upper layer above wall equipment (never behind a registered wall display);
@@ -813,6 +821,9 @@ function displayItem(d){
   else if(kind==="door"){const dr=D.doors.find(q=>q.id===p[1]);const f=dr.frames[dr.frames.length-1];const x=Math.max(f.p1[0],f.p2[0])+8,y=f.p1[1]-4;it=billboard(d,x,y,12,13,8)}
   if(it){it.kind="display";it.hit={type:"display",d};it.b=it.b||[0,0,0,0]}
   return it}
+// GLOBAL AUDIT: every wall, rim and standing display is a physical screen module (housing, bezel, recessed glass, bolts, indicator
+// row, reflection) on a mount. Content, state and placement are exactly the registry's; the hardware never lights up a screen.
+function physScreen(d,Wd,Hh,px){dScreenModule(0,0,Wd,Hh,false,(w,h)=>screenContent(d,w,h,px*w/Wd,false,true),"info")}
 function wallPanel(d,a,b,nin,Hh,bot){
   const vis=nin[0]*V.cam[0]+nin[1]*V.cam[1]>0.15;
   if(!vis){const m=[(a[0]+b[0])/2+nin[0]*3,(a[1]+b[1])/2+nin[1]*3];const len=Math.hypot(b[0]-a[0],b[1]-a[1]);return billboard(d,m[0],m[1],bot,Math.min(len,40)*0.75,Hh)}
@@ -821,10 +832,13 @@ function wallPanel(d,a,b,nin,Hh,bot){
     const o=V.P(p[0],p[1],bot+Hh),e=V.P(q[0],q[1],bot+Hh);const len=Math.hypot(q[0]-p[0],q[1]-p[1]);
     const ex=[(e[0]-o[0])/len,(e[1]-o[1])/len];
     const wallH=bot; // posts down to the wall line when the wall is cut low
-    ctx.save();ctx.transform(ex[0],ex[1],0,1,o[0],o[1]);screenContent(d,len,Hh,cam.z*Math.hypot(ex[0],ex[1]));ctx.restore();
-    if(cam.z>=0.9){line3([p[0],p[1],bot],[p[0],p[1],0],"rgba(185,194,204,.25)",0.4);line3([q[0],q[1],bot],[q[0],q[1],0],"rgba(185,194,204,.25)",0.4)}}}}
-function billboard(d,x,y,bot,Wd,Hh){return{b:[x-2,y-2,x+2,y+2],h:bot+Hh,hx:0,sbx:Wd/2,bias:0.1,draw(){const s=V.P(x,y,bot+Hh);ctx.save();ctx.translate(s[0]-Wd/2,s[1]);
-  line3([x,y,0],[x,y,bot],"rgba(150,160,172,.5)",0.5);screenContent(d,Wd,Hh,cam.z);ctx.restore()}}}
+    // housing depth: a dark slab between the screen and the wall, then two wall brackets below it
+    const back=[p,q,[q[0]-nin[0]*1.4,q[1]-nin[1]*1.4],[p[0]-nin[0]*1.4,p[1]-nin[1]*1.4]];prismX(back,bot-1.4,bot+Hh+1.4,"#2a2c31","#1d1f23",{lw:0.35,shadow:false,mat:false,hi:false});
+    for(const t of [0.18,0.82]){const m=[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];line3([m[0]-nin[0]*1.4,m[1]-nin[1]*1.4,bot-1.4],[m[0],m[1],bot-0.4],"#3a3d43",1.1);line3([m[0]-nin[0]*1.4,m[1]-nin[1]*1.4,bot-3.4],[m[0]-nin[0]*1.4,m[1]-nin[1]*1.4,bot-1.4],"#2a2c31",1.3)}
+    ctx.save();ctx.transform(ex[0],ex[1],0,1,o[0],o[1]);physScreen(d,len,Hh,cam.z*Math.hypot(ex[0],ex[1]));ctx.restore()}}}
+function billboard(d,x,y,bot,Wd,Hh){return{b:[x-2,y-2,x+2,y+2],h:bot+Hh,hx:0,sbx:Wd/2,bias:0.1,draw(){
+  prismX(rectPoly(x-1.6,y-1.6,x+1.6,y+1.6),0,0.7,"#3a3d43","#26282c",{lw:0.3,hi:false,mat:false});cyl(x,y,0.6,0.7,bot,null,"#3a3d43",{n:8});line3([x-0.4,y,0.7],[x-0.4,y,bot],"rgba(255,240,215,.18)",0.25);
+  const s=V.P(x,y,bot+Hh);ctx.save();ctx.translate(s[0]-Wd/2,s[1]);physScreen(d,Wd,Hh,cam.z);ctx.restore()}}}
 function surfacePanel(d,b,h){const o=V.P(b[0],b[1],h),ex=V.P(b[0]+1,b[1],h),ey=V.P(b[0],b[1]+1,h);
   ctx.save();ctx.transform(ex[0]-o[0],ex[1]-o[1],ey[0]-o[0],ey[1]-o[1],o[0],o[1]);ctx.globalAlpha=0.92;screenContent(d,b[2]-b[0],b[3]-b[1],cam.z*0.8,true);ctx.restore()}
 function stateIcon(st,x,y,r){ctx.lineWidth=r*0.28;const c=STATE_COL[st];ctx.strokeStyle=c;ctx.fillStyle=c;ctx.beginPath();
@@ -832,8 +846,8 @@ function stateIcon(st,x,y,r){ctx.lineWidth=r*0.28;const c=STATE_COL[st];ctx.stro
   else if(st==="NO_TELEMETRY"){ctx.setLineDash([r*0.5,r*0.4]);ctx.arc(x,y,r,0,TAU);ctx.stroke();ctx.setLineDash([])}
   else if(st==="UNKNOWN"){ctx.arc(x,y,r,0,TAU);ctx.stroke();ctx.font=`700 ${r*1.5}px system-ui`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("?",x,y+r*0.08)}
   else{ctx.arc(x,y,r,0,TAU);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-r*0.65);ctx.moveTo(x,y);ctx.lineTo(x+r*0.5,y);ctx.stroke()}}
-function screenContent(d,Wd,Hh,pxPerUnit,flat){
-  ctx.fillStyle=flat?"rgba(10,22,34,.88)":"#0d1622";ctx.fillRect(0,0,Wd,Hh);ctx.strokeStyle=flat?"rgba(127,216,234,.6)":"#9aa6b2";ctx.lineWidth=0.45;ctx.strokeRect(0,0,Wd,Hh);
+function screenContent(d,Wd,Hh,pxPerUnit,flat,mounted){
+  ctx.fillStyle=flat?"rgba(10,22,34,.88)":"#0d1622";ctx.fillRect(0,0,Wd,Hh);if(!mounted){ctx.strokeStyle=flat?"rgba(127,216,234,.6)":"#9aa6b2";ctx.lineWidth=0.45;ctx.strokeRect(0,0,Wd,Hh)}
   const c=STATE_COL[d.state];
   if(pxPerUnit*Hh<11){ctx.fillStyle=c;ctx.globalAlpha=0.7;ctx.fillRect(Wd*0.15,Hh*0.4,Wd*0.7,Math.max(0.6,Hh*0.18));ctx.globalAlpha=1;return}
   ctx.save();ctx.beginPath();ctx.rect(0,0,Wd,Hh);ctx.clip();
