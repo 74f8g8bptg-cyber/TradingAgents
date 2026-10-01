@@ -9,6 +9,9 @@ PLACEHOLDER = "/*DATA*/null"
 # into the page at this marker, so every room composition shares one construction language.
 VOCABULARY = "/*VOCABULARY*/"
 VOCABULARY_FILE = "stellar_vocabulary.js"
+# The life layer (ambient activity, navigation, doors, event hooks) is a pure module inlined at this marker
+LIFE = "/*LIFE*/"
+LIFE_FILE = "stellar_life.js"
 
 
 def _fill(template_name, data):
@@ -19,6 +22,8 @@ def _fill(template_name, data):
         html = html.replace(
             VOCABULARY, (TEMPLATES / VOCABULARY_FILE).read_text(encoding="utf-8").rstrip("\n")
         )
+    if LIFE in html:
+        html = html.replace(LIFE, (TEMPLATES / LIFE_FILE).read_text(encoding="utf-8").rstrip("\n"))
     return html.replace(PLACEHOLDER, json.dumps(data, separators=(",", ":")))
 
 

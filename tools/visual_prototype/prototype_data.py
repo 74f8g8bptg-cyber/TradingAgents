@@ -364,6 +364,14 @@ def build_prototype_data(g, registries):
         # world/occupancy rules for decorative residents (no AI, no pathfinding): where each may ever appear.
         # DEC-009, the resident dog, may roam the whole H-HAB habitat zone and its own room R4; nowhere else
         "occupancy": {"DEC-009": {"zone": "H-HAB", "rooms": ["H-HAB", "R4"]}},
+        # navigation model for the life layer, exactly as geometry.py builds it (explicit door lanes, wall
+        # seams, reserved rooms); the life engine mirrors geometry's can_step on these
+        "nav": {
+            "lanes": {d["id"]: d["lanes"] for d in g["doors"]},
+            "doorStatus": {d["id"]: d["status"] for d in g["doors"]},
+            "seams": g["seams"],
+            "reserved": g["reserved"],
+        },
         "engineOrder": [
             "MARKET_DATA",
             "TECHNICAL",

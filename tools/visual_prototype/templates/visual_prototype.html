@@ -71,9 +71,10 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
     <button id="t-legend">Legend</button>
     <button id="t-theme" title="Panel theme">Theme</button>
     <button id="t-vocab" title="Stellar visual vocabulary: every construction family on its own">Vocabulary</button>
+    <button id="t-life" title="Ambient life (cosmetic): idle agents move between their workstation, their room and the Habitat; the resident dog roams H-HAB and R4. Seeded and replayable; no task is ever implied">Life</button>
   </div>
 </div>
-<div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · agents at home anchors</div>
+<div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · <span id="banner-life">agents at home anchors</span></div>
 <div id="legend" class="panel">
   <div><span class="dot" style="background:#b8323f"></span>CMD · hexagon</div>
   <div><span class="dot" style="background:#3b7fd9"></span>SCI · circle</div>
@@ -109,7 +110,7 @@ const VIEWS={
   plan:{id:"plan",kx:1,ky:0.8,cam:[0,1],P:(x,y,h=0)=>[x,y*0.8-h],inv:(sx,sy)=>[sx,sy/0.8],depth:(x,y)=>y}};
 let V=VIEWS.isoR;
 const cam={z:2,cx:0,cy:0}; const MINZ=0.5,MAXZ=6;
-const opt={labels:true,grid:false,anchors:false,preview:false};let VOCAB_MODE=false;
+const opt={labels:true,grid:false,anchors:false,preview:false};let VOCAB_MODE=false,LIFE_ON=false;
 // ---------------------------------------------------------------- palette (Visual Bible C1, room sheets)
 const COL={navy:"#1b2640",navyLight:"#283a5e",corr:"#1f2b45",grate:"#272b33",wood:"#9a7350",threshold:"#2a3039",reserved:"#11141a",hull:"#0d1119",
   wall:"#e7e1d4",wallTop:"#c4cbd3",gunmetal:"#5b626d",ti:"#b9c2cc",graphite:"#2e333b",graphiteTop:"#3a4049",glass:"#121a27",niche:"#3a404a",resWall:"#3b414b"};
@@ -247,14 +248,14 @@ function buildScene(){
     const p1=[hb.x+R*Math.cos(rd.ang-half),hb.y+R*Math.sin(rd.ang-half)],p2=[hb.x+R*Math.cos(rd.ang+half),hb.y+R*Math.sin(rd.ang+half)];
     addDoorFrame(add,{id:rd.id,status:"reserved",kind:"DOR-009",restricted:false,A:"H-HAB",B:rd.room,collar:true},p1,p2,"H-HAB")}
   // furniture
-  for(const f of D.furniture){if(f.kind==="floor")continue;const b=fp(f);const fn=(CAL_ROOMS.has(f.room)&&BUILD_CAL[f.asset])||BUILD[f.asset]||BUILD._console;
+  for(const f of D.furniture){if(f.kind==="floor"||(LIFE_ON&&f.asset==="DEC-009"))continue; /* with life on, the dog is a moving actor */const b=fp(f);const fn=(CAL_ROOMS.has(f.room)&&BUILD_CAL[f.asset])||BUILD[f.asset]||BUILD._console;
     const it=fn(f,b);if(it){add(Object.assign({kind:"furn",f,b,hit:{type:"furn",f}},it));for(const ex of it.extra||[])add(Object.assign({kind:"furn",hit:{type:"furn",f}},ex))}}
   // agents
-  for(const a of D.agents){const x=a.tile[0]*T+6,y=a.tile[1]*T+6;add({kind:"agent",a,b:[x-4,y-4,x+4,y+4],h:21,bias:0.6,draw(){drawAgent(a,x,y)},hit:{type:"agent",a}})}
+  if(!LIFE_ON)for(const a of D.agents){const x=a.tile[0]*T+6,y=a.tile[1]*T+6;add({kind:"agent",a,b:[x-4,y-4,x+4,y+4],h:21,bias:0.6,draw(){drawAgent(a,x,y)},hit:{type:"agent",a}})}
   // displays
   for(const d of D.displays){const it=displayItem(d);if(it)add(it)}
   for(const it of items){it.key=V.depth((it.b[0]+it.b[2])/2,(it.b[1]+it.b[3])/2)+(it.bias||0);it.sb=screenBox(it)}
-  scene={items:sortItems(items),ground:buildGround(),grid:null};
+  scene={items:sortItems(items),ground:buildGround(),grid:null};scene.cells=lifeCells(scene.items);
 }
 function screenBox(it){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const [a,b,c,d]=it.b;const ht=(it.h||0)+(it.hx||0);
   for(const [x,y] of [[a,b],[c,b],[c,d],[a,d]])for(const h of [0,ht]){const s=V.P(x,y,h);x0=Math.min(x0,s[0]);y0=Math.min(y0,s[1]);x1=Math.max(x1,s[0]);y1=Math.max(y1,s[1])}
@@ -400,6 +401,7 @@ function rackForm(b){const bb=[b[0]+4,b[1]+1,b[2]-0.5,b[3]-1];return{h:13,draw()
 // which family each registered asset uses, the perimeter and wall rhythm, the deck plan and the local light. Geometry
 // comes from geometry.py; display identities and content from the registries.
 /*VOCABULARY*/
+/*LIFE*/
 const CAL_WING=new Set(["L1","L2","L3","L4","L6","L7","L9","L10"]);const CAL_CORR=new Set(["COR-N","COR-S"]);
 const CAL_ROOMS=new Set(["H-CMD","H-LAB","H-HAB",...CAL_WING]);
 const tileRoom=new Map();for(const [c,r,n] of D.tiles)tileRoom.set(c+","+r,n);
@@ -839,13 +841,13 @@ function calRimSegment(pts,h,i,hb,special){const ext=(p,q,k)=>[p[0]+(q[0]-p[0])*
 // ---- compact crew (reference construction: large head ~40 % of height, strong outline) in Stellar uniforms, integrated seating
 function drawAgentCal(a,x,y){
   const hsh=hash(a.chr);const skin=SKIN[hsh%SKIN.length],hair=HAIR[(hsh>>3)%HAIR.length],style=(hsh>>9)%4;
-  const seated=seatTiles.has(a.tile[0]+","+a.tile[1]);const atDesk=seated&&/console|feed|bench|driver|desk/.test(a.anchor);let ox=0,oy=0;
+  const seated=a.lifeSeated!==undefined?a.lifeSeated:seatTiles.has(a.tile[0]+","+a.tile[1]);const atDesk=seated&&a.lifeDesk!==false&&/console|feed|bench|driver|desk/.test(a.anchor);let ox=0,oy=0;
   if(seated){const L=Math.hypot(a.face[0],a.face[1])||1;const pull=atDesk?2.6:1.2;ox=a.face[0]/L*pull;oy=a.face[1]/L*pull}
-  const X=x+ox,Y=y+oy;const h0=calBaseH(x,y);const s=V.P(X,Y,h0);const fw=V.P(X+a.face[0],Y+a.face[1],0),f0=V.P(X,Y,0);let tx=fw[0]-f0[0];tx/=Math.hypot(tx,fw[1]-f0[1])||1;
+  const X=x+ox,Y=y+oy;const h0=calBaseH(x,y)+(a.lifeH||0)+(a.lifeBob||0);const s=V.P(X,Y,h0);const fw=V.P(X+a.face[0],Y+a.face[1],0),f0=V.P(X,Y,0);let tx=fw[0]-f0[0];tx/=Math.hypot(tx,fw[1]-f0[1])||1;
   const away=(V.cam[0]*a.face[0]+V.cam[1]*a.face[1])<-0.05;const active=opt.preview&&!a.noProducer;const dc=DEPT[a.dept];const O=CAL.out,OW=0.8;
-  ctx.save();if(a.noProducer)ctx.filter="saturate(0.35) brightness(0.85)";if(!seated)ell(X,Y,4.2,h0,"rgba(0,0,0,.45)");if(active)ell(X,Y,5.8,h0+0.1,null,"rgba(79,209,227,.85)",0.6);
+  ctx.save();if(a.lifeAlpha!==undefined)ctx.globalAlpha=a.lifeAlpha;if(a.noProducer)ctx.filter="saturate(0.35) brightness(0.85)";if(!seated)ell(X,Y,4.2,h0-(a.lifeBob||0),"rgba(0,0,0,.45)");if(active)ell(X,Y,5.8,h0+0.1,null,"rgba(79,209,227,.85)",0.6);
   ctx.translate(s[0],s[1]);ctx.lineJoin="round";ctx.strokeStyle=O;ctx.lineWidth=OW;
-  const seatH=a.anchor==="command.chair"?5.4:4.7;const hip=seated?-seatH:-5.2,sh=hip-5.4,W=2.9;
+  const seatH=a.anchor==="command.chair"?5.4:4.7;const hip=a.lifeFloor?-2.6:seated?-seatH:-5.2,sh=hip-5.4,W=2.9; // lifeFloor: sitting cross-legged on a mat or cushion
   const path=(pts)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke()};
   ctx.fillStyle="#24272d";
   if(seated){const k=tx*2.4;path([[-W*0.72,hip],[W*0.72,hip],[W*0.72+k,hip+1.5],[-W*0.72+k,hip+1.5]]);path([[-W*0.66+k,hip+1.3],[-W*0.1+k,hip+1.3],[-W*0.1+k,-0.6],[-W*0.66+k,-0.6]]);path([[W*0.1+k,hip+1.3],[W*0.66+k,hip+1.3],[W*0.66+k,-0.6],[W*0.1+k,-0.6]])}
@@ -1029,15 +1031,43 @@ function drawLights(){
 // ---------------------------------------------------------------- frame
 const stars=Array.from({length:260},(_,i)=>{const h=hash("s"+i);return[(h%10000)/10000,((h>>7)%10000)/10000,((h>>3)%3)+1]});
 let hits=[],hover=null,selected=null,badges=[];
+// static-layer cache: the frozen station is rendered once per camera (ground layer and full layer kept as bitmaps);
+// a life frame blits the full layer and repaints only small clipped regions around moving actors, from the ground
+// layer up, with the static items there and the actors in their depth slots
+let SCACHE=null;
+function cacheCanvas(c){if(!c||c.width!==cv.width||c.height!==cv.height){c=document.createElement("canvas");c.width=cv.width;c.height=cv.height}const g=c.getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);g.drawImage(cv,0,0);return c}
 function draw(){
+  const key=[cam.cx,cam.cy,cam.z,W,H,DPR,V.id,opt.preview,LIFE_ON,lastSec,VOCAB_MODE].join("|");
+  if(!VOCAB_MODE&&LIFE_ON&&SCACHE&&SCACHE.key===key&&SCACHE.scene===scene)return drawLifeFrame();
   dirty=false;ctx.setTransform(DPR,0,0,DPR,0,0);
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#05070d");g.addColorStop(1,"#0a1222");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   for(const [sx,sy,s] of stars){const x=((sx*W*1.3-cam.cx*cam.z*0.04)%(W*1.3)+W*1.3)%(W*1.3)-W*0.15,y=((sy*H*1.3-cam.cy*cam.z*0.04)%(H*1.3)+H*1.3)%(H*1.3)-H*0.15;ctx.fillStyle=`rgba(200,215,255,${0.15*s})`;ctx.fillRect(x,y,s*0.7,s*0.7)}
   const z=cam.z;ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR);
   if(VOCAB_MODE){drawVocabCatalogue();ctx.setTransform(DPR,0,0,DPR,0,0);return}
   drawGround();drawLights();
+  const ground=LIFE_ON?cacheCanvas(SCACHE&&SCACHE.ground):null;
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;hits=[];badges=[];
-  for(const it of scene.items){const b=it.sb;if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1)continue;it.draw();if(it.hit)hits.push([b,it.hit,it]);if(it.kind==="agent")badges.push(it)}
+  const drawIt=(it)=>{const b=it.sb;if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1)return;it.draw();if(it.hit)hits.push([b,it.hit,it]);if(it.kind==="agent")badges.push(it)};
+  for(const it of scene.items)drawIt(it);
+  if(LIFE_ON){SCACHE={key,scene,ground,full:cacheCanvas(SCACHE&&SCACHE.full),hits:hits.slice(),badges:badges.slice()};return drawLifeFrame()}
+  drawOverlays()}
+function drawLifeFrame(){
+  dirty=false;const z=cam.z;ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(SCACHE.full,0,0);hits=SCACHE.hits.slice();badges=SCACHE.badges.slice();
+  const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;const ov=(a,b)=>!(a[2]<b[0]||b[2]<a[0]||a[3]<b[1]||b[3]<a[1]);
+  const acts=[];for(const [ins,L] of lifeItems())for(const it of L){if(!ov(it.sb,[vx0,vy0,vx1,vy1]))continue;it.ins=ins;acts.push(it)}
+  let regs=acts.map(it=>[it.sb[0]-2,it.sb[1]-2,it.sb[2]+2,it.sb[3]+2]);
+  for(let merged=true;merged;){merged=false;for(let i=0;i<regs.length&&!merged;i++)for(let j=i+1;j<regs.length;j++)if(ov(regs[i],regs[j])){const A=regs[i],B=regs[j];regs[i]=[Math.min(A[0],B[0]),Math.min(A[1],B[1]),Math.max(A[2],B[2]),Math.max(A[3],B[3])];regs.splice(j,1);merged=true;break}}
+  const wt=()=>ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR),CS=48;
+  if(z<1.3){wt();for(const it of acts.sort((p,q)=>p.key-q.key)){const r=it.sb;ctx.save();ctx.beginPath();ctx.rect(r[0]-2,r[1]-2,r[2]-r[0]+4,r[3]-r[1]+4);ctx.clip();it.draw();ctx.restore()}regs=[]} // zoomed out: actors are a few pixels tall, drawn over the cached frame (each clipped to its box)
+  for(const r of regs){ctx.save();wt();ctx.beginPath();ctx.rect(r[0],r[1],r[2]-r[0],r[3]-r[1]);ctx.clip();ctx.setTransform(1,0,0,1,0,0);
+    {const dx0=Math.max(0,Math.floor(((r[0]-cam.cx)*z+W/2)*DPR)-1),dy0=Math.max(0,Math.floor(((r[1]-cam.cy)*z+H/2)*DPR)-1),dx1=Math.min(cv.width,Math.ceil(((r[2]-cam.cx)*z+W/2)*DPR)+1),dy1=Math.min(cv.height,Math.ceil(((r[3]-cam.cy)*z+H/2)*DPR)+1);
+     if(dx1>dx0&&dy1>dy0)ctx.drawImage(SCACHE.ground,dx0,dy0,dx1-dx0,dy1-dy0,dx0,dy0,dx1-dx0,dy1-dy0)}wt();
+    const cand=new Set();for(let gx=Math.floor(r[0]/CS);gx<=Math.floor(r[2]/CS);gx++)for(let gy=Math.floor(r[1]/CS);gy<=Math.floor(r[3]/CS);gy++)for(const i of scene.cells.get(gx+"|"+gy)||[])if(ov(scene.items[i].sb,r))cand.add(i);
+    const here=acts.filter(it=>ov(it.sb,r)).sort((p,q)=>p.ins-q.ins||p.key-q.key);let k=0;const flush=(i)=>{while(k<here.length&&here[k].ins<i){here[k].draw();k++}};
+    for(const i of [...cand].sort((p,q)=>p-q)){flush(i);scene.items[i].draw()}flush(Infinity);ctx.restore()}
+  for(const it of acts){if(it.hit)hits.push([it.sb,it.hit,it]);if(it.kind==="agent")badges.push(it)}
+  drawOverlays()}
+function drawOverlays(){const z=cam.z;ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR);
   if(opt.grid){ctx.strokeStyle="rgba(120,230,245,.35)";ctx.lineWidth=0.3;ctx.stroke(scene.ground.grid);ctx.fillStyle="rgba(255,90,90,.18)";ctx.fill(scene.ground.blocked);
     ctx.strokeStyle="rgba(255,210,90,.8)";ctx.lineWidth=0.6;for(const d of D.doors)for(const f of d.frames)line3([...f.p1,0.1],[...f.p2,0.1],"rgba(255,210,90,.9)",0.9)}
   if(opt.anchors){for(const a of D.anchors){const s=V.P(a.tile[0]*T+6,a.tile[1]*T+6);ctx.fillStyle=a.chr?"#4fd1e3":"#e0c070";ctx.beginPath();ctx.arc(s[0],s[1],1.4,0,TAU);ctx.fill();
@@ -1071,7 +1101,7 @@ function drawLabels(){labelHits=[];const z=cam.z;
     let ok=false;for(const dy of [0,22,-22,44]){if(!over(s[0],s[1]+dy)){s=[s[0],s[1]+dy];ok=true;break}}if(!ok)continue;
     const r=pill(s[0],s[1],text,{font,h:hub?24:cor?18:20,dot:res?null:(ACC[info[1]]||ACC.NEU),col:res?"#8a93a3":"#e6ebf2",bg:res?"rgba(10,12,16,.7)":"rgba(10,15,25,.8)",stroke:selectedRoom===id?"#4fd1e3":null});
     placed.push(r);labelHits.push([r,id])}}
-function drawBadges(){for(const it of badges){const a=it.a;const x=a.tile[0]*T+6,y=a.tile[1]*T+6;const p=V.P(x,y,23);const s=toScreen(p[0],p[1]);if(s[0]<-40||s[0]>W+40||s[1]<-20||s[1]>H+20)continue;
+function drawBadges(){for(const it of badges){const a=it.a;const x=it.lx!==undefined?it.lx:a.tile[0]*T+6,y=it.ly!==undefined?it.ly:a.tile[1]*T+6;const p=V.P(x,y,23);const s=toScreen(p[0],p[1]);if(s[0]<-40||s[0]>W+40||s[1]<-20||s[1]>H+20)continue;
   const active=opt.preview&&!a.noProducer;const word=a.noProducer?"idle · no producer":(active?(a.roleStates[0]||"working"):"idle");
   const text=cam.z>=2.6?`${a.code} · ${word}`:a.code;ctx.font="600 11px system-ui";const w=ctx.measureText(text).width+20;
   ctx.fillStyle=a.noProducer?"rgba(30,34,42,.85)":"rgba(10,15,25,.85)";ctx.beginPath();ctx.roundRect(s[0]-w/2,s[1]-9,w,18,9);ctx.fill();
@@ -1119,7 +1149,7 @@ cv.addEventListener("wheel",e=>{e.preventDefault();anim=null;setZoom(cam.z*Math.
 function pick(sx,sy){for(const l of labelHits){const r=l[0];if(sx>=r[0]&&sx<=r[2]&&sy>=r[1]&&sy<=r[3])return{label:l[1]}}
   const px=(sx-W/2)/cam.z+cam.cx,py=(sy-H/2)/cam.z+cam.cy;for(let i=hits.length-1;i>=0;i--){const b=hits[i][0];if(px>=b[0]&&px<=b[2]&&py>=b[1]&&py<=b[3])return{hit:hits[i]}}return null}
 function describe(h){const t=h.type;
-  if(t==="agent"){const a=h.a;return{title:`${a.code} · ${a.name}`,rows:[["Character",a.chr],["Role",a.role],["Department",a.dept],["Home",`${a.room} · ${a.anchor}`],["Movement class",a.cls],["Registry status",a.status],["Shown state",a.noProducer?"idle (no producer; Character Registry)":(opt.preview?"design preview: "+(a.roleStates[0]||"working")+" (not telemetry)":"idle at home anchor · no telemetry")]]}}
+  if(t==="agent"){const a=h.a;return{title:`${a.code} · ${a.name}`,rows:[["Character",a.chr],["Role",a.role],["Department",a.dept],["Home",`${a.room} · ${a.anchor}`],["Movement class",a.cls],["Registry status",a.status],["Shown state",a.noProducer?"idle (no producer; Character Registry)":(opt.preview?"design preview: "+(a.roleStates[0]||"working")+" (not telemetry)":"idle at home anchor · no telemetry")]].concat(h.life?[["Ambient life",`${h.life.state.toLowerCase().replace(/_/g," ")} · ${h.life.room} · ambient animation, no task`]]:[])}}
   if(t==="display"){const d=h.d;return{title:`${d.id} · ${d.name}`,rows:[["Full name",d.fullName],["Hardware",d.hw],["Source",d.src.replace(/`/g,"")],["Availability",{A:"A · available",P:"P · partial",N:"N · not available"}[d.av]],["I/O",d.io],["Shown now",d.text+(d.sub.length?" · "+d.sub.join(" · "):"")],["Why","No engine link in this prototype: values never appear without telemetry (Screen Registry §1, §3)"]]}}
   if(t==="furn"){const f=h.f;const b=fp(f);return{title:`${f.asset} · ${f.label}`,rows:[["Room",f.room],["Footprint",`${(b[2]-b[0])/T} × ${(b[3]-b[1])/T} tiles`],["Kind",f.kind]]}}
   if(t==="door"){const d=h.d;return{title:d.id,rows:[["Asset",d.kind],["Connects",`${d.A} ↔ ${d.B}`],["State",d.status==="open"?(d.restricted?"restricted (navigation rule; icon + marking; no lock)":"normal"):"reserved · sealed · RESERVED plate"]]}}
@@ -1148,12 +1178,32 @@ $("#t-theme").onclick=()=>{const r=document.documentElement;r.dataset.theme=r.da
 const ROOM_ORDER=[["Station","Full overview"],["H-CMD"],["H-LAB"],["H-HAB"],["COR-N"],["COR-S"],["L1"],["L2"],["L3"],["L4"],["L6"],["L7"],["L9"],["L10"],["R1"],["R2"],["R3"],["R4"],["L5","Reserved"],["L8","Reserved"],["Reserved","R5–R6 (radial)"]];
 for(const [id,nm] of ROOM_ORDER){const b=document.createElement("button");b.dataset.room=id;const i=D.rooms[id];
   b.innerHTML=`<span class="dot" style="background:${id==="Reserved"||i&&i[2]==="reserved"?"#3a414c":id==="Station"?"#4fd1e3":(ACC[i[1]]||ACC.NEU)}"></span><span class="code">${id}</span><span class="nm">${nm||i[0]}</span>`;b.onclick=()=>focusRoom(id);$("#rooms").appendChild(b)}
+// ---------------------------------------------------------------- LIFE LAYER (docs/STELLAR_LIFE_SYSTEM_V1.md)
+// Ambient life on the frozen station. Every agent is idle (no engine link), so all may show ambient life: their own
+// workstation, their own room, the Habitat and R1-R4; the resident dog roams H-HAB and R4 only. StellarLife is pure and
+// seeded; the renderer only draws its snapshot. Moving actors are slotted into the static depth order each frame
+// (no scene re-sort). The badge always keeps the runtime truth ("idle"); the inspector labels ambient animation.
+let life=null,lifeFrozen=false,lifeLast=null;const LIFE_SPEED=Math.max(0,+(new URLSearchParams(location.search).get("speed")||1));const lifeAgents=new Map(D.agents.map(a=>[a.chr,a]));
+function lifeSetup(){const qq=new URLSearchParams(location.search);life=StellarLife.create(StellarLife.buildWorld(D),{seed:qq.get("seed")||"stellar"});if(qq.get("lifeT")!==null){life.advanceTo(+qq.get("lifeT")*1000);lifeFrozen=true}}
+function lifeCells(items){const CS=48,cells=new Map();items.forEach((it,i)=>{const [x0,y0,x1,y1]=it.sb;for(let cx=Math.floor(x0/CS);cx<=Math.floor(x1/CS);cx++)for(let cy=Math.floor(y0/CS);cy<=Math.floor(y1/CS);cy++){const k=cx+"|"+cy;let a=cells.get(k);if(!a)cells.set(k,a=[]);a.push(i)}});return cells}
+function lifeItems(){const out=new Map();if(!LIFE_ON||!life||!scene.cells)return out;const cx=V.cam[0],cy=V.cam[1],CS=48;
+  const behind=(A,B)=>(cx>0.01&&A.b[2]<=B.b[0]+0.01)||(cx<-0.01&&A.b[0]>=B.b[2]-0.01)||(cy>0.01&&A.b[3]<=B.b[1]+0.01)||(cy<-0.01&&A.b[1]>=B.b[3]-0.01);
+  for(const s of life.snapshot()){const dogA=s.kind==="dog",r=dogA?3:4;const it={kind:dogA?"dog":"agent",b:[s.x-r,s.y-r,s.x+r,s.y+r],h:dogA?10:21,lx:s.x,ly:s.y};it.key=V.depth(s.x,s.y)+0.6;it.sb=screenBox(it);
+    if(dogA)it.draw=()=>{const bob=s.pose==="walk"?Math.abs(Math.sin(s.stride/2.2))*0.9:0;ctx.save();ctx.globalAlpha=s.alpha;ctx.translate(0,-bob-(s.h||0));SV.hab.dog(s.x,s.y);ctx.restore()};
+    else{const a=lifeAgents.get(s.id);const home=s.atHome&&s.alpha>=1;const pr=home?a:{...a,tile:[Math.floor(s.x/T),Math.floor(s.y/T)],face:s.face,anchor:s.spot||"",lifeSeated:s.pose==="sit"||s.pose==="desk"||s.pose==="floor",lifeFloor:s.pose==="floor",lifeDesk:false,lifeH:s.h||0,lifeBob:s.pose==="walk"?Math.abs(Math.sin(s.stride/3.2))*0.7:0,lifeAlpha:s.alpha};
+      it.a=pr;it.draw=()=>drawAgent(pr,s.x,s.y);it.hit={type:"agent",a,life:s}}
+    let ins=-1;const [x0,y0,x1,y1]=it.sb;
+    for(let gx=Math.floor(x0/CS);gx<=Math.floor(x1/CS);gx++)for(let gy=Math.floor(y0/CS);gy<=Math.floor(y1/CS);gy++)for(const i of scene.cells.get(gx+"|"+gy)||[]){if(i<=ins)continue;const S=scene.items[i],sb=S.sb;if(sb[2]<x0||x1<sb[0]||sb[3]<y0||y1<sb[1])continue;if(behind(S,it)||(!behind(it,S)&&S.key<=it.key))ins=i}
+    if(!out.has(ins))out.set(ins,[]);out.get(ins).push(it)}
+  for(const L of out.values())L.sort((p,q)=>p.key-q.key);return out}
+function setLife(on){LIFE_ON=on;if(on&&!life)lifeSetup();$("#t-life").classList.toggle("on",on);$("#banner-life").textContent=on?"ambient life (cosmetic, seeded): idle agents and the resident dog":"agents at home anchors";buildScene();dirty=true}
 // ---------------------------------------------------------------- boot
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+"px";cv.style.height=H+"px";dirty=true}
 addEventListener("resize",resize);resize();
 const q=new URLSearchParams(location.search);
 V=VIEWS[VIEWS[q.get("view")]?q.get("view"):"isoR"];viewButtons();
 for(const k of ["grid","anchors","preview"])if(q.get(k)==="1")toggle(k,"#t-"+k);if(q.get("labels")==="0")toggle("labels","#t-labels");
+LIFE_ON=q.get("life")!=="0";if(LIFE_ON)lifeSetup();$("#t-life").classList.toggle("on",LIFE_ON);if(LIFE_ON)$("#banner-life").textContent="ambient life (cosmetic, seeded): idle agents and the resident dog";$("#t-life").onclick=()=>setLife(!LIFE_ON);
 buildScene();
 {const p=V.P(+(q.get("x")||700),+(q.get("y")||600));cam.cx=p[0];cam.cy=p[1];cam.z=+(q.get("z")||2)}
 if(q.get("focus")){const f=q.get("focus");focusRoom(f);if(anim){anim(performance.now()+1e6)}if(q.get("z"))setZoom(+q.get("z"))}
@@ -1161,9 +1211,11 @@ function vocabMode(on){VOCAB_MODE=on;document.querySelector("#t-vocab").classLis
 document.querySelector("#t-vocab").onclick=()=>vocabMode(!VOCAB_MODE);if(q.get("vocab")==="1")vocabMode(true);
 updateZoomUI();
 let lastSec=-1;
-function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec!==lastSec){lastSec=sec;dirty=true}if(dirty)draw();requestAnimationFrame(loop)}
+function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec!==lastSec){lastSec=sec;dirty=true}
+  if(LIFE_ON&&life&&!lifeFrozen&&!VOCAB_MODE){if(lifeLast!==null){life.step((t-lifeLast)*LIFE_SPEED);dirty=true}lifeLast=t}else lifeLast=null;
+  if(dirty)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene};
+window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems};
 </script>
 </body>
 </html>
