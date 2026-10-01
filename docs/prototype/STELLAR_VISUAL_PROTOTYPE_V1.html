@@ -230,7 +230,12 @@ function buildScene(){
       const o=[nx/L*2,ny/L*2];const pts=[a,b2,[b2[0]+o[0],b2[1]+o[1]],[a[0]+o[0],a[1]+o[1]]];
       const cxp=(a[0]+b2[0])/2-rr.cx,cyp=(a[1]+b2[1])/2-rr.cy;if(o[0]*cxp+o[1]*cyp<0){pts[2]=[b2[0]-o[0],b2[1]-o[1]];pts[3]=[a[0]-o[0],a[1]-o[1]]}
       const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
-      if(REC_ACTIVE.has(rr.id)){const near=i===3;const h=near?LOW+1:wallHeight(a,b2);add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h,draw(){calRecWall(rr,pts,a,b2,h,i)}});continue}
+      if(REC_ACTIVE.has(rr.id)&&i===3){ // the straight door-side wall: keep only the parts outside the curved H-HAB rim (the rim closes the rest)
+        for(const [p,q] of recOutsideHub(a,b2)){const pp=[p,q,[q[0]+pts[2][0]-b2[0],q[1]+pts[2][1]-b2[1]],[p[0]+pts[3][0]-a[0],p[1]+pts[3][1]-a[1]]];const xx=pp.map(v=>v[0]),yy=pp.map(v=>v[1]);
+          add({kind:"rwall",b:[Math.min(...xx),Math.min(...yy),Math.max(...xx),Math.max(...yy)],h:LOW+1,draw(){calRecWall(rr,pp,p,q,LOW+1,i)}})}continue}
+      if(REC_ACTIVE.has(rr.id)){const h=wallHeight(a,b2);add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h,draw(){calRecWall(rr,pts,a,b2,h,i)}});continue}
+      if(i===3){for(const [p,q] of recOutsideHub(a,b2)){const pp=[p,q,[q[0]+pts[2][0]-b2[0],q[1]+pts[2][1]-b2[1]],[p[0]+pts[3][0]-a[0],p[1]+pts[3][1]-a[1]]];const xx=pp.map(v=>v[0]),yy=pp.map(v=>v[1]);
+        add({kind:"rwall",b:[Math.min(...xx),Math.min(...yy),Math.max(...xx),Math.max(...yy)],h:LOW+1,draw(){calSealedWall(pp,LOW+1,i)}})}continue} // sealed shells: same rim trim, shell unchanged
       add({kind:"rwall",b:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],h:LOW+1,draw(){calSealedWall(pts,LOW+1,i)}})}
     if(REC_ACTIVE.has(rr.id))for(const it of calRecItems(rr))add(it)}
   // doors
@@ -1553,6 +1558,10 @@ it.push(recItem(rr,-58,-46,10,6,()=>SV.rec.padBench(recFrame(rr,-58,-46,"v",20,8
   return it}
 // walls: the near (door) wall stays low; others are full bulkheads faced with acoustic panels (R1 warm, R2 dark), padding (R3)
 // or warm slats over a padded dog-height bumper dado (R4)
+// parts of segment a-b that lie outside the H-HAB rim bulkhead (outer face at R+7, see calRimSegment), as [p,q] pairs at least 1 unit long
+function recOutsideHub(a,b){const hb=hubById["H-HAB"];const dx=b[0]-a[0],dy=b[1]-a[1],fx=a[0]-hb.x,fy=a[1]-hb.y;const A=dx*dx+dy*dy,B=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-(hb.R+7)**2;const disc=B*B-4*A*C;
+  const P=t=>[a[0]+dx*t,a[1]+dy*t];if(disc<=0)return[[a,b]];const r=Math.sqrt(disc);const t1=(-B-r)/(2*A),t2=(-B+r)/(2*A);const out=[];
+  if(t1>0)out.push([0,Math.min(1,t1)]);if(t2<1)out.push([Math.max(0,t2),1]);return out.filter(([u,v])=>(v-u)*Math.sqrt(A)>1).map(([u,v])=>[P(u),P(v)])}
 function calRecWall(rr,pts,a,b,h,i){prismX(pts,0,h,"#3a3a38",rr.id==="R3"?"#3e3b44":"#2f2a27",{lw:0.4,shadow:false,hi:false,mat:h>=10});ctx.fillStyle=rr.id==="R3"?"#4e4a56":CAL.crown;ctx.fill(poly2(pts,h));
   if(h<10)return;const n=[rr.cx-(a[0]+b[0])/2,rr.cy-(a[1]+b[1])/2];const L=Math.hypot(...n);
   onFace(a,b,[n[0]/L,n[1]/L],0,h,(W,H)=>{const k=Math.max(1,Math.round(W/14));for(let j=0;j<k;j++){ctx.save();ctx.translate(j*W/k,0);
