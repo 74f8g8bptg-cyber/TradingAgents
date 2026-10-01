@@ -1,0 +1,649 @@
+"""Geometry pass: rasterise the approved Floor Plan at 12 world units per tile, place the
+approved furniture footprints and anchors, and run the geometry consistency checks.
+
+The Floor Plan coordinates, room layouts and anchors below are the approved geometry
+(docs/STELLAR_SPATIAL_SCALE_V1.md). Changing them is a design change, not a build change.
+"""
+
+import math
+from collections import deque
+
+T = 12  # world units per tile (approved)
+AGENT_H = 19
+SPACING = 0.8
+
+# ---------------- Floor Plan (sketch px = world units) ----------------
+HUBS = {"H-LAB": (280, 689, 182), "H-CMD": (975, 692, 224), "H-HAB": (1377, 692, 180)}
+RECTS = {
+    "L1": (420, 533, 345, 522),
+    "L2": (550, 664, 343, 520),
+    "L3": (689, 803, 341, 518),
+    "L4": (489, 603, 588, 694),
+    "L5": (620, 734, 588, 694),
+    "L6": (489, 603, 697, 788),
+    "L7": (620, 734, 697, 788),
+    "L8": (428, 541, 832, 1009),
+    "L9": (557, 671, 833, 1010),
+    "L10": (690, 805, 836, 1015),
+}
+CORRS = {"COR-N": (367, 823, 538, 585), "COR-S": (371, 829, 790, 828)}
+ROW_OVERRIDE = {"COR-N": (45, 47)}  # normalised to the 3-tile baseline
+RESERVED = {"L5", "L8"}
+R_ROOMS = {
+    "R1": (1144, 1322, 351, 558),
+    "R2": (1355, 1487, 333, 521),
+    "R3": (1504, 1714, 456, 641),
+    "R4": (1545, 1736, 665, 800),
+    "R5": (1387, 1557, 835, 1041),
+    "R6": (1156, 1335, 815, 1024),
+}
+# id, x, y, A, B, axis ('h' = door in a horizontal wall), status
+DOORS = [
+    ("DR-L1", 473, 525, "L1", "COR-N", "h", "open"),
+    ("DR-L2", 604, 526, "L2", "COR-N", "h", "open"),
+    ("DR-L3", 737, 524, "L3", "COR-N", "h", "open"),
+    ("DR-L4", 548, 587, "COR-N", "L4", "h", "open"),
+    ("DR-L5", 678, 586, "COR-N", "L5", "h", "reserved"),
+    ("DR-L6", 542, 783, "L6", "COR-S", "h", "open"),
+    ("DR-L7", 682, 786, "L7", "COR-S", "h", "open"),
+    ("DR-L8", 480, 834, "COR-S", "L8", "h", "reserved"),
+    ("DR-L9", 612, 834, "COR-S", "L9", "h", "open"),
+    ("DR-L10", 741, 833, "COR-S", "L10", "h", "open"),
+    ("DR-N-LAB", 388, 563, "H-LAB", "COR-N", "v", "open"),
+    ("DR-N-CMD", 801, 566, "COR-N", "H-CMD", "v", "open"),
+    ("DR-S-LAB", 383, 809, "H-LAB", "COR-S", "v", "open"),
+    ("DR-S-CMD", 817, 805, "COR-S", "H-CMD", "v", "open"),
+    ("DR-CMD-HAB", 1194, 692, "H-CMD", "H-HAB", "v", "open"),
+]
+R_DOORS = {
+    "DR-R1": (1274, 538),
+    "DR-R2": (1403, 522),
+    "DR-R3": (1525, 586),
+    "DR-R4": (1558, 718),
+    "DR-R5": (1433, 850),
+    "DR-R6": (1286, 840),
+}
+
+
+def cen(c):
+    return c * T + T / 2
+
+
+def tiles_in_range(lo, hi):
+    return [c for c in range(math.floor(lo / T) - 1, math.ceil(hi / T) + 1) if lo <= cen(c) <= hi]
+
+
+def build_geometry():
+    """Return the geometry model (JSON-ready) and its check results."""
+    region = {}
+    bbox = {}
+    issues = []
+    for h, (cx, cy, r) in HUBS.items():
+        for col in range(math.floor((cx - r) / T) - 1, math.ceil((cx + r) / T) + 1):
+            for row in range(math.floor((cy - r) / T) - 1, math.ceil((cy + r) / T) + 1):
+                if math.hypot(cen(col) - cx, cen(row) - cy) <= r:
+                    if (col, row) in region:
+                        issues.append(f"overlap {h} / {region[(col, row)]} at {(col, row)}")
+                    region[(col, row)] = h
+    for name, (x0, x1, y0, y1) in list(RECTS.items()) + list(CORRS.items()):
+        cols = tiles_in_range(x0, x1)
+        rows = (
+            list(range(ROW_OVERRIDE[name][0], ROW_OVERRIDE[name][1] + 1))
+            if name in ROW_OVERRIDE
+            else tiles_in_range(y0, y1)
+        )
+        bbox[name] = (cols[0], rows[0], cols[-1], rows[-1])
+        for col in cols:
+            for row in rows:
+                if (col, row) in region:
+                    if name.startswith("COR") and region[(col, row)].startswith("H-"):
+                        continue  # the corridor ends at the hub rim
+                    issues.append(f"overlap {name} / {region[(col, row)]} at {(col, row)}")
+                region[(col, row)] = name
+    for h in HUBS:
+        ts = [t for t, n in region.items() if n == h]
+        bbox[h] = (
+            min(t[0] for t in ts),
+            min(t[1] for t in ts),
+            max(t[0] for t in ts),
+            max(t[1] for t in ts),
+        )
+
+    # ---------------- doors: seams or threshold tiles ----------------
+    allowed = set()  # frozenset({a, b}) edges that cross a region boundary
+    door_info = {}
+    for did, x, y, A, B, axis, status in DOORS:
+        along = sorted(
+            range(math.floor(x / T) - 2, math.floor(x / T) + 3)
+            if axis == "h"
+            else range(math.floor(y / T) - 2, math.floor(y / T) + 3),
+            key=lambda k: abs(cen(k) - (x if axis == "h" else y)),
+        )[:2]
+        along.sort()
+        lanes = []
+        for k in along:
+            line = [
+                ((k, j) if axis == "h" else (j, k))
+                for j in range(
+                    math.floor((y if axis == "h" else x) / T) - 6,
+                    math.floor((y if axis == "h" else x) / T) + 7,
+                )
+            ]
+            best = None
+            for i, t in enumerate(line):
+                for j2 in range(i + 1, len(line)):
+                    u = line[j2]
+                    ra, rb = region.get(t), region.get(u)
+                    if (
+                        {ra, rb} == {A, B}
+                        and all(region.get(m) is None for m in line[i + 1 : j2])
+                        and (best is None or j2 - i < best[1] - best[0])
+                    ):
+                        best = (i, j2)
+            if best is None:
+                issues.append(f"{did}: no {A}/{B} crossing on lane {k}")
+                continue
+            chain = line[best[0] : best[1] + 1]
+            for m in chain[1:-1]:
+                region[m] = did
+            for a, b in zip(chain, chain[1:], strict=False):
+                allowed.add((frozenset((a, b)), did))
+            lanes.append(chain)
+        door_info[did] = {
+            "id": did,
+            "x": x,
+            "y": y,
+            "A": A,
+            "B": B,
+            "axis": axis,
+            "status": status,
+            "lanes": lanes,
+            "depth": len(lanes[0]) - 2 if lanes else None,
+        }
+    allowed_open = {e for e, d in allowed if door_info[d]["status"] == "open"}
+
+    # ---------------- furniture and anchors ----------------
+    furn, anchors, seams = [], [], set()
+
+    def L(room, u, v):
+        c0, r0, _, _ = bbox[room]
+        return (c0 + u, r0 + v)
+
+    def rect(room, u, v, w, h):
+        return [L(room, u + i, v + j) for j in range(h) for i in range(w)]
+
+    def absrect(c, r, w, h):
+        return [(c + i, r + j) for j in range(h) for i in range(w)]
+
+    def F(room, asset, tiles, label, kind="block", tall=False):
+        furn.append(
+            {
+                "room": room,
+                "asset": asset,
+                "tiles": tiles,
+                "label": label,
+                "kind": kind,
+                "tall": tall,
+            }
+        )
+
+    def A_(room, name, tile, chr_=None, code=None, serves=None):
+        anchors.append(
+            {"room": room, "name": name, "tile": tile, "chr": chr_, "code": code, "serves": serves}
+        )
+
+    def clock(h, hours, rt):
+        cx, cy, _ = HUBS[h]
+        th = math.radians(hours * 30)
+        return (
+            math.floor((cx + rt * T * math.sin(th)) / T),
+            math.floor((cy - rt * T * math.cos(th)) / T),
+        )
+
+    # L1 Market Specialists (9 x 15, door south)
+    F("L1", "CON-009", rect("L1", 3, 1, 3, 1), "CON-009 FX desk")
+    F("L1", "CON-009", rect("L1", 0, 6, 1, 2), "CON-009 metals")
+    F("L1", "CON-009", rect("L1", 8, 6, 1, 2), "CON-009 indices")
+    # PLT-003 desk plants sit on the CON-009 desks (Asset Registry: "on desks", no footprint); drawn by the prototype
+    for u in (0, 1, 2, 6, 7, 8):
+        seams.add(frozenset((L("L1", u, 3), L("L1", u, 4))))  # WAL-005 glass partition (seam)
+    A_("L1", "specialists.desk_fx", L("L1", 4, 2), "CHR-023", "FX", "CON-009 FX desk")
+    A_("L1", "specialists.desk_metals", L("L1", 1, 6), "CHR-022", "MET", "CON-009 metals")
+    A_("L1", "specialists.desk_indices", L("L1", 7, 6), "CHR-025", "IDX", "CON-009 indices")
+    A_("L1", "specialists.visitor", L("L1", 6, 12))
+    # L2 Technical Deck (9 x 14, door south)
+    for code, u, v in (
+        ("T3", 0, 2),
+        ("T4", 0, 5),
+        ("T5", 0, 8),
+        ("T6", 8, 2),
+        ("T7", 8, 5),
+        ("T8", 8, 10),
+    ):
+        F("L2", "CON-002", rect("L2", u, v, 1, 2), f"CON-002 {code}")
+    F("L2", "TBL-002", rect("L2", 3, 3, 3, 4), "TBL-002 holo chart table")
+    F("L2", "CON-010", rect("L2", 0, 11, 1, 1), "CON-010 clock")
+    for n, (c, u, v) in {
+        "t3": ("CHR-027", 1, 2),
+        "t4": ("CHR-028", 1, 5),
+        "t5": ("CHR-029", 1, 8),
+        "t6": ("CHR-030", 7, 2),
+        "t7": ("CHR-031", 7, 5),
+        "t8": ("CHR-032", 7, 10),
+    }.items():
+        A_("L2", f"technical.station_{n}", L("L2", u, v), c, n.upper(), f"CON-002 {n.upper()}")
+    A_("L2", "technical.session_clock", L("L2", 1, 11), "CHR-026", "T2", "CON-010 clock")
+    A_("L2", "technical.table_1", L("L2", 2, 4), serves="TBL-002 holo chart table")
+    A_("L2", "technical.table_2", L("L2", 6, 5), serves="TBL-002 holo chart table")
+    # L3 Debate Chamber (10 x 15, door south)
+    F("L3", "CON-023", rect("L3", 3, 2, 3, 1), "CON-023 review desk")
+    F("L3", "SEA-003", [L("L3", 4, 1)], "SEA-003", kind="seat")
+    F("L3", "TBL-007", rect("L3", 3, 5, 3, 3), "TBL-007 evidence stage")
+    for lab, u, v in (
+        ("bull", 2, 6),
+        ("bear", 6, 6),
+        ("risk_1", 2, 10),
+        ("risk_2", 4, 10),
+        ("risk_3", 6, 10),
+    ):
+        F("L3", "CON-011", [L("L3", u, v)], f"CON-011 {lab}")
+    A_("L3", "debate.judge_seat", L("L3", 4, 1), serves="CON-023 review desk")
+    A_("L3", "debate.podium_bull", L("L3", 1, 6), "CHR-006", "U1", "CON-011 bull")
+    A_("L3", "debate.podium_bear", L("L3", 7, 6), "CHR-007", "U2", "CON-011 bear")
+    for i, (c, u) in enumerate((("CHR-008", 2), ("CHR-009", 4), ("CHR-010", 6)), 1):
+        A_("L3", f"debate.podium_risk_{i}", L("L3", u, 11), c, f"U{4 + i}", f"CON-011 risk_{i}")
+    A_("L3", "debate.visitor", L("L3", 7, 13))
+    # L4 Data Core (9 x 9, door north)
+    F("L4", "EQP-001", rect("L4", 4, 4, 1, 1), "EQP-001 + SCR-006 column", tall=True)
+    F("L4", "CON-018", rect("L4", 4, 6, 2, 1), "CON-018 validator")
+    F("L4", "SRV-001", rect("L4", 8, 2, 1, 2), "SRV-001 rack", tall=True)
+    F("L4", "SRV-002", rect("L4", 8, 5, 1, 2), "SRV-002 rack", tall=True)
+    F("L4", "CON-027", rect("L4", 0, 8, 2, 1), "CON-027 recon.")
+    A_("L4", "datacore.reactor_console", L("L4", 4, 7), "CHR-035", "T1", "CON-018 validator")
+    A_("L4", "datacore.rack_check", L("L4", 7, 6), serves="SRV-002 rack")
+    A_("L4", "datacore.visitor", L("L4", 2, 1))
+    # L6 Memory Archive (9 x 8, door south)
+    F("L6", "CON-019", rect("L6", 0, 2, 1, 2), "CON-019 terminal")
+    F("L6", "STO-004", rect("L6", 8, 2, 1, 3), "STO-004 record shelf", tall=True)
+    F("L6", "TBL-005", rect("L6", 3, 4, 2, 1), "TBL-005 table")
+    A_("L6", "archive.terminal", L("L6", 1, 2), "CHR-033", "L1", "CON-019 terminal")
+    A_("L6", "archive.shelf", L("L6", 7, 3), serves="STO-004 record shelf")
+    A_("L6", "archive.table_1", L("L6", 4, 3), serves="TBL-005 table")
+    # L7 Performance Lab (9 x 8, door south)
+    F("L7", "CON-020", rect("L7", 0, 2, 1, 2), "CON-020 terminal")
+    F("L7", "TBL-005", rect("L7", 4, 4, 2, 1), "TBL-005 table")
+    A_("L7", "perflab.terminal", L("L7", 1, 2), "CHR-034", "L2", "CON-020 terminal")
+    A_("L7", "perflab.table_1", L("L7", 4, 3), serves="TBL-005 table")
+    # L9 Execution Bay (10 x 15, door north)
+    F("L9", "CON-016", rect("L9", 0, 2, 1, 2), "CON-016 pre-flight")
+    F("L9", "CON-017", rect("L9", 3, 8, 1, 2), "CON-017 execution")
+    F("L9", "EQP-002", rect("L9", 0, 8, 1, 2), "EQP-002 Dispatch Tube", tall=True)
+    F("L9", "EQP-003", rect("L9", 3, 14, 3, 1), "EQP-003 docking board")
+    F("L9", "FLR-008", rect("L9", 0, 6, 10, 9), "FLR-008 launch deck", kind="floor")
+    A_("L9", "execbay.preflight", L("L9", 1, 2), "CHR-038", "P4", "CON-016 pre-flight")
+    A_("L9", "execbay.launch", L("L9", 4, 8), "CHR-039", "E1", "CON-017 execution")
+    A_("L9", "execbay.entry", L("L9", 3, 1))
+    # L10 Risk Control (10 x 15, door north)
+    F("L10", "CON-012", rect("L10", 0, 2, 3, 1), "CON-012 intake")
+    F("L10", "CON-001", rect("L10", 0, 4, 1, 2), "CON-001 contradiction desk")
+    F("L10", "CON-029", rect("L10", 9, 1, 1, 2), "CON-029 outbox")
+    F("L10", "CON-015", rect("L10", 0, 9, 1, 1), "CON-015 breaker panel")
+    F("L10", "CON-014", rect("L10", 9, 9, 1, 2), "CON-014 sizing")
+    F("L10", "CON-013", rect("L10", 3, 14, 3, 1), "CON-013 rule checklist")
+    F("L10", "(marking)", rect("L10", 0, 7, 10, 1), "risk.core line (marking)", kind="floor")
+    A_("L10", "risk.intake_drop", L("L10", 1, 1), serves="CON-012 intake")
+    A_("L10", "risk.intake_desk", L("L10", 1, 4), "CHR-036", "P2", "CON-001 contradiction desk")
+    A_("L10", "risk.entry_wait", L("L10", 3, 1))
+    A_("L10", "risk.outbox_pickup", L("L10", 8, 1), serves="CON-029 outbox")
+    A_("L10", "risk.breaker_panel", L("L10", 1, 9), serves="CON-015 breaker panel")
+    A_("L10", "risk.sizing_console", L("L10", 8, 9), serves="CON-014 sizing")
+    A_("L10", "risk.rule_console", L("L10", 4, 13), "CHR-037", "P3", "CON-013 rule checklist")
+    # H-CMD (circle, 37 tiles across)
+    cc, cr = math.floor(975 / T), math.floor(692 / T)
+    F(
+        "H-CMD",
+        "FLR-002",
+        [
+            (c, r)
+            for c in range(cc - 6, cc + 7)
+            for r in range(cr - 6, cr + 7)
+            if math.hypot(c - cc, r - cr) <= 5.6
+        ],
+        "FLR-002 dais",
+        kind="floor",
+    )
+    F(
+        "H-CMD",
+        "TBL-001",
+        [
+            (c, r)
+            for c in range(cc - 3, cc + 4)
+            for r in range(cr - 3, cr + 4)
+            if math.hypot(c - cc, r - cr) <= 2.3
+        ],
+        "TBL-001 circular table",
+    )
+    F("H-CMD", "SEA-001", [(cc, cr - 3)], "SEA-001 command chair", kind="seat")
+    F("H-CMD", "CON-003", absrect(cc - 9, cr - 13, 3, 1), "CON-003 ops")
+    F("H-CMD", "CON-004", absrect(cc + 7, cr - 13, 3, 1), "CON-004 trader")
+    F("H-CMD", "CON-005", absrect(cc - 9, cr + 13, 3, 1), "CON-005 proposal")
+    F("H-CMD", "CON-022", absrect(cc - 1, cr + 15, 3, 1), "CON-022 budget")
+    F("H-CMD", "SEA-005", absrect(cc + 10, cr + 10, 2, 1), "SEA-005 bench", kind="seat")
+    A_("H-CMD", "command.chair", (cc, cr - 3), "CHR-001", "U8", "TBL-001 circular table")
+    A_("H-CMD", "command.table_head", (cc, cr + 3), "CHR-002", "U3", "TBL-001 circular table")
+    for n, (dc, dr) in {"n1": (-2, -2), "n2": (2, -2), "s1": (-2, 2), "s2": (2, 2)}.items():
+        A_("H-CMD", f"command.table_{n}", (cc + dc, cr + dr), serves="TBL-001 circular table")
+    A_("H-CMD", "command.console_ops", (cc - 8, cr - 12), "CHR-003", "O1", "CON-003 ops")
+    A_("H-CMD", "command.console_trader", (cc + 8, cr - 12), "CHR-004", "U4", "CON-004 trader")
+    A_("H-CMD", "command.console_proposal", (cc - 8, cr + 12), "CHR-005", "P1", "CON-005 proposal")
+    A_("H-CMD", "command.console_budget", (cc, cr + 14), "CHR-042", "QM", "CON-022 budget")
+    A_("H-CMD", "command.bench_1", (cc + 10, cr + 10), serves="SEA-005 bench")
+    A_("H-CMD", "command.bench_2", (cc + 11, cr + 10), serves="SEA-005 bench")
+    A_("H-CMD", "command.visitor_1", (cc + 9, cr + 8))
+    A_("H-CMD", "command.visitor_2", (cc + 12, cr + 8))
+    # H-LAB (circle, 30 tiles across)
+    lc, lr = math.floor(280 / T), math.floor(689 / T)
+    F("H-LAB", "CON-008", absrect(lc - 1, lr - 12, 3, 1), "CON-008 driver board")
+    for i, (c, r) in enumerate(
+        (
+            (lc - 12, lr - 5),
+            (lc - 12, lr - 2),
+            (lc - 12, lr + 1),
+            (lc - 8, lr - 5),
+            (lc - 8, lr - 2),
+            (lc - 8, lr + 1),
+        ),
+        1,
+    ):
+        F("H-LAB", "CON-006", absrect(c, r, 1, 2), f"CON-006 R{i}")
+        A_("H-LAB", f"lab.feed_r{i}", (c + 1, r), f"CHR-0{11 + i}", f"R{i}", f"CON-006 R{i}")
+    F("H-LAB", "EQP-005", absrect(lc + 1, lr - 1, 3, 3), "EQP-005 dome ring", tall=False)
+    F(
+        "H-LAB", "SCR-006", [(lc + 4, lr)], "SCR-006 projector column"
+    )  # DSP-LAB-05; added in the visual pass (missing from geometry V1)
+    F("H-LAB", "CON-007", absrect(lc - 2, lr + 11, 4, 1), "CON-007 bench")
+    for i in range(4):
+        A_(
+            "H-LAB",
+            f"lab.bench_{i + 1}",
+            (lc - 2 + i, lr + 10),
+            f"CHR-0{18 + i}",
+            f"V{i + 1}",
+            "CON-007 bench",
+        )
+    A_("H-LAB", "lab.driver_board", (lc, lr - 11), "CHR-011", "M1", "CON-008 driver board")
+    A_("H-LAB", "lab.handoff_n", (lc + 5, lr - 9))
+    A_("H-LAB", "lab.visitor_1", (lc + 4, lr + 5))
+    A_("H-LAB", "lab.visitor_2", (lc + 5, lr + 5))
+    # H-HAB (circle, 30 tiles across)
+    hc, hr = math.floor(1377 / T), math.floor(692 / T)
+    F("H-HAB", "PLT-005", absrect(hc - 1, hr - 1, 3, 3), "PLT-005 central tree", tall=True)
+    F("H-HAB", "LEI-002", absrect(hc + 5, hr - 10, 3, 1), "LEI-002 counter")
+    F("H-HAB", "LEI-003", absrect(hc + 8, hr - 10, 1, 1), "LEI-003 dispenser")
+    A_("H-HAB", "habitat.counter", (hc + 6, hr - 11), "CHR-043", "HOST", "LEI-002 counter")
+    for i, c in enumerate((hc + 3, hc + 6, hc + 9)):
+        F("H-HAB", "TBL-003", [(c, hr - 6)], "TBL-003 café table")
+        for j, dc in enumerate((-1, 1)):
+            F("H-HAB", "SEA-007", [(c + dc, hr - 6)], "SEA-007", kind="seat")
+            A_(
+                "H-HAB",
+                f"habitat.cafe_seat_{2 * i + j + 1}",
+                (c + dc, hr - 6),
+                serves="TBL-003 café table",
+            )
+    for i, c in enumerate((hc - 10, hc - 8, hc - 6)):
+        F(
+            "H-HAB",
+            "EQP-004",
+            absrect(c, hr - 8, 1, 2),
+            f"EQP-004 recovery pod {i + 1}",
+            kind="seat",
+            tall=True,
+        )
+        A_(
+            "H-HAB",
+            f"habitat.recovery_pod_{i + 1}",
+            (c, hr - 8),
+            serves=f"EQP-004 recovery pod {i + 1}",
+        )
+    F("H-HAB", "CON-021", [(hc - 8, hr - 4)], "CON-021 vitals")
+    A_("H-HAB", "habitat.vitals", (hc - 7, hr - 4), "CHR-041", "O2", "CON-021 vitals")
+    F("H-HAB", "LEI-001", absrect(hc + 9, hr + 6, 3, 2), "LEI-001 billiards")
+    F("H-HAB", "(clearance)", absrect(hc + 8, hr + 5, 5, 4), "LEI-001 +1 clearance", kind="floor")
+    A_("H-HAB", "habitat.billiards_1", (hc + 8, hr + 6), serves="LEI-001 billiards")
+    A_("H-HAB", "habitat.billiards_2", (hc + 12, hr + 7), serves="LEI-001 billiards")
+    F("H-HAB", "STO-003", absrect(hc + 10, hr + 10, 2, 1), "STO-003 cue rack", tall=True)
+    F("H-HAB", "LEI-004", absrect(hc - 2, hr + 6, 5, 3), "LEI-004 rug", kind="floor")
+    F("H-HAB", "SEA-006", absrect(hc - 2, hr + 6, 1, 2), "SEA-006 sofa W", kind="seat")
+    F("H-HAB", "SEA-006", absrect(hc + 2, hr + 6, 1, 2), "SEA-006 sofa E", kind="seat")
+    F("H-HAB", "TBL-004", absrect(hc, hr + 6, 1, 2), "TBL-004")
+    for i, t in enumerate(
+        ((hc - 2, hr + 6), (hc - 2, hr + 7), (hc + 2, hr + 6), (hc + 2, hr + 7)), 1
+    ):
+        A_("H-HAB", f"habitat.sofa_{i}", t, serves="SEA-006 sofa W" if i <= 2 else "SEA-006 sofa E")
+    F("H-HAB", "SEA-009", absrect(hc - 3, hr + 14, 2, 1), "SEA-009 window bench", kind="seat")
+    F("H-HAB", "SEA-009", absrect(hc + 1, hr + 14, 2, 1), "SEA-009 window bench", kind="seat")
+    A_("H-HAB", "habitat.window_1", (hc - 3, hr + 14), serves="SEA-009 window bench")
+    A_("H-HAB", "habitat.window_2", (hc + 2, hr + 14), serves="SEA-009 window bench")
+    for i, t in enumerate(((hc - 11, hr + 4), (hc - 11, hr + 6), (hc - 10, hr + 8)), 1):
+        F("H-HAB", "LEI-005", [t], f"LEI-005 rest pod {i}", kind="seat")
+        A_("H-HAB", f"habitat.rest_pod_{i}", t, serves=f"LEI-005 rest pod {i}")
+
+    # ---------------- checks ----------------
+    blocked = {}
+    for f in furn:
+        for t in f["tiles"]:
+            if f["kind"] == "block":
+                if t in blocked:
+                    issues.append(f"furniture overlap {f['label']} / {blocked[t]} at {t}")
+                blocked[t] = f["label"]
+            if region.get(t) != f["room"]:
+                issues.append(f"{f['label']} tile {t} outside {f['room']} (is {region.get(t)})")
+    anchor_at = {}
+    for a in anchors:
+        t = a["tile"]
+        if region.get(t) != a["room"]:
+            issues.append(f"anchor {a['name']} {t} outside {a['room']} ({region.get(t)})")
+        if t in blocked:
+            issues.append(f"anchor {a['name']} on furniture {blocked[t]}")
+        if t in anchor_at:
+            issues.append(f"anchor {a['name']} shares tile with {anchor_at[t]}")
+        anchor_at[t] = a["name"]
+        if a.get("serves"):
+            ft = [tt for f in furn if f["label"] == a["serves"] for tt in f["tiles"]]
+            if not ft:
+                issues.append(f"anchor {a['name']} serves unknown {a['serves']}")
+            elif t not in ft and min(abs(t[0] - x) + abs(t[1] - y) for x, y in ft) > 1:
+                issues.append(f"anchor {a['name']} not adjacent to {a['serves']}")
+
+    def walkable(t):
+        reg = region.get(t)
+        if reg is None or reg in RESERVED or t in blocked:
+            return False
+        return not (reg in door_info and door_info[reg]["status"] != "open")
+
+    def can_step(a, b):
+        if not (walkable(a) and walkable(b)):
+            return False
+        e = frozenset((a, b))
+        if e in seams:
+            return False
+        return region[a] == region[b] or e in allowed_open
+
+    def nbrs(t):
+        for d in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            u = (t[0] + d[0], t[1] + d[1])
+            if can_step(t, u):
+                yield u
+
+    def bfs(src):
+        dist = {src: 0}
+        prev = {}
+        q = deque([src])
+        while q:
+            t = q.popleft()
+            for u in nbrs(t):
+                if u not in dist:
+                    dist[u] = dist[t] + 1
+                    prev[u] = t
+                    q.append(u)
+        return dist, prev
+
+    # station-wide connectivity from the COR-N centre
+    start = (math.floor(600 / T), 46)
+    dist, prev = bfs(start)
+    walk_tiles = [t for t in region if walkable(t)]
+    unreached = [t for t in walk_tiles if t not in dist]
+    by_room_unreached = {}
+    for t in unreached:
+        by_room_unreached.setdefault(region[t], []).append(t)
+    for rm, ts in by_room_unreached.items():
+        issues.append(f"{len(ts)} walkable tiles in {rm} unreachable, e.g. {ts[:3]}")
+    for a in anchors:
+        if a["tile"] not in dist:
+            issues.append(f"anchor {a['name']} unreachable")
+
+    # door approach: 2 tiles deep on each open side must be free of furniture and anchors
+    def door_approach(d):
+        out = []
+        for ch in d["lanes"]:
+            a0, a1, b0, b1 = ch[0], ch[1], ch[-1], ch[-2]
+            for end, nxt in ((a0, a1), (b0, b1)):
+                dx, dy = end[0] - nxt[0], end[1] - nxt[1]
+                out += [end, (end[0] + dx, end[1] + dy)]
+        return out
+
+    for d in door_info.values():
+        if d["status"] != "open":
+            continue
+        for t in door_approach(d):
+            if t in blocked:
+                issues.append(f"{d['id']} approach {t} blocked by {blocked[t]}")
+            if t in anchor_at:
+                issues.append(f"{d['id']} approach {t} holds anchor {anchor_at[t]}")
+            if not walkable(t):
+                issues.append(f"{d['id']} approach {t} not walkable ({region.get(t)})")
+    for rid, (
+        x,
+        y,
+    ) in R_DOORS.items():  # reserved R-doors: keep the hub-side approach clear (H-HAB sheet)
+        for t, reg in region.items():
+            if (
+                reg == "H-HAB"
+                and math.hypot(cen(t[0]) - x, cen(t[1]) - y) <= 30
+                and (t in blocked or t in anchor_at)
+            ):
+                issues.append(f"{rid} approach {t} occupied")
+    # H-HAB billiards clearance
+    clr = [f for f in furn if f["label"] == "LEI-001 +1 clearance"][0]["tiles"]
+    for t in clr:
+        if t in blocked and not blocked[t].startswith("LEI-001"):
+            issues.append(f"billiards clearance {t} blocked by {blocked[t]}")
+
+    # two-agent passing: a tile supports passing if it sits in a free 2x2 block of one region
+    def pass2(t):
+        for ox in (0, -1):
+            for oy in (0, -1):
+                sq = [(t[0] + ox + i, t[1] + oy + j) for i in (0, 1) for j in (0, 1)]
+                if (
+                    all(walkable(s) and s not in anchor_at for s in sq)
+                    and len({region[s] for s in sq}) == 1
+                ):
+                    return True
+        return False
+
+    def path(src, dst):
+        ds, pv = bfs(src)
+        if dst not in ds:
+            return None
+        p = [dst]
+        while p[-1] != src:
+            p.append(pv[p[-1]])
+        return p[::-1]
+
+    room_rep = {}
+    for rm in list(RECTS) + list(CORRS) + list(HUBS):
+        if rm in RESERVED:
+            continue
+        ts = [t for t, r in region.items() if r == rm]
+        free = [t for t in ts if walkable(t)]
+        c0, r0, c1, r1 = bbox[rm]
+        doors = [d for d in door_info.values() if rm in (d["A"], d["B"]) and d["status"] == "open"]
+        single = []
+        for a in [a for a in anchors if a["room"] == rm]:
+            for d in doors:
+                ch = d["lanes"][0]
+                inner = ch[0] if region[ch[0]] == rm else ch[-1]
+                p = path(inner, a["tile"])
+                if p is None:
+                    continue
+                run = 0
+                worst = 0
+                for t in p[2:-1]:
+                    run = 0 if pass2(t) else run + 1
+                    worst = max(worst, run)
+                single.append((a["name"], d["id"], len(p) - 1, worst))
+        occl = []
+        for a in [a for a in anchors if a["room"] == rm and a.get("chr")]:
+            s = (a["tile"][0], a["tile"][1] + 1)
+            if s in blocked and any(f["tall"] and s in f["tiles"] for f in furn):
+                occl.append(a["name"])
+        room_rep[rm] = {
+            "size_tiles": (c1 - c0 + 1, r1 - r0 + 1),
+            "size_units": ((c1 - c0 + 1) * T, (r1 - r0 + 1) * T),
+            "floor_tiles": len(ts),
+            "free_tiles": len(free),
+            "furniture_tiles": sum(1 for t in ts if t in blocked),
+            "pass2_share": round(sum(1 for t in free if pass2(t)) / max(1, len(free)), 2),
+            "routes": single,
+            "occluded": occl,
+        }
+        if occl:
+            issues.append(f"{rm}: anchors hidden behind tall furniture: {occl}")
+
+    # corridor width
+    for cn in CORRS:
+        widths = {}
+        for (c, _r), reg in region.items():
+            if reg == cn:
+                widths[c] = widths.get(c, 0) + 1
+        room_rep[cn]["width_profile"] = sorted(set(widths.values()))
+        room_rep[cn]["full_width_cols"] = sum(1 for w in widths.values() if w == 3)
+        room_rep[cn]["cols"] = len(widths)
+
+    out = {
+        "scale": {
+            "tile": T,
+            "agent_height": AGENT_H,
+            "spacing_tiles": SPACING,
+            "camera": {"default": 2, "min": 0.5, "max": 6},
+        },
+        "hubs": HUBS,
+        "rects": RECTS,
+        "corrs": CORRS,
+        "r_rooms": R_ROOMS,
+        "r_doors": R_DOORS,
+        "reserved": sorted(RESERVED),
+        "tiles": [[c, r, reg] for (c, r), reg in region.items()],
+        "doors": [dict(d) for d in door_info.values()],
+        "seams": [sorted(e) for e in seams],
+        "furniture": furn,
+        "anchors": anchors,
+        "bbox": bbox,
+        "report": room_rep,
+        "issues": issues,
+    }
+    return out
+
+
+def print_report(geo):
+    """Print the geometry check summary (issues, room fit, doors)."""
+    print("ISSUES:", len(geo["issues"]))
+    for i in geo["issues"]:
+        print("  -", i)
+    for rm, r in geo["report"].items():
+        worst = max([x[3] for x in r["routes"]] or [0])
+        print(
+            f"{rm:6} {r['size_tiles']} floor {r['floor_tiles']} free {r['free_tiles']} "
+            f"pass2 {r['pass2_share']} worst single-file run {worst}"
+        )

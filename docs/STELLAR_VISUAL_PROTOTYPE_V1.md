@@ -133,6 +133,9 @@ StarNet was used as a spatial and technical reference only. No StarNet art, spri
 | Doors: 21 doors; restricted = `DR-L9`, `DR-L10`; `DOR-001` ×8, `DOR-008` ×2, `DOR-009` ×11 as in the Asset Registry; L5 / L8 sealed | pass |
 | Self-contained: no external URL, image or StarNet reference | pass |
 | Stellar tests / ruff | 891 passed / all checks passed |
+| Rebuild test: `python tools/visual_prototype/build.py --check` rebuilds both pages from the pipeline and compares them byte for byte | pass |
+
+The build and validation pipeline lives in [`tools/visual_prototype/`](../tools/visual_prototype/README.md), separate from production code.
 
 ## 6. Geometry findings from this pass
 

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stellar Geometry Preview</title>
+<style>
+:root{--bg:#0b1020;--hull:#121a2e;--panel:#f4f1ea;--ink:#1d2433;--muted:#5b6476;--line:#c9c3b6;
+--room:#e9e4d9;--hub:#dfe6ee;--corr:#d6dbe3;--door:#7cc4c9;--res:#3a3f4d;--wall:#f7f5f0;--furn:#5a6b86;--seat:#8aa1b8;--tall:#36435c;--floor:rgba(120,150,190,.18);--agent:#e8a64a;--anchor:#3d7f86}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--panel:#1a2133;--ink:#e6e9ef;--muted:#9aa3b5;--line:#2c3550}}
+:root[data-theme="dark"]{--panel:#1a2133;--ink:#e6e9ef;--muted:#9aa3b5;--line:#2c3550}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+#stage{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;cursor:grab;touch-action:none}
+#stage:active{cursor:grabbing}
+.hud{position:fixed;left:16px;top:16px;max-width:min(380px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.hud h1{font-size:15px;margin:0 0 4px}
+.hud p{margin:2px 0;color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+button,select{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
+button.on{background:var(--anchor);color:#fff;border-color:var(--anchor)}
+.legend{position:fixed;right:16px;bottom:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12px;max-width:calc(100vw - 32px)}
+.legend div{display:flex;align-items:center;gap:6px;margin:2px 0}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block}
+@media (max-width:640px){.legend{display:none}}
+</style>
+</head>
+<body>
+<svg id="stage" xmlns="http://www.w3.org/2000/svg"><g id="cam"></g></svg>
+<div class="hud">
+  <h1>Stellar geometry / scale preview V1</h1>
+  <p>1 tile = 12 world units · 1 Floor Plan px = 1 unit · agent 19 units · spacing 0.8 tile</p>
+  <p id="zoomInfo"></p>
+  <div class="row">
+    <button data-z="0.5">0.5×</button><button data-z="1">1×</button><button data-z="2">2×</button><button data-z="4">4×</button><button data-z="6">6×</button>
+    <select id="focus" aria-label="Focus room"></select>
+    <button id="lbl" class="on">Labels</button>
+  </div>
+</div>
+<div class="legend">
+  <div><span class="sw" style="background:var(--room)"></span>Room floor</div>
+  <div><span class="sw" style="background:var(--hub)"></span>Hub floor</div>
+  <div><span class="sw" style="background:var(--corr)"></span>Corridor (3 tiles)</div>
+  <div><span class="sw" style="background:var(--door)"></span>Door (2 tiles) / threshold</div>
+  <div><span class="sw" style="background:var(--res)"></span>Reserved (L5, L8, R1–R6)</div>
+  <div><span class="sw" style="background:var(--furn)"></span>Blocking footprint (dark = tall)</div>
+  <div><span class="sw" style="background:var(--seat)"></span>Seat / pod (agent-occupied)</div>
+  <div><span class="sw" style="background:var(--agent)"></span>Agent: 0.8-tile footprint + 19-unit height</div>
+  <div><span class="sw" style="background:var(--anchor)"></span>Unoccupied anchor</div>
+</div>
+<script>
+const D=/*DATA*/null;
+const T=D.T, NS="http://www.w3.org/2000/svg", cam=document.getElementById("cam"), svg=document.getElementById("stage");
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||cam).appendChild(e);return e}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const labels=el("g",{});cam.removeChild(labels);
+// reserved radial rooms (art only; not walkable)
+const hab=D.hubs["H-HAB"];
+for(const [id,[x0,x1,y0,y1]] of Object.entries(D.rRooms)){
+  const cx=(x0+x1)/2, cy=(y0+y1)/2, ang=Math.atan2(cy-hab[1],cx-hab[0])*180/Math.PI+90;
+  el("rect",{x:cx-57.5,y:cy-92.5,width:115,height:185,fill:css("--res"),stroke:css("--wall"),"stroke-width":2,opacity:.8,transform:`rotate(${ang} ${cx} ${cy})`});
+  el("text",{x:cx,y:cy,"text-anchor":"middle","font-size":14,fill:"#c8cdd8"},labels).textContent=id+" · reserved";
+}
+// floor tiles
+for(const [c,r,n] of D.tiles){
+  let f=css("--room");
+  if(n.startsWith("H-"))f=css("--hub"); else if(n.startsWith("COR"))f=css("--corr"); else if(n.startsWith("DR"))f=css("--door");
+  if(D.reserved.includes(n)||(n.startsWith("DR")&&D.doorInfo.find(d=>d.id==n).status!="open"))f=css("--res");
+  el("rect",{x:c*T,y:r*T,width:T,height:T,fill:f,stroke:"rgba(40,50,70,.13)","stroke-width":.4});
+}
+// floor-kind furniture (markings, dais, rug, clearance)
+for(const f of D.furn.filter(f=>f.kind=="floor"))for(const [c,r] of f.tiles)el("rect",{x:c*T,y:r*T,width:T,height:T,fill:css("--floor")});
+// walls
+for(const [x1,y1,x2,y2] of D.walls)el("line",{x1,y1,x2,y2,stroke:css("--wall"),"stroke-width":2.4,"stroke-linecap":"square"});
+for(const [x1,y1,x2,y2] of D.glass)el("line",{x1,y1,x2,y2,stroke:"#9fd3e6","stroke-width":1.6,"stroke-dasharray":"3 2"});
+for(const [x1,y1,x2,y2,st] of D.doors)el("line",{x1,y1,x2,y2,stroke:st=="open"?css("--door"):"#c98a3a","stroke-width":st=="open"?2:3,"stroke-dasharray":st=="open"?"2 2":""});
+for(const [id,[x,y]] of Object.entries(D.rDoors))el("rect",{x:x-12,y:y-3,width:24,height:6,fill:"#c98a3a",transform:`rotate(${Math.atan2(y-hab[1],x-hab[0])*180/Math.PI+90} ${x} ${y})`});
+// furniture
+for(const f of D.furn.filter(f=>f.kind!="floor")){
+  const fill=f.kind=="seat"?css("--seat"):(f.tall?css("--tall"):css("--furn"));
+  let sx=0,sy=0;
+  for(const [c,r] of f.tiles){el("rect",{x:c*T+.6,y:r*T+.6,width:T-1.2,height:T-1.2,rx:1.5,fill});sx+=c;sy+=r}
+  const cx=(sx/f.tiles.length+.5)*T, cy=(sy/f.tiles.length+.5)*T;
+  if(f.kind!="seat"||f.asset=="SEA-001"){const t=el("text",{x:cx,y:cy+1.5,"text-anchor":"middle","font-size":3.6,fill:"#fff",stroke:"#1d2433","stroke-width":.5,"paint-order":"stroke"},labels);t.textContent=f.label}
+}
+// anchors and representative agents (Character Registry homes)
+for(const a of D.anchors){
+  const [c,r]=a.tile, fx=c*T+T/2, fy=r*T+11;
+  if(!a.chr){el("circle",{cx:c*T+T/2,cy:r*T+T/2,r:1.6,fill:css("--anchor")});continue}
+  el("ellipse",{cx:fx,cy:fy-1.5,rx:D.sp*T/2,ry:D.sp*T/4,fill:"rgba(0,0,0,.25)"});
+  el("rect",{x:fx-3.5,y:fy-D.H,width:7,height:D.H,rx:3.5,fill:css("--agent"),stroke:"#5a3b10","stroke-width":.5});
+  el("circle",{cx:fx,cy:fy-D.H+3.5,r:3,fill:"#f5d6a5"});
+  const t=el("text",{x:fx,y:fy-D.H-1.5,"text-anchor":"middle","font-size":4,"font-weight":700,fill:"#fff",stroke:"#1d2433","stroke-width":.6,"paint-order":"stroke"},labels);t.textContent=a.code;
+}
+// room labels
+for(const [id,[c0,r0,c1,r1]] of Object.entries(D.bbox)){
+  const hub=id.startsWith("H-"), cor=id.startsWith("COR");
+  const a=hub?{x:(c0+c1+1)/2*T,y:r0*T-6,"text-anchor":"middle","font-size":14}:cor?{x:(c0+c1+1)/2*T,y:(r0+r1+1)/2*T+3,"text-anchor":"middle","font-size":8}:{x:c0*T+2.5,y:r0*T+8,"text-anchor":"start","font-size":7};
+  const t=el("text",{...a,"font-weight":700,fill:cor?"#4a5568":((hub||D.reserved.includes(id))?"#c8cdd8":"#3b4252"),opacity:.85},labels);
+  t.textContent=id+(D.reserved.includes(id)?" · reserved":"");
+}
+cam.appendChild(labels);
+// camera: StarNet reference default 2x, range 0.5x-6x
+const st={z:2,x:0,y:0}; const MINZ=.5,MAXZ=6;
+function apply(){cam.setAttribute("transform",`translate(${st.x} ${st.y}) scale(${st.z})`);
+  document.getElementById("zoomInfo").textContent=`Camera ${st.z.toFixed(2)}× · 1 tile = ${(T*st.z).toFixed(0)} px · agent = ${(D.H*st.z).toFixed(0)} px`;
+  for(const b of document.querySelectorAll("[data-z]"))b.classList.toggle("on",Math.abs(+b.dataset.z-st.z)<.01)}
+function centreOn(wx,wy,z){st.z=Math.min(MAXZ,Math.max(MINZ,z??st.z));st.x=innerWidth/2-wx*st.z;st.y=innerHeight/2-wy*st.z;apply()}
+function zoomAt(z,px,py){z=Math.min(MAXZ,Math.max(MINZ,z));const wx=(px-st.x)/st.z,wy=(py-st.y)/st.z;st.z=z;st.x=px-wx*z;st.y=py-wy*z;apply()}
+svg.addEventListener("wheel",e=>{e.preventDefault();zoomAt(st.z*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
+let drag=null;svg.addEventListener("pointerdown",e=>{drag=[e.clientX,e.clientY,st.x,st.y];svg.setPointerCapture(e.pointerId)});
+svg.addEventListener("pointermove",e=>{if(drag){st.x=drag[2]+e.clientX-drag[0];st.y=drag[3]+e.clientY-drag[1];apply()}});
+svg.addEventListener("pointerup",()=>drag=null);
+for(const b of document.querySelectorAll("[data-z]"))b.onclick=()=>zoomAt(+b.dataset.z,innerWidth/2,innerHeight/2);
+const sel=document.getElementById("focus");
+const focusList={"Station":[960,690,.5],...Object.fromEntries(Object.entries(D.bbox).map(([k,[c0,r0,c1,r1]])=>[k,[(c0+c1+1)/2*T,(r0+r1+1)/2*T,2]]))};
+for(const k of Object.keys(focusList)){const o=document.createElement("option");o.value=k;o.textContent="Focus: "+k;sel.appendChild(o)}
+sel.onchange=()=>{const [x,y,z]=focusList[sel.value];centreOn(x,y,z)};
+document.getElementById("lbl").onclick=e=>{labels.style.display=labels.style.display=="none"?"":"none";e.target.classList.toggle("on")};
+const q=new URLSearchParams(location.search);
+if(q.get("focus")&&focusList[q.get("focus")]){sel.value=q.get("focus");const [x,y,z]=focusList[q.get("focus")];centreOn(x,y,+(q.get("z")||z))}
+else centreOn(+(q.get("x")||606),+(q.get("y")||560),+(q.get("z")||2));
+</script>
+</body>
+</html>

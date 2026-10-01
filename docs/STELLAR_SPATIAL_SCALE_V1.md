@@ -165,4 +165,4 @@ Not included, as instructed: final art, audio, chat, the owner avatar, events or
 1. The L2 `TBL-002` size: 3×4 (as drawn) or 2×4.
 2. The modelling conventions in §3: seats as occupied tiles, `WAL-005` as a seam, and the L10 divider as a marking only.
 3. Hub furniture positions inside the approved clock sectors (H-CMD, H-LAB, H-HAB) are first proposals.
-4. Whether the generator script (Python; it rasterises the plan and runs the checks) should live in the repository. It is currently kept outside the repo.
+4. ~~Where the generator script lives~~ **Closed:** the pipeline is in [`tools/visual_prototype/`](../tools/visual_prototype/README.md). `build.py` rebuilds this preview, and `build.py --check` verifies it.
