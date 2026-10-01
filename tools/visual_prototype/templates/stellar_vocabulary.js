@@ -449,11 +449,24 @@ SV.door.lintel=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2,dD=(
   if(type!=="standard"){prismX(frameRect(fr,s0+1,s1-1,-dD+1.4,dD-1.4),H+0.6,H+1.8,"#3d4046",CAL.gunLo,{lw:0.35,shadow:false,mat:false});capTop(fr,s0+1,s1-1,-dD+1.4,dD-1.4,H+1.8,4)
     for(const sg of [-1,1]){const p=[fr.cx+fr.a[0]*sg*(hW+sp.jw/2),fr.cy+fr.a[1]*sg*(hW+sp.jw/2)];cyl(p[0],p[1],0.9,H+1.8,H+3.2,type==="restricted"?CAL.amberHi:CAL.amber,"#5a3a14",{n:8})}} // beacons
   else capTop(fr,s0,s1,-dD+0.6,dD-0.6,H+0.6,4)};
-SV.door.leaf=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2;for(const sg of [-1,1]){const s0=sg<0?-hW:0.15,s1=sg<0?-0.15:hW;prismX(frameRect(fr,s0,s1,-0.7,0.7),0.2,sp.H-sp.lh,"#4a4e56","#3a3e46",{lw:0.4,shadow:false});
-  for(const k of ["front","back"]){const [a,b,n]=faces(fr,s0,s1,-0.7,0.7)[k];onFace(a,b,n,0.2,sp.H-sp.lh,(W,HH)=>{dRaised(0.8,1,W-1.6,HH*0.4,"#43474f");dRaised(0.8,HH*0.48,W-1.6,HH*0.4,"#43474f");
-    const ex=sg<0?W-1:0;for(let y=0.4;y<HH;y+=1.4){ctx.fillStyle=Math.floor(y/1.4)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(ex,y,1,0.7)}dWear(W,HH,sg+2)})}}};
+// leaf: two sliding panels meeting at the centre; o.open (0 shut .. 1 open) slides each full-width panel sideways into its
+// jamb pocket. The panels are clipped to the opening, so the travelling part disappears into the column (no squash, no fade)
+SV.door.leaf=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2;const k=Math.max(0,Math.min(1,o.open||0));if(k>0.995)return;const off=k*hW,H1=sp.H-sp.lh,dc=o.d||0;
+  ctx.save();if(k>0.001){const pts=[];for(const h of [0,H1+0.2])for(const p of frameRect(fr,-hW,hW,dc-0.9,dc+0.9))pts.push(V.P(p[0],p[1],h));
+    pts.sort((p,q)=>p[0]-q[0]||p[1]-q[1]);const cr=(o2,a2,b2)=>(a2[0]-o2[0])*(b2[1]-o2[1])-(a2[1]-o2[1])*(b2[0]-o2[0]);const lo=[],up=[];for(const p of pts){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+    for(const p of pts.slice().reverse()){while(up.length>1&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}const hull=lo.slice(0,-1).concat(up.slice(0,-1));
+    ctx.beginPath();hull.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.clip()}
+  const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));
+  for(const sg of order){const s0=sg<0?-hW-off:0.15+off,s1=sg<0?-0.15-off:hW+off;prismX(frameRect(fr,s0,s1,dc-0.7,dc+0.7),0.2,H1,"#4a4e56","#3a3e46",{lw:0.4,shadow:false});
+  for(const kk of ["front","back"]){const [a,b,n]=faces(fr,s0,s1,dc-0.7,dc+0.7)[kk];onFace(a,b,n,0.2,H1,(W,HH)=>{dRaised(0.8,1,W-1.6,HH*0.4,"#43474f");dRaised(0.8,HH*0.48,W-1.6,HH*0.4,"#43474f");
+    const ex=sg<0?W-1:0;for(let y=0.4;y<HH;y+=1.4){ctx.fillStyle=Math.floor(y/1.4)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(ex,y,1,0.7)}dWear(W,HH,sg+2)})}}
+  ctx.restore()};
 // the whole assembly in camera order; returns nothing (items are split by the caller for depth sorting when needed)
-SV.door.build=(fr,type,o={})=>{SV.door.threshold(fr,type,o);const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));SV.door.jamb(fr,type,order[0],o);if(o.closed)SV.door.leaf(fr,type,o);SV.door.jamb(fr,type,order[1],o);SV.door.lintel(fr,type,o)};
+// leaves: a single-frame door has one panel pair at mid-depth; a deep doorway (corridor frame + room frame merged) has a pair at
+// each frame face, so a shut door blocks the opening from every camera (a pair deep inside a long tunnel is hidden by the lintel)
+SV.door.build=(fr,type,o={})=>{SV.door.threshold(fr,type,o);const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));SV.door.jamb(fr,type,order[0],o);
+  const sp=SV.door.SPEC[type],dD=(o.D||sp.depth)/2,k=o.closed?0:o.open;
+  if(k!==undefined&&k<0.999){const ds=dD>sp.depth/2+1.5?[-(dD-1.6),dD-1.6].sort((p,q)=>(p-q)*camAlong(fr.f)):[0];for(const d of ds)SV.door.leaf(fr,type,{open:k,d})}SV.door.jamb(fr,type,order[1],o);SV.door.lintel(fr,type,o)};
 // FLR-bigGrate: a large framed deck grate (n x n tiles): titanium frame with bolts, a recessed well, a grid of square holes with
 // a lit lip, a centre cross-brace; the reference bridge's paired floor grates, built in Stellar's deck language
 SV.floor.bigGrate=(X,Y,S,fine)=>{const q=rectPoly(X+1,Y+1,X+S-1,Y+S-1);ctx.fillStyle="#3a3c40";ctx.fill(poly2(q,0.03));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(q,0.03));

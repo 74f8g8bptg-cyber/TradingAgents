@@ -24,25 +24,26 @@
   // AMBIENCE carries every continuous bed (station, rooms, fountain, café murmur, cinema layers); EFFECTS carries one-shots in
   // four groups with fixed trims so a door never overpowers the station and the dog never overpowers H-HAB; MUSIC carries
   // only the R1 calm pad; UI carries the sound toggle confirmation.
-  const CATEGORIES = { MASTER: 0.8, AMBIENCE: 0.6, EFFECTS: 0.8, MUSIC: 0.35, UI: 0.5 };
-  const GROUPS = { DOORS: 0.85, AGENTS: 0.6, MACHINERY: 0.6, DOG: 0.6 };
+  const CATEGORIES = { MASTER: 0.85, AMBIENCE: 0.5, EFFECTS: 0.9, MUSIC: 0.35, UI: 0.5 };
+  const GROUPS = { DOORS: 0.8, AGENTS: 1.0, MACHINERY: 0.7, DOG: 0.75, WATER: 0.7 }; // WATER feeds the AMBIENCE bus (fountain detail)
 
   // ------------------------------------------------------------------ cue catalogue: category/group, priority, rate gate (ms), base level
   const CUES = {
-    "door.open.standard": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 }, "door.close.standard": { g: "DOORS", prio: 3, gate: 250, vol: 0.8 },
-    "door.open.hub": { g: "DOORS", prio: 3, gate: 250, vol: 1.0 }, "door.close.hub": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 },
-    "door.open.restricted": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 }, "door.close.restricted": { g: "DOORS", prio: 3, gate: 250, vol: 0.8 },
-    "step.metal": { g: "AGENTS", prio: 0, gate: 0, vol: 0.35 }, "step.wood": { g: "AGENTS", prio: 0, gate: 0, vol: 0.3 }, "step.soft": { g: "AGENTS", prio: 0, gate: 0, vol: 0.18 },
-    "seat.sit": { g: "AGENTS", prio: 1, gate: 120, vol: 0.55 }, "seat.stand": { g: "AGENTS", prio: 1, gate: 120, vol: 0.45 }, "cafe.cup": { g: "AGENTS", prio: 1, gate: 400, vol: 0.4 },
-    "billiards.click": { g: "AGENTS", prio: 1, gate: 600, vol: 0.5 },
-    "console.wake": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.45 }, "console.sleep": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.4 },
+    // doors: four cues per family, one per physical transition of the Life door (travel starts, end stop, travel back, seal)
+    ...Object.fromEntries(["standard", "hub", "restricted"].flatMap((ty) => [[`door.travel.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 1.0 }], [`door.stop.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.8 }],
+      [`door.travelback.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.95 }], [`door.seal.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.9 }]])),
+    "step.metal": { g: "AGENTS", prio: 1, gate: 0, vol: 1.0 }, "step.wood": { g: "AGENTS", prio: 1, gate: 0, vol: 0.95 }, "step.soft": { g: "AGENTS", prio: 1, gate: 0, vol: 0.7 },
+    "cafe.clink": { g: "AGENTS", prio: 1, gate: 900, vol: 0.7 }, "sofa.creak": { g: "AGENTS", prio: 1, gate: 1500, vol: 0.6 }, "console.touch": { g: "MACHINERY", prio: 1, gate: 700, vol: 0.55 },
+    "seat.sit": { g: "AGENTS", prio: 1, gate: 120, vol: 0.8 }, "seat.stand": { g: "AGENTS", prio: 1, gate: 120, vol: 0.65 }, "cafe.cup": { g: "AGENTS", prio: 1, gate: 400, vol: 0.7 },
+    "billiards.click": { g: "AGENTS", prio: 1, gate: 600, vol: 0.8 },
+    "console.wake": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.7 }, "console.sleep": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.6 },
     "pod.close": { g: "MACHINERY", prio: 2, gate: 400, vol: 0.5 }, "pod.open": { g: "MACHINERY", prio: 2, gate: 400, vol: 0.45 },
     "projector.start": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.6 }, "projector.stop": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.55 },
     "cinema.lightsdown": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.5 }, "cinema.lightsup": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.5 },
-    "structure.creak": { g: "MACHINERY", prio: 1, gate: 20000, vol: 0.35 }, "fountain.drop": { g: "MACHINERY", prio: 0, gate: 200, vol: 0.25 },
+    "structure.creak": { g: "MACHINERY", prio: 1, gate: 20000, vol: 0.35 }, "fountain.drop": { g: "WATER", prio: 0, gate: 0, vol: 0.5 }, "fountain.bubble": { g: "WATER", prio: 0, gate: 0, vol: 0.45 },
     "zen.bowl": { g: "MACHINERY", prio: 2, gate: 15000, vol: 0.4 }, "quiet.seal": { g: "MACHINERY", prio: 1, gate: 4000, vol: 0.25 },
-    "dog.paw": { g: "DOG", prio: 0, gate: 0, vol: 0.3 }, "dog.tag": { g: "DOG", prio: 1, gate: 800, vol: 0.45 }, "dog.toy": { g: "DOG", prio: 1, gate: 900, vol: 0.5 },
-    "dog.lap": { g: "DOG", prio: 1, gate: 500, vol: 0.4 }, "dog.woof": { g: "DOG", prio: 2, gate: 120000, vol: 0.4 },
+    "dog.paw": { g: "DOG", prio: 0, gate: 0, vol: 0.6 }, "dog.tag": { g: "DOG", prio: 1, gate: 800, vol: 0.6 }, "dog.toy": { g: "DOG", prio: 1, gate: 900, vol: 0.7 },
+    "dog.lap": { g: "DOG", prio: 1, gate: 500, vol: 0.6 }, "dog.woof": { g: "DOG", prio: 2, gate: 120000, vol: 0.4 },
   };
 
   // ------------------------------------------------------------------ rooms: acoustic identity (floor, reverb) and ambience beds
@@ -51,36 +52,41 @@
   const FLOOR = { "H-HAB": "wood", R1: "wood", R2: "soft", R3: "soft", R4: "soft" }; // default: metal deck
   const VERB = { L3: 0.35, "H-CMD": 0.25, "H-LAB": 0.25, "H-HAB": 0.18, R1: 0.2, R2: 0.08, R3: 0.0, R4: 0.12 }; // default 0.15
   // bed recipes: noise bands [type, freq, Q, level] + hum partials [freq, level]; levels are pre-mix, the director scales them
+  // beds: few broadband components, more structure. Each room has its own character (tone, pulse, band), quiet enough that
+  // activity sits on top. Levels are pre-mix; the director gives the room the listener is in full weight and fades its
+  // neighbours within a short distance of the walls, so crossing a door changes the room.
   const BEDS = {
-    station: { noise: [["lowpass", 90, 0.7, 0.30]], hum: [[50, 0.025]] },
-    corridor: { noise: [["lowpass", 900, 0.7, 0.16], ["bandpass", 2600, 0.7, 0.035]], hum: [] },
-    "H-CMD": { noise: [["bandpass", 1800, 0.8, 0.06], ["lowpass", 300, 0.7, 0.10]], hum: [[60, 0.035], [120, 0.015]] },
-    "H-LAB": { noise: [["lowpass", 400, 0.7, 0.09], ["bandpass", 3500, 4, 0.012]], hum: [[90, 0.03], [180, 0.012]] },
-    "H-HAB": { noise: [["lowpass", 600, 0.7, 0.09]], hum: [] },
-    L1: { noise: [["bandpass", 1500, 0.8, 0.05], ["lowpass", 300, 0.7, 0.07]], hum: [[60, 0.015]] },
-    L2: { noise: [["bandpass", 2400, 0.8, 0.045], ["lowpass", 300, 0.7, 0.06]], hum: [[75, 0.02]] },
-    L3: { noise: [["lowpass", 250, 0.7, 0.09]], hum: [] },
-    L4: { noise: [["bandpass", 1800, 0.8, 0.12], ["lowpass", 250, 0.7, 0.09]], hum: [[120, 0.035]] },
-    L6: { noise: [["lowpass", 200, 0.7, 0.05]], hum: [[55, 0.01]] },
-    L7: { noise: [["bandpass", 1600, 0.8, 0.05], ["lowpass", 300, 0.7, 0.06]], hum: [[66, 0.015]] },
-    L9: { noise: [["lowpass", 160, 0.7, 0.12]], hum: [[45, 0.035], [90, 0.015]] },
-    L10: { noise: [["bandpass", 2000, 0.8, 0.06], ["lowpass", 300, 0.7, 0.07]], hum: [[80, 0.02]] },
-    R1: { noise: [["lowpass", 350, 0.7, 0.04]], hum: [] },
-    R2: { noise: [["lowpass", 220, 0.7, 0.06]], hum: [] },
-    R3: { noise: [["lowpass", 120, 0.7, 0.02]], hum: [] },
-    R4: { noise: [["lowpass", 500, 0.7, 0.06]], hum: [] },
-    fountain: { noise: [["bandpass", 1300, 0.6, 0.10], ["bandpass", 3600, 1.2, 0.035]], hum: [], am: 0.35 },
-    cafe: { noise: [["bandpass", 520, 1.6, 0.05], ["bandpass", 1100, 2.2, 0.025]], hum: [], am: 0.6 },
-    cinemaFan: { noise: [["bandpass", 900, 1.2, 0.05]], hum: [[110, 0.008]] },
-    cinemaRumble: { noise: [["lowpass", 110, 0.7, 0.16]], hum: [], am: 0.5 },
-    zenPad: { noise: [], hum: [[174.6, 0.03], [261.6, 0.02], [349.2, 0.012]], am: 0.3, music: true },
+    station: { noise: [["lowpass", 60, 0.7, 0.05]], hum: [[41, 0.006]] },                                   // distant hull rumble
+    corridor: { noise: [["lowpass", 320, 0.7, 0.05]], hum: [[248, 0.002]], am: 0.6, rate: 0.18 },              // air moving through ducts
+    "H-CMD": { noise: [["bandpass", 2200, 4, 0.008]], hum: [[60, 0.012], [120, 0.009], [180, 0.005], [7200, 0.0012]] }, // electrical, bright
+    "H-LAB": { noise: [["lowpass", 170, 0.7, 0.05], ["bandpass", 3500, 9, 0.004]], hum: [[90, 0.008]], am: 0.85, rate: 0.75 }, // pump pulse + instrument whine
+    "H-HAB": { noise: [["lowpass", 260, 0.7, 0.022]], hum: [], am: 0.3, rate: 0.05 },                         // soft, warm, no mains hum
+    L1: { noise: [["bandpass", 1800, 3, 0.006]], hum: [[60, 0.006]] },
+    L2: { noise: [["bandpass", 2400, 3, 0.006]], hum: [[75, 0.007], [9800, 0.0008]] },                       // displays
+    L3: { noise: [["lowpass", 140, 0.7, 0.025]], hum: [] },                                                    // large quiet chamber
+    L4: { noise: [["bandpass", 2600, 1.4, 0.022], ["bandpass", 900, 1.2, 0.01]], hum: [[120, 0.012]] },        // server fans
+    L6: { noise: [["lowpass", 110, 0.7, 0.012]], hum: [] },                                                    // archive: near silent
+    L7: { noise: [["bandpass", 1600, 3, 0.006]], hum: [[66, 0.006]] },
+    L9: { noise: [["lowpass", 120, 0.7, 0.07]], hum: [[45, 0.016], [90, 0.006]], am: 0.8, rate: 1.4 },         // machinery cycling
+    L10: { noise: [["bandpass", 2000, 3, 0.006]], hum: [[80, 0.008], [160, 0.004]] },
+    R1: { noise: [["lowpass", 180, 0.7, 0.006]], hum: [], am: 0.5, rate: 0.04 },                              // almost silent, slow breath of air
+    R2: { noise: [["lowpass", 160, 0.7, 0.012]], hum: [] },
+    R3: { noise: [["lowpass", 90, 0.7, 0.003]], hum: [] },
+    R4: { noise: [["lowpass", 300, 0.7, 0.012]], hum: [] },
+    fountain: { noise: [["lowpass", 650, 0.7, 0.03], ["bandpass", 260, 1.2, 0.02]], hum: [], am: 0.55, rate: 2.3 }, // basin water body (detail = bubbles and drops)
+    cafe: { noise: [["bandpass", 480, 1.8, 0.02]], hum: [], am: 0.7, rate: 0.9 },
+    cinemaFan: { noise: [["bandpass", 900, 2, 0.02]], hum: [[110, 0.004]] },
+    cinemaRumble: { noise: [["lowpass", 100, 0.7, 0.06]], hum: [], am: 0.5, rate: 0.07 },
+    zenPad: { noise: [], hum: [[174.6, 0.012], [261.6, 0.008], [349.2, 0.005]], am: 0.3, rate: 0.05, music: true },
   };
 
   // every Life event type is mapped explicitly: a resolver, or null (deliberately silent: doors and footsteps already cover it)
   const EVENT_MAP = {
     AGENT_ENTER_ROOM: null, AGENT_EXIT_ROOM: null, AGENT_START_ACTIVITY: null, AGENT_END_ACTIVITY: null, DECOMPRESSION_END: null, MEDITATION_END: null,
-    DOOR_OPEN: (e, d) => [{ cue: `door.open.${d.doorType(e.door)}`, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
-    DOOR_CLOSE: (e, d) => [{ cue: `door.close.${d.doorType(e.door)}`, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_OPEN: (e, d) => [{ cue: `door.travel.${d.doorType(e.door)}`, key: "door:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_OPENED: (e, d) => [{ cue: `door.stop.${d.doorType(e.door)}`, key: "doorstop:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_CLOSE: (e, d) => [{ cue: `door.travelback.${d.doorType(e.door)}`, key: "door:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_CLOSED: (e, d) => [{ cue: `door.seal.${d.doorType(e.door)}`, key: "doorstop:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
     AGENT_START_WORK: (e, d) => (TECH.has(e.room) ? [{ cue: "console.wake", actor: e.actor, room: e.room }] : []),
     AGENT_STOP_WORK: (e, d) => (TECH.has(e.room) ? [{ cue: "console.sleep", actor: e.actor, room: e.room }] : []),
     AGENT_SIT: (e) => (e.actor === "DEC-009" ? [] : [{ cue: "seat.sit", actor: e.actor, room: e.room }].concat(/cafe_seat/.test(e.spot || "") ? [{ cue: "cafe.cup", actor: e.actor, room: e.room, delay: 0.5 }] : [])),
@@ -98,7 +104,7 @@
     DOG_STOP_PLAY: (e) => [{ cue: "dog.tag", actor: e.actor, room: e.room }],
   };
 
-  const TICK = 100, MAX_PLAYS = 6, STEP_LEN = 11, DOG_STEP = 6;
+  const TICK = 100, MAX_PLAYS = 8, STEP_LEN = 11, DOG_STEP = 6;
 
   // ------------------------------------------------------------------ the director (pure)
   function createDirector(opt) {
@@ -142,12 +148,12 @@
       const room = q.room || roomOf(at[0], at[1]);
       if (SILENT.has(room)) { stats.blocked.reserved++; return; }
       if (c.g === "DOG" && !dogRooms.has(room)) { stats.blocked.dog++; return; }
-      const gate = c.gate || 0; if (gate && lastAt[q.cue] !== undefined && t - lastAt[q.cue] < gate) return;
+      const gate = c.gate || 0, gk = q.key || q.cue; if (gate && lastAt[gk] !== undefined && t - lastAt[gk] < gate) return;
       const sp = spatial(listener, at[0], at[1]); if (!sp) return;
       if (listener.room === "R3" && room !== "R3") sp.gain *= 0.1; // sound isolation: little leaks into R3
       if (room === "R3" && listener.room !== "R3") sp.gain *= 0.1; // ... and little leaks out of it
       if (sp.gain < 0.01) return;
-      lastAt[q.cue] = t;
+      lastAt[gk] = t;
       const r = rngFor(seed, q.cue, n++);
       plays.push({ cue: q.cue, group: c.g, prio: c.prio, gain: c.vol * sp.gain * (0.9 + 0.2 * r()), pan: sp.pan, rate: 0.94 + 0.12 * r(), variant: Math.floor(r() * 3), delay: q.delay || 0, room, verb: VERB[room] !== undefined ? VERB[room] : 0.15 });
     }
@@ -173,7 +179,7 @@
         for (const { a } of walkers) {
           const len = a.kind === "dog" ? DOG_STEP : STEP_LEN; const m = stepMark.get(a.id); if (m === undefined || a.stride < m) { stepMark.set(a.id, a.stride); continue; }
           if (a.stride - m < len) continue; stepMark.set(a.id, a.stride);
-          if (steps >= 3) continue; steps++;
+          if (steps >= 4) continue; steps++;
           const fl = FLOOR[a.room] || "metal";
           request(listener, { cue: a.kind === "dog" ? "dog.paw" : `step.${fl}`, at: [a.x, a.y], room: a.room }, plays);
         }
@@ -184,9 +190,17 @@
           if (a.phase !== "dwell") continue;
           if (a.act === "GAMES" && billiards && r() < 0.012) request(listener, { cue: "billiards.click", at: [a.x, a.y], room: a.room }, plays);
           if (a.kind === "dog" && a.state === "DOG_DRINKING" && r() < 0.25) request(listener, { cue: "dog.lap", at: [a.x, a.y], room: a.room }, plays);
+          // presence of people actually there: cups at the café, the sofa, hands on a console while at the workstation
+          if (a.kind === "agent" && a.state === "SOCIAL" && /cafe_seat/.test(a.spot || "") && r() < 0.012) request(listener, { cue: "cafe.clink", key: "clink:" + a.id, at: [a.x, a.y], room: a.room }, plays);
+          if (a.kind === "agent" && a.state === "SOCIAL" && /sofa/.test(a.spot || "") && r() < 0.006) request(listener, { cue: "sofa.creak", key: "creak:" + a.id, at: [a.x, a.y], room: a.room }, plays);
+          if (a.kind === "agent" && a.atHome && TECH.has(a.room) && r() < 0.004) request(listener, { cue: "console.touch", key: "touch:" + a.id, at: [a.x, a.y], room: a.room }, plays);
         }
         if (t >= nextCreak) { nextCreak = t + 45000 + rngFor(seed, "creak", t)() * 75000; request(listener, { cue: "structure.creak", at: [listener.x + 80, listener.y - 60], room: "COR-N" }, plays); }
-        if (fountain && t >= nextDrop) { nextDrop = t + 700 + rngFor(seed, "drop", t)() * 2200; request(listener, { cue: "fountain.drop", at: fountain, room: "H-HAB" }, plays); }
+        // the fountain's detail: small irregular bubbles and drops at the basin, only while the listener is near it
+        if (fountain && Math.hypot(fountain[0] - listener.x, fountain[1] - listener.y) < hearing(listener.z) * 0.8) {
+          const rr = rngFor(seed, "water", Math.floor(t / TICK));
+          if (rr() < 0.55) request(listener, { cue: rr() < 0.6 ? "fountain.bubble" : "fountain.drop", at: [fountain[0] + (rr() - 0.5) * 18, fountain[1] + (rr() - 0.5) * 18], room: "H-HAB", delay: rr() * 0.09 }, plays);
+        }
         // 4 budget: at most MAX_PLAYS per tick, highest priority and loudest first
         plays.sort((p, q) => q.prio - p.prio || q.gain - p.gain);
         if (plays.length > MAX_PLAYS) stats.dropped += plays.length - MAX_PLAYS;
@@ -194,15 +208,15 @@
         // 5 ambience targets from the listener position, then smoothed (no abrupt cuts)
         const R = hearing(listener.z); const target = {};
         const zoomTrim = clamp((listener.z - 0.4) / 1.2, 0.35, 1);
-        target.station = 1;
-        for (const s of shapes) {
-          if (SILENT.has(s.id)) continue;
-          const w = Math.pow(Math.max(0, 1 - s.dist(listener.x, listener.y) / (R * 0.6)), 2) * zoomTrim;
-          const key = /^COR-/.test(s.id) ? "corridor" : s.id; if (!BEDS[key]) continue;
-          target[key] = Math.max(target[key] || 0, w);
+        target.station = listener.room ? 0.5 : 1;
+        for (const sh of shapes) {
+          if (SILENT.has(sh.id)) continue;
+          const key = /^COR-/.test(sh.id) ? "corridor" : sh.id; if (!BEDS[key]) continue;
+          const w = sh.id === listener.room ? 1 : Math.pow(Math.max(0, 1 - sh.dist(listener.x, listener.y) / 30), 2) * 0.6;
+          target[key] = Math.max(target[key] || 0, w * zoomTrim);
         }
         const near = (p, rad) => (p ? Math.pow(Math.max(0, 1 - Math.hypot(p[0] - listener.x, p[1] - listener.y) / rad), 1.5) * zoomTrim : 0);
-        target.fountain = near(fountain, 150);
+        target.fountain = listener.room === "H-HAB" || !listener.room ? near(fountain, 120) : 0;
         const social = snap.filter((a) => a.kind === "agent" && a.room === "H-HAB" && a.state === "SOCIAL" && a.phase === "dwell").length;
         target.cafe = near(cafe, 170) * clamp(social / 4, 0, 1);
         const cin = life && life.cinema ? life.cinema : "EMPTY"; const r2 = target.R2 || 0;
@@ -222,17 +236,18 @@
   function createEngine(opt = {}) {
     let ctx = null, master = null, meter = null, buses = {}, groups = {}, verbIn = null, noiseBuf = null; const loops = {}; let active = 0, created = 0;
     const vols = { ...CATEGORIES };
-    const VOICES = 14;
+    const VOICES = 24;
     function build() {
       const AC = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext); if (!AC) return false;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = vols.MASTER;
       const tame = ctx.createBiquadFilter(); tame.type = "highshelf"; tame.frequency.value = 5200; tame.gain.value = -8;
       const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -12; lim.knee.value = 8; lim.ratio.value = 10; lim.attack.value = 0.004; lim.release.value = 0.25;
-      master.connect(tame); tame.connect(lim); lim.connect(ctx.destination);
+      const makeup = ctx.createGain(); makeup.gain.value = 2.4; // events land around -10 dBFS, ambience stays far below (measured)
+      master.connect(makeup); makeup.connect(tame); tame.connect(lim); lim.connect(ctx.destination);
       meter = ctx.createAnalyser(); meter.fftSize = 2048; lim.connect(meter); // output meter (tests, diagnostics)
       for (const c of ["AMBIENCE", "EFFECTS", "MUSIC", "UI"]) { const g = ctx.createGain(); g.gain.value = vols[c]; g.connect(master); buses[c] = g; }
-      for (const [gname, trim] of Object.entries(GROUPS)) { const g = ctx.createGain(); g.gain.value = trim; g.connect(buses.EFFECTS); groups[gname] = g; }
+      for (const [gname, trim] of Object.entries(GROUPS)) { const g = ctx.createGain(); g.gain.value = trim; g.connect(gname === "WATER" ? buses.AMBIENCE : buses.EFFECTS); groups[gname] = g; }
       // seeded noise and a short synthetic room impulse (no Math.random: the same station sounds the same)
       const r = rngFor("stellar-noise");
       noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 2), ctx.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = r() * 2 - 1;
@@ -244,7 +259,7 @@
       for (const [key, b] of Object.entries(BEDS)) {
         const out = ctx.createGain(); out.gain.value = 0; out.connect(b.music ? buses.MUSIC : buses.AMBIENCE);
         let tgt = out;
-        if (b.am) { const am = ctx.createGain(); am.gain.value = 1 - b.am * 0.5; const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07 + (fnv(key) % 100) / 900; const lg = ctx.createGain(); lg.gain.value = b.am * 0.5; lfo.connect(lg); lg.connect(am.gain); lfo.start(); am.connect(out); tgt = am; loops[key + ":lfo"] = lfo; }
+        if (b.am) { const am = ctx.createGain(); am.gain.value = 1 - b.am * 0.5; const lfo = ctx.createOscillator(); lfo.frequency.value = b.rate || 0.07 + (fnv(key) % 100) / 900; const lg = ctx.createGain(); lg.gain.value = b.am * 0.5; lfo.connect(lg); lg.connect(am.gain); lfo.start(); am.connect(out); tgt = am; loops[key + ":lfo"] = lfo; }
         const srcs = [];
         for (const [type, f, q, lvl] of b.noise) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = lvl; s.connect(fl); fl.connect(g); g.connect(tgt); s.start(0, (off = (off + 0.37) % 1.9)); srcs.push(s); }
         for (const [f, lvl] of b.hum) { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; const g = ctx.createGain(); g.gain.value = lvl; o.connect(g); g.connect(tgt); o.start(); srcs.push(o); }
@@ -290,15 +305,22 @@
   // ------------------------------------------------------------------ cue recipes (original, procedural; nz = filtered noise, tn = tone)
   const RECIPES = {
     "ui.on": (nz, tn) => { tn({ f: 660, dur: 0.12, v: 0.12 }); tn({ f: 990, at: 0.06, dur: 0.16, v: 0.08 }); },
-    "door.open.standard": (nz, tn, k) => { nz({ type: "bandpass", f: 420, to: 1500, q: 2, dur: 0.55, v: 0.22, atk: 0.04 }); nz({ type: "highpass", f: 3000, q: 0.7, at: 0.05, dur: 0.35, v: 0.06 }); tn({ f: 92 + k * 6, dur: 0.12, v: 0.18, at: 0.52 }); },
-    "door.close.standard": (nz, tn, k) => { nz({ type: "bandpass", f: 1400, to: 380, q: 2, dur: 0.5, v: 0.2, atk: 0.03 }); tn({ f: 70 + k * 5, dur: 0.16, v: 0.24, at: 0.48 }); nz({ type: "lowpass", f: 260, dur: 0.12, v: 0.18, at: 0.48 }); },
-    "door.open.hub": (nz, tn, k) => { nz({ type: "bandpass", f: 260, to: 1000, q: 1.6, dur: 0.85, v: 0.24, atk: 0.06 }); nz({ type: "highpass", f: 2600, q: 0.7, at: 0.08, dur: 0.6, v: 0.07 }); tn({ f: 62 + k * 4, dur: 0.2, v: 0.22, at: 0.82 }); },
-    "door.close.hub": (nz, tn, k) => { nz({ type: "bandpass", f: 1000, to: 240, q: 1.6, dur: 0.8, v: 0.22, atk: 0.05 }); tn({ f: 52 + k * 4, dur: 0.24, v: 0.28, at: 0.78 }); nz({ type: "lowpass", f: 200, dur: 0.18, v: 0.2, at: 0.78 }); },
-    "door.open.restricted": (nz, tn, k) => { tn({ f: 1180, dur: 0.07, v: 0.07 }); tn({ f: 1580, at: 0.09, dur: 0.08, v: 0.06 }); nz({ type: "bandpass", f: 400, to: 1400, q: 2.2, at: 0.18, dur: 0.55, v: 0.22, atk: 0.04 }); tn({ f: 86 + k * 5, dur: 0.12, v: 0.2, at: 0.72 }); },
-    "door.close.restricted": (nz, tn, k) => { nz({ type: "bandpass", f: 1400, to: 360, q: 2.2, dur: 0.5, v: 0.2, atk: 0.03 }); tn({ f: 66 + k * 5, dur: 0.16, v: 0.26, at: 0.48 }); tn({ f: 980, at: 0.62, dur: 0.07, v: 0.05 }); },
-    "step.metal": (nz, tn, k) => { nz({ type: "bandpass", f: 1700 + k * 250, q: 3, dur: 0.05, v: 0.22, atk: 0.002 }); nz({ type: "lowpass", f: 220, dur: 0.06, v: 0.12, atk: 0.002 }); },
-    "step.wood": (nz, tn, k) => { nz({ type: "bandpass", f: 520 + k * 80, q: 2, dur: 0.06, v: 0.22, atk: 0.002 }); },
-    "step.soft": (nz, tn, k) => { nz({ type: "lowpass", f: 380 + k * 60, dur: 0.07, v: 0.16, atk: 0.006 }); },
+    // doors (timed to the 0.9 s Life travel): travel = release clunk + motor run rising; stop = soft end-stop thud;
+    // travelback = motor run falling; seal = lock clunk + seal hiss. Hub doors are heavier and lower; restricted adds an access chirp
+    ...Object.fromEntries([["standard", 1, 0], ["hub", 0.72, 0], ["restricted", 0.95, 1]].flatMap(([ty, p, chirp]) => [
+      [`door.travel.${ty}`, (nz, tn, k) => { if (chirp) { tn({ f: 1180, dur: 0.06, v: 0.05 }); tn({ f: 1580, at: 0.08, dur: 0.07, v: 0.045 }); } tn({ f: 70 * p, dur: 0.07, v: 0.16 }); nz({ type: "lowpass", f: 300 * p, dur: 0.06, v: 0.16 });
+        tn({ type: "sawtooth", f: 52 * p + k * 3, to: 78 * p, at: 0.05, dur: 0.86, v: 0.03, atk: 0.12 }); nz({ type: "bandpass", f: 520 * p, to: 1100 * p, q: 3, at: 0.05, dur: 0.86, v: 0.06, atk: 0.12 }); }],
+      [`door.stop.${ty}`, (nz, tn, k) => { tn({ f: 62 * p + k * 4, dur: 0.12, v: 0.18 }); nz({ type: "lowpass", f: 380 * p, dur: 0.1, v: 0.12 }); }],
+      [`door.travelback.${ty}`, (nz, tn, k) => { tn({ type: "sawtooth", f: 78 * p + k * 3, to: 52 * p, dur: 0.86, v: 0.03, atk: 0.1 }); nz({ type: "bandpass", f: 1100 * p, to: 520 * p, q: 3, dur: 0.86, v: 0.06, atk: 0.1 }); }],
+      [`door.seal.${ty}`, (nz, tn, k) => { tn({ f: 54 * p + k * 3, dur: 0.16, v: 0.24 }); nz({ type: "lowpass", f: 260 * p, dur: 0.12, v: 0.2 }); nz({ type: "highpass", f: 2600, at: 0.08, dur: 0.35, v: 0.035, atk: 0.03 });
+        if (chirp) tn({ f: 980, at: 0.3, dur: 0.06, v: 0.04 }); }]])),
+    // footsteps: heel + toe, a body thump and a material ring (metal deck rings, wood knocks, soft floors only thud)
+    "step.metal": (nz, tn, k) => { nz({ type: "lowpass", f: 180, dur: 0.05, v: 0.3, atk: 0.002 }); nz({ type: "bandpass", f: 2300 + k * 400, q: 6, dur: 0.06, v: 0.17, atk: 0.001 }); tn({ f: 960 + k * 140, dur: 0.05, v: 0.02 }); nz({ type: "bandpass", f: 1500 + k * 200, q: 3, at: 0.07, dur: 0.035, v: 0.06, atk: 0.002 }); },
+    "step.wood": (nz, tn, k) => { nz({ type: "lowpass", f: 220, dur: 0.06, v: 0.32, atk: 0.002 }); nz({ type: "bandpass", f: 650 + k * 90, q: 3, dur: 0.05, v: 0.2, atk: 0.002 }); nz({ type: "bandpass", f: 900 + k * 80, q: 2, at: 0.065, dur: 0.035, v: 0.06, atk: 0.002 }); },
+    "step.soft": (nz, tn, k) => { nz({ type: "lowpass", f: 200 + k * 30, dur: 0.08, v: 0.26, atk: 0.006 }); nz({ type: "lowpass", f: 500, at: 0.06, dur: 0.05, v: 0.05, atk: 0.004 }); },
+    "cafe.clink": (nz, tn, k) => { tn({ f: 2900 + k * 210, dur: 0.18, v: 0.04 }); tn({ f: 4350 + k * 260, dur: 0.1, v: 0.025 }); tn({ f: 2500 + k * 120, at: 0.11, dur: 0.12, v: 0.025 }); },
+    "sofa.creak": (nz, tn, k) => { nz({ type: "bandpass", f: 300 + k * 40, to: 240, q: 5, dur: 0.35, v: 0.09, atk: 0.05 }); },
+    "console.touch": (nz, tn, k) => { nz({ type: "bandpass", f: 3800, q: 4, dur: 0.018, v: 0.08, atk: 0.001 }); nz({ type: "bandpass", f: 3400, q: 4, at: 0.11 + k * 0.03, dur: 0.018, v: 0.06, atk: 0.001 }); tn({ f: 1760, at: 0.2, dur: 0.05, v: 0.012 }); },
     "seat.sit": (nz, tn, k) => { nz({ type: "lowpass", f: 420, dur: 0.18, v: 0.22, atk: 0.01 }); tn({ f: 150 - k * 10, to: 110, dur: 0.12, v: 0.06 }); },
     "seat.stand": (nz, tn, k) => { nz({ type: "bandpass", f: 900, to: 600, q: 1.2, dur: 0.22, v: 0.12, atk: 0.03 }); },
     "cafe.cup": (nz, tn, k) => { tn({ f: 2650 + k * 140, dur: 0.12, v: 0.05 }); tn({ f: 3980 + k * 160, dur: 0.08, v: 0.03 }); nz({ type: "highpass", f: 4000, dur: 0.02, v: 0.05 }); },
@@ -312,7 +334,9 @@
     "cinema.lightsdown": (nz, tn) => { tn({ f: 72, dur: 0.15, v: 0.14 }); tn({ f: 392, to: 262, at: 0.1, dur: 1.2, v: 0.03, atk: 0.2 }); },
     "cinema.lightsup": (nz, tn) => { tn({ f: 72, dur: 0.15, v: 0.14 }); tn({ f: 262, to: 392, at: 0.1, dur: 1.2, v: 0.03, atk: 0.2 }); },
     "structure.creak": (nz, tn, k) => { nz({ type: "bandpass", f: 240 + k * 30, to: 170, q: 6, dur: 1.1, v: 0.12, atk: 0.2 }); tn({ f: 48, dur: 0.9, v: 0.05, atk: 0.2 }); },
-    "fountain.drop": (nz, tn, k) => { tn({ f: 1400 + k * 260, to: 900 + k * 120, dur: 0.06, v: 0.04 }); },
+    // water: a drop is a short falling plip with a splash tick; a bubble is the classic rising resonance of a small air pocket
+    "fountain.drop": (nz, tn, k) => { tn({ f: 1500 + k * 300, to: 700 + k * 100, dur: 0.05, v: 0.05, atk: 0.002 }); nz({ type: "bandpass", f: 2400 + k * 300, q: 2, dur: 0.025, v: 0.025, atk: 0.001 }); },
+    "fountain.bubble": (nz, tn, k) => { tn({ f: 420 + k * 180, to: 980 + k * 260, dur: 0.045, v: 0.06, atk: 0.003 }); },
     "zen.bowl": (nz, tn) => { tn({ f: 264, dur: 5.5, v: 0.06, atk: 0.01 }); tn({ f: 528, dur: 4.2, v: 0.03, atk: 0.01 }); tn({ f: 794, dur: 3, v: 0.012, atk: 0.01 }); },
     "quiet.seal": (nz, tn) => { tn({ f: 55, to: 45, dur: 0.6, v: 0.06, atk: 0.05 }); },
     "dog.paw": (nz, tn, k) => { nz({ type: "highpass", f: 4200 + k * 300, dur: 0.012, v: 0.12, atk: 0.001 }); nz({ type: "lowpass", f: 300, dur: 0.03, v: 0.06, atk: 0.002 }); },

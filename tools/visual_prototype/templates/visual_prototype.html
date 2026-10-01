@@ -45,6 +45,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
 #insp .x{position:absolute;right:8px;top:6px;border:none;font-size:16px}
 #legend{right:240px;top:16px;padding:8px 10px;font-size:11px;color:var(--muted);display:none;width:220px}
 #legend div{display:flex;gap:6px;align-items:center;margin:2px 0}
+#sdebug{right:240px;bottom:16px;padding:8px 10px;font:11px/1.35 ui-monospace,Menlo,monospace;color:var(--muted);white-space:pre;display:none;z-index:4}
 #mixer label{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted)}#mixer input{width:58px;accent-color:var(--accent)}
 @media (max-width:900px){#rooms{top:auto;bottom:16px;max-height:40vh;width:180px}#banner{display:none}#insp{right:16px;bottom:auto;top:200px}#mini{display:none}}
 </style>
@@ -80,6 +81,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
     <label>Effects<input type="range" min="0" max="100" data-cat="EFFECTS"></label><label>Music<input type="range" min="0" max="100" data-cat="MUSIC"></label>
   </div>
 </div>
+<div id="sdebug" class="panel"></div>
 <div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · <span id="banner-life">agents at home anchors</span></div>
 <div id="legend" class="panel">
   <div><span class="dot" style="background:#b8323f"></span>CMD · hexagon</div>
@@ -261,7 +263,7 @@ function buildScene(){
   // displays
   for(const d of D.displays){const it=displayItem(d);if(it)add(it)}
   for(const it of items){it.key=V.depth((it.b[0]+it.b[2])/2,(it.b[1]+it.b[3])/2)+(it.bias||0);it.sb=screenBox(it)}
-  scene={items:sortItems(items),ground:buildGround(),grid:null};scene.cells=lifeCells(scene.items);
+  scene={items:sortItems(items),ground:buildGround(),grid:null};scene.cells=lifeCells(scene.items);scene.doors=scene.items.map((it,i)=>it.doorId?i:-1).filter(i=>i>=0);
 }
 function screenBox(it){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const [a,b,c,d]=it.b;const ht=(it.h||0)+(it.hx||0);
   for(const [x,y] of [[a,b],[c,b],[c,d],[a,d]])for(const h of [0,ht]){const s=V.P(x,y,h);x0=Math.min(x0,s[0]);y0=Math.min(y0,s[1]);x1=Math.max(x1,s[0]);y1=Math.max(y1,s[1])}
@@ -337,7 +339,7 @@ function rimKeptEnds(hb){const gaps=(D.hubGaps[hb.id]||[]);const other=hubList.f
     if(calInDoorZone(pm))continue;for(const a of [a0,a1])out.push([hb.x+(hb.R+1.5)*Math.cos(a),hb.y+(hb.R+1.5)*Math.sin(a)])}return out}
 function addCalDoor(add,z){const {fr,type,sp,m,u,n,W}=z;const ext=W/2+sp.jw;const dD=sp.depth/2;
   const dz=(z.D||sp.depth)/2;const corners=[[-ext,-dz-1],[ext,-dz-1],[ext,dz+1],[-ext,dz+1]].map(([s,d])=>[m[0]+u[0]*s+n[0]*d,m[1]+u[1]*s+n[1]*d]);
-  add({kind:"door",b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed,D:z.D})}});
+  add({kind:"door",doorId:z.d.id,b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed,D:z.D,open:doorOpenK(z.d.id)})}});
   if(!z.hub)return;
   // bulkhead returns: close the wall from each jamb back to the nearest kept rim end (no white stubs, no second frame)
   const ends=hubList.filter(h=>Math.hypot(h.x-m[0],h.y-m[1])<h.R+40).flatMap(rimKeptEnds);
@@ -1056,22 +1058,25 @@ function draw(){
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;hits=[];badges=[];
   const drawIt=(it)=>{const b=it.sb;if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1)return;it.draw();if(it.hit)hits.push([b,it.hit,it]);if(it.kind==="agent")badges.push(it)};
   for(const it of scene.items)drawIt(it);
-  if(LIFE_ON){SCACHE={key,scene,ground,full:cacheCanvas(SCACHE&&SCACHE.full),hits:hits.slice(),badges:badges.slice()};return drawLifeFrame()}
+  if(LIFE_ON){SCACHE={key,scene,ground,full:cacheCanvas(SCACHE&&SCACHE.full),hits:hits.slice(),badges:badges.slice(),doorK:Object.fromEntries(scene.doors.map(i=>[i,doorOpenK(scene.items[i].doorId)]))};return drawLifeFrame()}
   drawOverlays()}
 function drawLifeFrame(){
   dirty=false;const z=cam.z;ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(SCACHE.full,0,0);hits=SCACHE.hits.slice();badges=SCACHE.badges.slice();
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;const ov=(a,b)=>!(a[2]<b[0]||b[2]<a[0]||a[3]<b[1]||b[3]<a[1]);
   const acts=[];for(const [ins,L] of lifeItems())for(const it of L){if(!ov(it.sb,[vx0,vy0,vx1,vy1]))continue;it.ins=ins;acts.push(it)}
-  let regs=acts.map(it=>[it.sb[0]-2,it.sb[1]-2,it.sb[2]+2,it.sb[3]+2]);
+  const doorRegs=[];for(const i of scene.doors){const it=scene.items[i];if(Math.abs(doorOpenK(it.doorId)-SCACHE.doorK[i])>0.001&&ov(it.sb,[vx0,vy0,vx1,vy1]))doorRegs.push([it.sb[0]-1,it.sb[1]-1,it.sb[2]+1,it.sb[3]+1])} // moving doors
+  const lowZ=z<1.3; // zoomed out: actors are a few pixels tall and are drawn over the frame afterwards (each clipped to its box)
+  let regs=(lowZ?[]:acts.map(it=>[it.sb[0]-2,it.sb[1]-2,it.sb[2]+2,it.sb[3]+2])).concat(doorRegs);
   for(let merged=true;merged;){merged=false;for(let i=0;i<regs.length&&!merged;i++)for(let j=i+1;j<regs.length;j++)if(ov(regs[i],regs[j])){const A=regs[i],B=regs[j];regs[i]=[Math.min(A[0],B[0]),Math.min(A[1],B[1]),Math.max(A[2],B[2]),Math.max(A[3],B[3])];regs.splice(j,1);merged=true;break}}
   const wt=()=>ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR),CS=48;
-  if(z<1.3){wt();for(const it of acts.sort((p,q)=>p.key-q.key)){const r=it.sb;ctx.save();ctx.beginPath();ctx.rect(r[0]-2,r[1]-2,r[2]-r[0]+4,r[3]-r[1]+4);ctx.clip();it.draw();ctx.restore()}regs=[]} // zoomed out: actors are a few pixels tall, drawn over the cached frame (each clipped to its box)
+  const inRegs=lowZ?[]:acts;
   for(const r of regs){ctx.save();wt();ctx.beginPath();ctx.rect(r[0],r[1],r[2]-r[0],r[3]-r[1]);ctx.clip();ctx.setTransform(1,0,0,1,0,0);
     {const dx0=Math.max(0,Math.floor(((r[0]-cam.cx)*z+W/2)*DPR)-1),dy0=Math.max(0,Math.floor(((r[1]-cam.cy)*z+H/2)*DPR)-1),dx1=Math.min(cv.width,Math.ceil(((r[2]-cam.cx)*z+W/2)*DPR)+1),dy1=Math.min(cv.height,Math.ceil(((r[3]-cam.cy)*z+H/2)*DPR)+1);
      if(dx1>dx0&&dy1>dy0)ctx.drawImage(SCACHE.ground,dx0,dy0,dx1-dx0,dy1-dy0,dx0,dy0,dx1-dx0,dy1-dy0)}wt();
     const cand=new Set();for(let gx=Math.floor(r[0]/CS);gx<=Math.floor(r[2]/CS);gx++)for(let gy=Math.floor(r[1]/CS);gy<=Math.floor(r[3]/CS);gy++)for(const i of scene.cells.get(gx+"|"+gy)||[])if(ov(scene.items[i].sb,r))cand.add(i);
-    const here=acts.filter(it=>ov(it.sb,r)).sort((p,q)=>p.ins-q.ins||p.key-q.key);let k=0;const flush=(i)=>{while(k<here.length&&here[k].ins<i){here[k].draw();k++}};
+    const here=inRegs.filter(it=>ov(it.sb,r)).sort((p,q)=>p.ins-q.ins||p.key-q.key);let k=0;const flush=(i)=>{while(k<here.length&&here[k].ins<i){here[k].draw();k++}};
     for(const i of [...cand].sort((p,q)=>p-q)){flush(i);scene.items[i].draw()}flush(Infinity);ctx.restore()}
+  if(lowZ){wt();for(const it of acts.slice().sort((p,q)=>p.key-q.key)){const r=it.sb;ctx.save();ctx.beginPath();ctx.rect(r[0]-2,r[1]-2,r[2]-r[0]+4,r[3]-r[1]+4);ctx.clip();it.draw();ctx.restore()}}
   for(const it of acts){if(it.hit)hits.push([it.sb,it.hit,it]);if(it.kind==="agent")badges.push(it)}
   drawOverlays()}
 function drawOverlays(){const z=cam.z;ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR);
@@ -1204,6 +1209,11 @@ function lifeItems(){const out=new Map();if(!LIFE_ON||!life||!scene.cells)return
     if(!out.has(ins))out.set(ins,[]);out.get(ins).push(it)}
   for(const L of out.values())L.sort((p,q)=>p.key-q.key);return out}
 function setLife(on){LIFE_ON=on;if(on&&!life){lifeSetup();if(typeof soundAttach==="function")soundAttach()}$("#t-life").classList.toggle("on",on);$("#banner-life").textContent=on?"ambient life (cosmetic, seeded): idle agents and the resident dog":"agents at home anchors";buildScene();dirty=true}
+// doors are physical: the leaf is drawn at the Life door's opening fraction (0 shut .. 1 open). With Life off every door is
+// shut (nobody is passing); reserved doors are always shut. DOOR_OVERRIDE pins a door for the visual door test.
+const DOOR_OVERRIDE={};
+function doorOpenK(id){if(id in DOOR_OVERRIDE)return DOOR_OVERRIDE[id];if(!LIFE_ON||!life)return 0;const d=life.doors[id];return d?d.k:0}
+function setDoorOverride(id,k){if(k===null)delete DOOR_OVERRIDE[id];else DOOR_OVERRIDE[id]=k;SCACHE=null;dirty=true}
 // ---------------------------------------------------------------- SOUND LAYER (docs/STELLAR_SOUND_SYSTEM_V1.md)
 // Life emits events and knows nothing about audio; the Director (pure) listens on the Life bus and turns events and Life
 // state into sound requests and ambience levels; the Engine (Web Audio) synthesises them. Off until the user presses
@@ -1214,8 +1224,17 @@ function setSound(on){SOUND_ON=on;$("#t-sound").classList.toggle("on",on);$("#mi
   if(on){if(!sound)sound=StellarSound.createEngine();if(!director)director=StellarSound.createDirector({D,world:life?life.world:StellarLife.buildWorld(D),seed:new URLSearchParams(location.search).get("seed")||"stellar"});sound.enable();
     document.querySelectorAll("#mixer input").forEach(i=>{i.value=Math.round(sound.volume(i.dataset.cat)*100)})}
   else if(sound)sound.disable();soundLast=null;soundAttach()}
+// developer-only sound debug (?sounddebug=1): room, loudest beds, voices, recent cues, nearby doors, life activity
+const SOUND_DEBUG=new URLSearchParams(location.search).get("sounddebug")==="1";const sdRecent=[];let sdAt=0;
+function soundDebug(out,lf,w){if(!SOUND_DEBUG)return;for(const p of out.plays)sdRecent.unshift(`${p.cue} (${p.room||"?"}) ${p.gain.toFixed(2)}`);sdRecent.length=Math.min(sdRecent.length,8);
+  if(performance.now()-sdAt<250)return;sdAt=performance.now();const el=$("#sdebug");el.style.display="block";
+  const beds=Object.entries(out.beds).filter(([,v])=>v>0.01).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k} ${v.toFixed(2)}`).join("  ");
+  const doors=life?Object.entries(life.doors).map(([id,d])=>[id,d,Math.hypot(lifeDoorPos(id)[0]-w[0],lifeDoorPos(id)[1]-w[1])]).filter(x=>x[2]<200).sort((a,b)=>a[2]-b[2]).slice(0,3).map(([id,d])=>`${id} ${d.state} ${d.k.toFixed(2)}`).join("  "):"";
+  const acts={};for(const a of lf.snapshot)acts[a.state]=(acts[a.state]||0)+1;const lv=sound.level();
+  el.textContent=`SOUND DEBUG\nroom ${out.listenerRoom||"(between rooms)"}   zoom ${cam.z.toFixed(1)}\nbeds ${beds}\nvoices ${sound.active}   out rms ${lv.rms.toFixed(4)} peak ${lv.peak.toFixed(3)}\ndoors ${doors||"none near"}\nlife ${Object.entries(acts).map(([k,v])=>k.toLowerCase()+" "+v).join(", ")}\ncues\n  ${sdRecent.join("\n  ")}`}
+function lifeDoorPos(id){return life.world.doorPos[id]||[0,0]}
 function soundTick(t){if(!SOUND_ON||!sound||!director)return;if(soundLast===null){soundLast=t;return}soundAcc+=t-soundLast;soundLast=t;if(soundAcc<StellarSound.TICK)return;const dt=Math.min(soundAcc,1000);soundAcc=0;
-  const w=V.inv(cam.cx,cam.cy);const lf=life&&LIFE_ON?{snapshot:life.snapshot(),cinema:life.cinema}:{snapshot:[],cinema:"EMPTY"};sound.apply(director.tick(dt,{x:w[0],y:w[1],z:cam.z},lf))}
+  const w=V.inv(cam.cx,cam.cy);const lf=life&&LIFE_ON?{snapshot:life.snapshot(),cinema:life.cinema}:{snapshot:[],cinema:"EMPTY"};const out=director.tick(dt,{x:w[0],y:w[1],z:cam.z},lf);sound.apply(out);soundDebug(out,lf,w)}
 // ---------------------------------------------------------------- boot
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+"px";cv.style.height=H+"px";dirty=true}
 addEventListener("resize",resize);resize();
@@ -1234,7 +1253,7 @@ function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec
   if(LIFE_ON&&life&&!lifeFrozen&&!VOCAB_MODE){if(lifeLast!==null){life.step((t-lifeLast)*LIFE_SPEED);dirty=true}lifeLast=t}else lifeLast=null;
   soundTick(t);if(dirty)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems,sound:()=>sound,director:()=>director,setSound};
+window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,setDoorOverride,doorOpenK,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems,sound:()=>sound,director:()=>director,setSound};
 </script>
 </body>
 </html>

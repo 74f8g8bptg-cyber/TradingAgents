@@ -137,18 +137,37 @@ for (const a of D.anchors) { const p = L.findPath(world, { allow: new Set(world.
 {
   const life = L.create(world, { seed: "soak" });
   let maxAway = 0, peak = {};
+  let doorViol = 0, closeOnActor = 0, stuck = 0;
   run(life, 2 * H, "soak", (lf) => {
+    for (const a of lf.actors) {
+      if (a.phase !== "walk" || !a.route) continue;
+      if ((a.waitMs || 0) > 8000) stuck++;
+      for (let i = Math.max(1, a.ri - 1); i < Math.min(a.route.length, a.ri + 2); i++) {
+        const w = a.route[i], d = w.door || w.via; if (!d) continue; const [dx, dy] = world.doorPos[d]; const dd = Math.hypot(a.x - dx, a.y - dy);
+        const st = lf.doors[d];
+        if (dd < 5 && (!st || st.k < 0.8)) doorViol++;               // walking through a panel
+        if (dd < 12 && st && st.state === "CLOSING") closeOnActor++; // closing on someone in the passage
+      }
+    }
     const c = { away: 0 };
     for (const a of lf.actors) { if (a.kind !== "agent" || a.act === "WORKING") continue; const dest = a.spot && a.spot.room ? a.spot.room : a.room; if (dest !== a.home) c.away++; if (a.phase === "dwell") c[a.room] = (c[a.room] || 0) + 1; }
     maxAway = Math.max(maxAway, c.away); for (const k of Object.keys(c)) peak[k] = Math.max(peak[k] || 0, c[k]);
   });
+  ok(doorViol === 0, `12 nobody passes a door that is not open (${doorViol} violations)`);
+  ok(closeOnActor === 0, `12 a door never closes on someone in the passage (${closeOnActor})`);
+  ok(stuck === 0, "nobody waits at a door for more than 8 s");
+  { const seq = {}; let bad = 0; const nextOk = { DOOR_OPEN: ["CLOSED", "CLOSING", undefined], DOOR_OPENED: ["OPENING"], DOOR_CLOSE: ["OPEN"], DOOR_CLOSED: ["CLOSING"] }, to = { DOOR_OPEN: "OPENING", DOOR_OPENED: "OPEN", DOOR_CLOSE: "CLOSING", DOOR_CLOSED: "CLOSED" };
+    for (const e of life.events) { if (!(e.type in to)) continue; if (!nextOk[e.type].includes(seq[e.door])) bad++; seq[e.door] = to[e.type]; }
+    ok(bad === 0, `12 every door follows CLOSED → OPENING → OPEN → CLOSING → CLOSED (${bad} bad transitions)`);
+    ok(Object.keys(seq).length >= 8, `12 many doors cycled (${Object.keys(seq).length})`);
+    ok(!Object.keys(seq).some((d) => /DR-(L5|L8|R5|R6)$/.test(d)), "12 reserved doors never open"); }
   ok(maxAway <= L.CAPS.away, `11 beat budget: at most ${L.CAPS.away} agents away (peak ${maxAway})`);
   ok((peak.R1 || 0) <= 3 && (peak.R3 || 0) <= 2, `R1 calm (peak ${peak.R1 || 0}) and R3 quiet (peak ${peak.R3 || 0})`);
   ok((peak.R4 || 0) <= 2, `R4 at most two people (peak ${peak.R4 || 0})`);
   ok((peak.R2 || 0) >= 2 && (peak.R2 || 0) <= 8, `the cinema draws a small audience (peak ${peak.R2 || 0})`);
   const types = new Set(life.events.map((e) => e.type));
   ok([...types].every((t) => L.EVENTS.includes(t)), "every emitted event is in the catalogue");
-  for (const t of ["AGENT_START_WORK", "AGENT_STOP_WORK", "AGENT_ENTER_ROOM", "AGENT_SIT", "AGENT_STAND", "DOOR_OPEN", "DOOR_CLOSE", "DOG_ENTER_R4", "DOG_ENTER_HHAB", "DOG_START_PLAY", "DOG_STOP_PLAY", "CINEMA_START", "CINEMA_END"])
+  for (const t of ["AGENT_START_WORK", "AGENT_STOP_WORK", "AGENT_ENTER_ROOM", "AGENT_SIT", "AGENT_STAND", "DOOR_OPEN", "DOOR_OPENED", "DOOR_CLOSE", "DOOR_CLOSED", "DOG_ENTER_R4", "DOG_ENTER_HHAB", "DOG_START_PLAY", "DOG_STOP_PLAY", "CINEMA_START", "CINEMA_END"])
     ok(types.has(t), `soak emits ${t}`);
   const working = life.actors.filter((a) => a.kind === "agent" && a.act === "WORKING").length;
   ok(working >= 20, `most agents stay at work (${working} of ${life.actors.length - 1} at their workstation)`);

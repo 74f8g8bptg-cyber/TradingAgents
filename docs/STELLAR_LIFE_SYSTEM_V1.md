@@ -161,6 +161,8 @@ Subscribe with `life.on(type, fn)` (or `"*"`). Each event is `{ type, t, ambient
 
 `AGENT_ENTER_ROOM`, `AGENT_EXIT_ROOM`, `AGENT_START_WORK`, `AGENT_STOP_WORK`, `AGENT_SIT`, `AGENT_STAND`, `AGENT_START_REST`, `AGENT_END_REST`, `AGENT_START_ACTIVITY`, `AGENT_END_ACTIVITY`, `DOOR_OPEN`, `DOOR_CLOSE`, `MEDITATION_START`, `MEDITATION_END`, `CINEMA_STATE`, `CINEMA_START`, `CINEMA_END`, `DECOMPRESSION_START`, `DECOMPRESSION_END`, `DOG_ENTER_R4`, `DOG_ENTER_HHAB`, `DOG_START_PLAY`, `DOG_STOP_PLAY`.
 
+V1.1 adds `DOOR_OPENED` and `DOOR_CLOSED` (the door's end stops).
+
 **Doors:**
 - A door opens when an actor on a route through it comes within 26 units, and closes 1.5 s after the last user. Its state is in `life.doors`.
 - The door **artwork is unchanged**: the open assemblies already read as doorways in the frozen baseline. The door cycle is exposed as state and events, ready for a future door animation and sound.
@@ -233,3 +235,23 @@ Also tested:
 - An animated door leaf.
 - Real telemetry driving `WORKING`, plus the `agent.resting` recovery pods.
 - A day / night clock (the clock abstraction is `step(dtMs)` and `t`; work and rest periods can be layered on it).
+
+
+## V1.1 — physical doors
+
+Doors are a state machine in the engine (`stepDoors`):
+
+- **States:** CLOSED → OPENING → OPEN → CLOSING → CLOSED, with 0.9 s travel.
+- **Request:** an actor on a route through the door asks for it within 30 units.
+- **Hold:** the door stays open while anyone is within 14 units of it, and for 1.5 s after the last request.
+- **Reverse:** a request during CLOSING reverses the travel.
+- **Waiting:** walkers wait at a door that is less than 80 % open (8 s safety limit).
+- **Rendering:** the renderer draws the panels at the door's opening fraction `life.doors[id].k`. Reserved doors never open.
+
+The soak test checks:
+- nobody passes a door that is less than 80 % open;
+- no door closes on someone in the passage;
+- every door follows the state order;
+- nobody waits more than 8 s.
+
+See `docs/STELLAR_SOUND_SYSTEM_V1.md` (V1.1) for the door sounds.

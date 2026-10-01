@@ -60,7 +60,7 @@ for (const [cue] of Object.entries(S.CUES)) ok(typeof S.RECIPES[cue] === "functi
   ok(out.plays.length <= S.MAX_PLAYS, `an event storm is capped (${out.plays.length} plays)`);
   ok(dir.stats.dropped >= 4000, "the event queue is bounded");
   const doors = out.plays.filter((p) => p.cue.startsWith("door."));
-  ok(new Set(doors.map((p) => p.cue)).size === doors.length, "per-cue gates stop machine-gunning");
+  ok(doors.length <= 4, `per-door gates stop machine-gunning (${doors.length} door sounds for 5000 events on 4 doors)`);
 }
 // 5 ambience: transitions are smooth, rooms differ, R3 is isolated, reserved stay silent
 {
@@ -113,9 +113,25 @@ for (const [cue] of Object.entries(S.CUES)) ok(typeof S.RECIPES[cue] === "functi
   }
   ok(leak === 0, "no dog sound outside H-HAB/R4 and no sound from reserved rooms over the soak");
   ok(maxPlays <= S.MAX_PLAYS, "never more than the per-tick budget");
-  for (const c of ["door.open.standard", "door.close.hub", "step.metal", "step.wood", "seat.sit", "console.wake", "fountain.drop"]) ok(heard[c] > 0, `soak hears ${c}`);
+  for (const c of ["door.travel.standard", "door.seal.standard", "door.travel.hub", "door.stop.hub", "step.metal", "step.wood", "seat.sit", "console.wake", "fountain.bubble"]) ok(heard[c] > 0, `soak hears ${c}`);
   ok(L.EVENTS.filter((e) => !["CINEMA_START"].includes(e)).every((e) => !life.events.some((x) => x.type === e) || dir.stats.seen[e] > 0), "every event Life emitted reached the Director");
   console.log(`sound soak: 1 h, ${dir.stats.plays} cues, heard ${JSON.stringify(heard)}`);
+}
+// 7b doors: the four door sounds follow the physical door, in order, timed to the 0.9 s panel travel; a door that does not
+// move makes no sound
+{
+  const life = L.create(world, { seed: "doorsync" });
+  const dir = S.createDirector({ D, world, seed: "doorsync" });
+  life.on("*", (ev) => dir.onEvent(ev));
+  const fx = life.actors.find((a) => a.code === "FX"); life.step(100); life.assign(fx.id, "CAFE");
+  const at = world.doorPos["DR-L1"]; const plays = [];
+  for (let i = 0; i < 400; i++) { life.step(100); const o = dir.tick(100, { x: at[0], y: at[1], z: 4 }, { snapshot: life.snapshot(), cinema: life.cinema }); for (const p of o.plays) if (/^door\./.test(p.cue)) plays.push([life.t, p.cue]); }
+  const seq = plays.map((p) => p[1].split(".")[1]);
+  ok(seq.slice(0, 4).join() === "travel,stop,travelback,seal", `DR-L1 sounds follow the door: ${seq.slice(0, 4).join(",")}`);
+  const dt = plays.length >= 2 ? plays[1][0] - plays[0][0] : 0;
+  ok(dt >= 800 && dt <= 1100, `the end stop sounds when the panels reach OPEN (${dt} ms after travel starts)`);
+  const doorEv = life.events.filter((e) => /^DOOR_/.test(e.type) && e.door === "DR-L1").length;
+  ok(plays.length <= doorEv, "no door sound without a door transition");
 }
 // 8 determinism + lint
 {

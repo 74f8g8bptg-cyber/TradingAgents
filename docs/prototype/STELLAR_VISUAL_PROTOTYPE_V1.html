@@ -45,6 +45,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
 #insp .x{position:absolute;right:8px;top:6px;border:none;font-size:16px}
 #legend{right:240px;top:16px;padding:8px 10px;font-size:11px;color:var(--muted);display:none;width:220px}
 #legend div{display:flex;gap:6px;align-items:center;margin:2px 0}
+#sdebug{right:240px;bottom:16px;padding:8px 10px;font:11px/1.35 ui-monospace,Menlo,monospace;color:var(--muted);white-space:pre;display:none;z-index:4}
 #mixer label{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted)}#mixer input{width:58px;accent-color:var(--accent)}
 @media (max-width:900px){#rooms{top:auto;bottom:16px;max-height:40vh;width:180px}#banner{display:none}#insp{right:16px;bottom:auto;top:200px}#mini{display:none}}
 </style>
@@ -80,6 +81,7 @@ button.on{background:var(--accent);border-color:var(--accent);color:#04161a}
     <label>Effects<input type="range" min="0" max="100" data-cat="EFFECTS"></label><label>Music<input type="range" min="0" max="100" data-cat="MUSIC"></label>
   </div>
 </div>
+<div id="sdebug" class="panel"></div>
 <div id="banner" class="panel"><b>VISUAL PROTOTYPE · NO ENGINE LINK</b> · displays show their approved offline states · <span id="banner-life">agents at home anchors</span></div>
 <div id="legend" class="panel">
   <div><span class="dot" style="background:#b8323f"></span>CMD · hexagon</div>
@@ -261,7 +263,7 @@ function buildScene(){
   // displays
   for(const d of D.displays){const it=displayItem(d);if(it)add(it)}
   for(const it of items){it.key=V.depth((it.b[0]+it.b[2])/2,(it.b[1]+it.b[3])/2)+(it.bias||0);it.sb=screenBox(it)}
-  scene={items:sortItems(items),ground:buildGround(),grid:null};scene.cells=lifeCells(scene.items);
+  scene={items:sortItems(items),ground:buildGround(),grid:null};scene.cells=lifeCells(scene.items);scene.doors=scene.items.map((it,i)=>it.doorId?i:-1).filter(i=>i>=0);
 }
 function screenBox(it){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const [a,b,c,d]=it.b;const ht=(it.h||0)+(it.hx||0);
   for(const [x,y] of [[a,b],[c,b],[c,d],[a,d]])for(const h of [0,ht]){const s=V.P(x,y,h);x0=Math.min(x0,s[0]);y0=Math.min(y0,s[1]);x1=Math.max(x1,s[0]);y1=Math.max(y1,s[1])}
@@ -337,7 +339,7 @@ function rimKeptEnds(hb){const gaps=(D.hubGaps[hb.id]||[]);const other=hubList.f
     if(calInDoorZone(pm))continue;for(const a of [a0,a1])out.push([hb.x+(hb.R+1.5)*Math.cos(a),hb.y+(hb.R+1.5)*Math.sin(a)])}return out}
 function addCalDoor(add,z){const {fr,type,sp,m,u,n,W}=z;const ext=W/2+sp.jw;const dD=sp.depth/2;
   const dz=(z.D||sp.depth)/2;const corners=[[-ext,-dz-1],[ext,-dz-1],[ext,dz+1],[-ext,dz+1]].map(([s,d])=>[m[0]+u[0]*s+n[0]*d,m[1]+u[1]*s+n[1]*d]);
-  add({kind:"door",b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed,D:z.D})}});
+  add({kind:"door",doorId:z.d.id,b:calBounds(corners),h:sp.H+4,hit:{type:"door",d:z.d},draw(){SV.door.build(fr,type,{plate:z.plate,closed:z.closed,D:z.D,open:doorOpenK(z.d.id)})}});
   if(!z.hub)return;
   // bulkhead returns: close the wall from each jamb back to the nearest kept rim end (no white stubs, no second frame)
   const ends=hubList.filter(h=>Math.hypot(h.x-m[0],h.y-m[1])<h.R+40).flatMap(rimKeptEnds);
@@ -857,11 +859,24 @@ SV.door.lintel=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2,dD=(
   if(type!=="standard"){prismX(frameRect(fr,s0+1,s1-1,-dD+1.4,dD-1.4),H+0.6,H+1.8,"#3d4046",CAL.gunLo,{lw:0.35,shadow:false,mat:false});capTop(fr,s0+1,s1-1,-dD+1.4,dD-1.4,H+1.8,4)
     for(const sg of [-1,1]){const p=[fr.cx+fr.a[0]*sg*(hW+sp.jw/2),fr.cy+fr.a[1]*sg*(hW+sp.jw/2)];cyl(p[0],p[1],0.9,H+1.8,H+3.2,type==="restricted"?CAL.amberHi:CAL.amber,"#5a3a14",{n:8})}} // beacons
   else capTop(fr,s0,s1,-dD+0.6,dD-0.6,H+0.6,4)};
-SV.door.leaf=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2;for(const sg of [-1,1]){const s0=sg<0?-hW:0.15,s1=sg<0?-0.15:hW;prismX(frameRect(fr,s0,s1,-0.7,0.7),0.2,sp.H-sp.lh,"#4a4e56","#3a3e46",{lw:0.4,shadow:false});
-  for(const k of ["front","back"]){const [a,b,n]=faces(fr,s0,s1,-0.7,0.7)[k];onFace(a,b,n,0.2,sp.H-sp.lh,(W,HH)=>{dRaised(0.8,1,W-1.6,HH*0.4,"#43474f");dRaised(0.8,HH*0.48,W-1.6,HH*0.4,"#43474f");
-    const ex=sg<0?W-1:0;for(let y=0.4;y<HH;y+=1.4){ctx.fillStyle=Math.floor(y/1.4)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(ex,y,1,0.7)}dWear(W,HH,sg+2)})}}};
+// leaf: two sliding panels meeting at the centre; o.open (0 shut .. 1 open) slides each full-width panel sideways into its
+// jamb pocket. The panels are clipped to the opening, so the travelling part disappears into the column (no squash, no fade)
+SV.door.leaf=(fr,type,o={})=>{const sp=SV.door.SPEC[type];const hW=fr.L/2;const k=Math.max(0,Math.min(1,o.open||0));if(k>0.995)return;const off=k*hW,H1=sp.H-sp.lh,dc=o.d||0;
+  ctx.save();if(k>0.001){const pts=[];for(const h of [0,H1+0.2])for(const p of frameRect(fr,-hW,hW,dc-0.9,dc+0.9))pts.push(V.P(p[0],p[1],h));
+    pts.sort((p,q)=>p[0]-q[0]||p[1]-q[1]);const cr=(o2,a2,b2)=>(a2[0]-o2[0])*(b2[1]-o2[1])-(a2[1]-o2[1])*(b2[0]-o2[0]);const lo=[],up=[];for(const p of pts){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+    for(const p of pts.slice().reverse()){while(up.length>1&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}const hull=lo.slice(0,-1).concat(up.slice(0,-1));
+    ctx.beginPath();hull.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.clip()}
+  const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));
+  for(const sg of order){const s0=sg<0?-hW-off:0.15+off,s1=sg<0?-0.15-off:hW+off;prismX(frameRect(fr,s0,s1,dc-0.7,dc+0.7),0.2,H1,"#4a4e56","#3a3e46",{lw:0.4,shadow:false});
+  for(const kk of ["front","back"]){const [a,b,n]=faces(fr,s0,s1,dc-0.7,dc+0.7)[kk];onFace(a,b,n,0.2,H1,(W,HH)=>{dRaised(0.8,1,W-1.6,HH*0.4,"#43474f");dRaised(0.8,HH*0.48,W-1.6,HH*0.4,"#43474f");
+    const ex=sg<0?W-1:0;for(let y=0.4;y<HH;y+=1.4){ctx.fillStyle=Math.floor(y/1.4)%2?"#1a1a1a":CAL.hazard;ctx.fillRect(ex,y,1,0.7)}dWear(W,HH,sg+2)})}}
+  ctx.restore()};
 // the whole assembly in camera order; returns nothing (items are split by the caller for depth sorting when needed)
-SV.door.build=(fr,type,o={})=>{SV.door.threshold(fr,type,o);const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));SV.door.jamb(fr,type,order[0],o);if(o.closed)SV.door.leaf(fr,type,o);SV.door.jamb(fr,type,order[1],o);SV.door.lintel(fr,type,o)};
+// leaves: a single-frame door has one panel pair at mid-depth; a deep doorway (corridor frame + room frame merged) has a pair at
+// each frame face, so a shut door blocks the opening from every camera (a pair deep inside a long tunnel is hidden by the lintel)
+SV.door.build=(fr,type,o={})=>{SV.door.threshold(fr,type,o);const order=[-1,1].sort((p,q)=>(p-q)*camAlong(fr.a));SV.door.jamb(fr,type,order[0],o);
+  const sp=SV.door.SPEC[type],dD=(o.D||sp.depth)/2,k=o.closed?0:o.open;
+  if(k!==undefined&&k<0.999){const ds=dD>sp.depth/2+1.5?[-(dD-1.6),dD-1.6].sort((p,q)=>(p-q)*camAlong(fr.f)):[0];for(const d of ds)SV.door.leaf(fr,type,{open:k,d})}SV.door.jamb(fr,type,order[1],o);SV.door.lintel(fr,type,o)};
 // FLR-bigGrate: a large framed deck grate (n x n tiles): titanium frame with bolts, a recessed well, a grid of square holes with
 // a lit lip, a centre cross-brace; the reference bridge's paired floor grates, built in Stellar's deck language
 SV.floor.bigGrate=(X,Y,S,fine)=>{const q=rectPoly(X+1,Y+1,X+S-1,Y+S-1);ctx.fillStyle="#3a3c40";ctx.fill(poly2(q,0.03));ctx.strokeStyle=CAL.out;ctx.lineWidth=0.4;ctx.stroke(poly2(q,0.03));
@@ -1314,12 +1329,12 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
 
   // ------------------------------------------------------------------ event hooks (the bridge to a future sound system)
   const EVENTS = ["AGENT_ENTER_ROOM", "AGENT_EXIT_ROOM", "AGENT_START_WORK", "AGENT_STOP_WORK", "AGENT_SIT", "AGENT_STAND",
-    "AGENT_START_REST", "AGENT_END_REST", "AGENT_START_ACTIVITY", "AGENT_END_ACTIVITY", "DOOR_OPEN", "DOOR_CLOSE",
+    "AGENT_START_REST", "AGENT_END_REST", "AGENT_START_ACTIVITY", "AGENT_END_ACTIVITY", "DOOR_OPEN", "DOOR_OPENED", "DOOR_CLOSE", "DOOR_CLOSED",
     "MEDITATION_START", "MEDITATION_END", "CINEMA_STATE", "CINEMA_START", "CINEMA_END", "DECOMPRESSION_START",
     "DECOMPRESSION_END", "DOG_ENTER_R4", "DOG_ENTER_HHAB", "DOG_START_PLAY", "DOG_STOP_PLAY"];
   // suggested future sound cue per event (no audio is played anywhere in V1; a sound layer subscribes to the bus)
   const SOUND_HOOKS = { AGENT_START_WORK: "workstation.wake", AGENT_STOP_WORK: "workstation.sleep", AGENT_SIT: "seat.creak",
-    AGENT_STAND: "seat.release", DOOR_OPEN: "door.open", DOOR_CLOSE: "door.close", MEDITATION_START: "zen.chime",
+    AGENT_STAND: "seat.release", DOOR_OPEN: "door.open", DOOR_OPENED: "door.endstop", DOOR_CLOSE: "door.close", DOOR_CLOSED: "door.seal", MEDITATION_START: "zen.chime",
     CINEMA_START: "cinema.start", CINEMA_END: "cinema.end", DECOMPRESSION_START: "quiet.enter", DOG_START_PLAY: "dog.play",
     DOG_STOP_PLAY: "dog.settle", DOG_ENTER_R4: "dog.pawsteps", DOG_ENTER_HHAB: "dog.pawsteps", AGENT_START_REST: "rest.pod" };
   function makeBus() {
@@ -1706,19 +1721,39 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
       return startActivity(a, n, s, r);
     }
 
-    // doors: an actor within reach of a door on its route asks for it; the door opens at once and closes 1.5 s after the
-    // last user has gone. The door assembly itself is drawn exactly as before (the frozen visual baseline).
+    // doors: a physical state machine CLOSED -> OPENING -> OPEN -> CLOSING -> CLOSED with real travel (DOOR_MOVE ms). An actor
+    // within reach of a door on its route asks for it; the door holds open while anyone is in the passage and for DOOR_HOLD
+    // after the last request; a request during CLOSING reverses it. The renderer draws the leaf at fraction k (0 shut, 1 open)
+    // and the sound layer hears the four transitions: DOOR_OPEN (travel starts), DOOR_OPENED (end stop), DOOR_CLOSE, DOOR_CLOSED
+    const DOOR_MOVE = 900, DOOR_HOLD = 1500, DOOR_REACH = 30, DOOR_PASS = 14;
+    const doorOf = (d) => doors[d] || (doors[d] = { state: "CLOSED", k: 0, lastSeen: -1e9 });
     function stepDoors() {
-      const want = {};
+      const want = {}, pass = {};
       for (const a of actors) {
         if (a.phase !== "walk" || !a.route) continue;
         for (let i = Math.max(1, a.ri - 1); i < Math.min(a.route.length, a.ri + 3); i++) {
           const w = a.route[i], d = w.door || w.via; if (!d) continue;
-          const [dx, dy] = world.doorPos[d]; if (Math.hypot(a.x - dx, a.y - dy) < 26) { want[d] = want[d] || a.id; }
+          const [dx, dy] = world.doorPos[d]; const dd = Math.hypot(a.x - dx, a.y - dy);
+          if (dd < DOOR_REACH) want[d] = want[d] || a.id;
+          if (dd < DOOR_PASS) pass[d] = true;
         }
       }
-      for (const [d, by] of Object.entries(want)) { const s = doors[d] || (doors[d] = { open: false, lastSeen: 0 }); s.lastSeen = t; if (!s.open) { s.open = true; s.by = by; emit("DOOR_OPEN", { door: d, actor: by }); } }
-      for (const [d, s] of Object.entries(doors)) if (s.open && t - s.lastSeen > 1500) { s.open = false; emit("DOOR_CLOSE", { door: d }); }
+      for (const [d, by] of Object.entries(want)) { const s = doorOf(d); s.lastSeen = t; if (s.state === "CLOSED" || s.state === "CLOSING") { s.state = "OPENING"; s.by = by; emit("DOOR_OPEN", { door: d, actor: by, from: +s.k.toFixed(2) }); } }
+      const dk = STEP / DOOR_MOVE;
+      for (const [d, s] of Object.entries(doors)) {
+        if (s.state === "OPENING") { s.k = Math.min(1, s.k + dk); if (s.k >= 1) { s.state = "OPEN"; emit("DOOR_OPENED", { door: d }); } }
+        else if (s.state === "CLOSING") { s.k = Math.max(0, s.k - dk); if (s.k <= 0) { s.state = "CLOSED"; emit("DOOR_CLOSED", { door: d }); } }
+        else if (s.state === "OPEN" && t - s.lastSeen > DOOR_HOLD && !pass[d]) { s.state = "CLOSING"; emit("DOOR_CLOSE", { door: d }); }
+      }
+    }
+    // an actor waits at a door that is not yet open enough to pass (it never walks through a panel)
+    function blockedByDoor(a) {
+      for (let i = a.ri; i < Math.min(a.route.length, a.ri + 2); i++) {
+        const w = a.route[i], d = w.door || w.via; if (!d) continue;
+        const s = doors[d]; const [dx, dy] = world.doorPos[d];
+        if ((!s || s.k < 0.8) && Math.hypot(a.x - dx, a.y - dy) < 18) return true;
+      }
+      return false;
     }
 
     function stepActor(a, dt) {
@@ -1727,6 +1762,7 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
         const speed = a.kind === "dog" ? (a.act === "DOG_PLAYING" ? 34 : 24) : 18; // units per second
         let left = speed * dt / 1000;
         if (t - a.walkStart > 150000) { teleport(a, a.spot); return; } // walk too long: fade (plan §1.6)
+        if (blockedByDoor(a)) { a.waitMs = (a.waitMs || 0) + dt; if (a.waitMs < 8000) return; } else a.waitMs = 0; // safety: never stuck forever
         while (left > 0 && a.ri < a.route.length) {
           const w = a.route[a.ri]; const dx = w.x - a.x, dy = w.y - a.y; const L = Math.hypot(dx, dy);
           if (L > 1e-6) { a.face = [dx / L, dy / L]; }
@@ -1808,25 +1844,26 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
   // AMBIENCE carries every continuous bed (station, rooms, fountain, café murmur, cinema layers); EFFECTS carries one-shots in
   // four groups with fixed trims so a door never overpowers the station and the dog never overpowers H-HAB; MUSIC carries
   // only the R1 calm pad; UI carries the sound toggle confirmation.
-  const CATEGORIES = { MASTER: 0.8, AMBIENCE: 0.6, EFFECTS: 0.8, MUSIC: 0.35, UI: 0.5 };
-  const GROUPS = { DOORS: 0.85, AGENTS: 0.6, MACHINERY: 0.6, DOG: 0.6 };
+  const CATEGORIES = { MASTER: 0.85, AMBIENCE: 0.5, EFFECTS: 0.9, MUSIC: 0.35, UI: 0.5 };
+  const GROUPS = { DOORS: 0.8, AGENTS: 1.0, MACHINERY: 0.7, DOG: 0.75, WATER: 0.7 }; // WATER feeds the AMBIENCE bus (fountain detail)
 
   // ------------------------------------------------------------------ cue catalogue: category/group, priority, rate gate (ms), base level
   const CUES = {
-    "door.open.standard": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 }, "door.close.standard": { g: "DOORS", prio: 3, gate: 250, vol: 0.8 },
-    "door.open.hub": { g: "DOORS", prio: 3, gate: 250, vol: 1.0 }, "door.close.hub": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 },
-    "door.open.restricted": { g: "DOORS", prio: 3, gate: 250, vol: 0.9 }, "door.close.restricted": { g: "DOORS", prio: 3, gate: 250, vol: 0.8 },
-    "step.metal": { g: "AGENTS", prio: 0, gate: 0, vol: 0.35 }, "step.wood": { g: "AGENTS", prio: 0, gate: 0, vol: 0.3 }, "step.soft": { g: "AGENTS", prio: 0, gate: 0, vol: 0.18 },
-    "seat.sit": { g: "AGENTS", prio: 1, gate: 120, vol: 0.55 }, "seat.stand": { g: "AGENTS", prio: 1, gate: 120, vol: 0.45 }, "cafe.cup": { g: "AGENTS", prio: 1, gate: 400, vol: 0.4 },
-    "billiards.click": { g: "AGENTS", prio: 1, gate: 600, vol: 0.5 },
-    "console.wake": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.45 }, "console.sleep": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.4 },
+    // doors: four cues per family, one per physical transition of the Life door (travel starts, end stop, travel back, seal)
+    ...Object.fromEntries(["standard", "hub", "restricted"].flatMap((ty) => [[`door.travel.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 1.0 }], [`door.stop.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.8 }],
+      [`door.travelback.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.95 }], [`door.seal.${ty}`, { g: "DOORS", prio: 3, gate: 300, vol: 0.9 }]])),
+    "step.metal": { g: "AGENTS", prio: 1, gate: 0, vol: 1.0 }, "step.wood": { g: "AGENTS", prio: 1, gate: 0, vol: 0.95 }, "step.soft": { g: "AGENTS", prio: 1, gate: 0, vol: 0.7 },
+    "cafe.clink": { g: "AGENTS", prio: 1, gate: 900, vol: 0.7 }, "sofa.creak": { g: "AGENTS", prio: 1, gate: 1500, vol: 0.6 }, "console.touch": { g: "MACHINERY", prio: 1, gate: 700, vol: 0.55 },
+    "seat.sit": { g: "AGENTS", prio: 1, gate: 120, vol: 0.8 }, "seat.stand": { g: "AGENTS", prio: 1, gate: 120, vol: 0.65 }, "cafe.cup": { g: "AGENTS", prio: 1, gate: 400, vol: 0.7 },
+    "billiards.click": { g: "AGENTS", prio: 1, gate: 600, vol: 0.8 },
+    "console.wake": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.7 }, "console.sleep": { g: "MACHINERY", prio: 2, gate: 300, vol: 0.6 },
     "pod.close": { g: "MACHINERY", prio: 2, gate: 400, vol: 0.5 }, "pod.open": { g: "MACHINERY", prio: 2, gate: 400, vol: 0.45 },
     "projector.start": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.6 }, "projector.stop": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.55 },
     "cinema.lightsdown": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.5 }, "cinema.lightsup": { g: "MACHINERY", prio: 2, gate: 1000, vol: 0.5 },
-    "structure.creak": { g: "MACHINERY", prio: 1, gate: 20000, vol: 0.35 }, "fountain.drop": { g: "MACHINERY", prio: 0, gate: 200, vol: 0.25 },
+    "structure.creak": { g: "MACHINERY", prio: 1, gate: 20000, vol: 0.35 }, "fountain.drop": { g: "WATER", prio: 0, gate: 0, vol: 0.5 }, "fountain.bubble": { g: "WATER", prio: 0, gate: 0, vol: 0.45 },
     "zen.bowl": { g: "MACHINERY", prio: 2, gate: 15000, vol: 0.4 }, "quiet.seal": { g: "MACHINERY", prio: 1, gate: 4000, vol: 0.25 },
-    "dog.paw": { g: "DOG", prio: 0, gate: 0, vol: 0.3 }, "dog.tag": { g: "DOG", prio: 1, gate: 800, vol: 0.45 }, "dog.toy": { g: "DOG", prio: 1, gate: 900, vol: 0.5 },
-    "dog.lap": { g: "DOG", prio: 1, gate: 500, vol: 0.4 }, "dog.woof": { g: "DOG", prio: 2, gate: 120000, vol: 0.4 },
+    "dog.paw": { g: "DOG", prio: 0, gate: 0, vol: 0.6 }, "dog.tag": { g: "DOG", prio: 1, gate: 800, vol: 0.6 }, "dog.toy": { g: "DOG", prio: 1, gate: 900, vol: 0.7 },
+    "dog.lap": { g: "DOG", prio: 1, gate: 500, vol: 0.6 }, "dog.woof": { g: "DOG", prio: 2, gate: 120000, vol: 0.4 },
   };
 
   // ------------------------------------------------------------------ rooms: acoustic identity (floor, reverb) and ambience beds
@@ -1835,36 +1872,41 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
   const FLOOR = { "H-HAB": "wood", R1: "wood", R2: "soft", R3: "soft", R4: "soft" }; // default: metal deck
   const VERB = { L3: 0.35, "H-CMD": 0.25, "H-LAB": 0.25, "H-HAB": 0.18, R1: 0.2, R2: 0.08, R3: 0.0, R4: 0.12 }; // default 0.15
   // bed recipes: noise bands [type, freq, Q, level] + hum partials [freq, level]; levels are pre-mix, the director scales them
+  // beds: few broadband components, more structure. Each room has its own character (tone, pulse, band), quiet enough that
+  // activity sits on top. Levels are pre-mix; the director gives the room the listener is in full weight and fades its
+  // neighbours within a short distance of the walls, so crossing a door changes the room.
   const BEDS = {
-    station: { noise: [["lowpass", 90, 0.7, 0.30]], hum: [[50, 0.025]] },
-    corridor: { noise: [["lowpass", 900, 0.7, 0.16], ["bandpass", 2600, 0.7, 0.035]], hum: [] },
-    "H-CMD": { noise: [["bandpass", 1800, 0.8, 0.06], ["lowpass", 300, 0.7, 0.10]], hum: [[60, 0.035], [120, 0.015]] },
-    "H-LAB": { noise: [["lowpass", 400, 0.7, 0.09], ["bandpass", 3500, 4, 0.012]], hum: [[90, 0.03], [180, 0.012]] },
-    "H-HAB": { noise: [["lowpass", 600, 0.7, 0.09]], hum: [] },
-    L1: { noise: [["bandpass", 1500, 0.8, 0.05], ["lowpass", 300, 0.7, 0.07]], hum: [[60, 0.015]] },
-    L2: { noise: [["bandpass", 2400, 0.8, 0.045], ["lowpass", 300, 0.7, 0.06]], hum: [[75, 0.02]] },
-    L3: { noise: [["lowpass", 250, 0.7, 0.09]], hum: [] },
-    L4: { noise: [["bandpass", 1800, 0.8, 0.12], ["lowpass", 250, 0.7, 0.09]], hum: [[120, 0.035]] },
-    L6: { noise: [["lowpass", 200, 0.7, 0.05]], hum: [[55, 0.01]] },
-    L7: { noise: [["bandpass", 1600, 0.8, 0.05], ["lowpass", 300, 0.7, 0.06]], hum: [[66, 0.015]] },
-    L9: { noise: [["lowpass", 160, 0.7, 0.12]], hum: [[45, 0.035], [90, 0.015]] },
-    L10: { noise: [["bandpass", 2000, 0.8, 0.06], ["lowpass", 300, 0.7, 0.07]], hum: [[80, 0.02]] },
-    R1: { noise: [["lowpass", 350, 0.7, 0.04]], hum: [] },
-    R2: { noise: [["lowpass", 220, 0.7, 0.06]], hum: [] },
-    R3: { noise: [["lowpass", 120, 0.7, 0.02]], hum: [] },
-    R4: { noise: [["lowpass", 500, 0.7, 0.06]], hum: [] },
-    fountain: { noise: [["bandpass", 1300, 0.6, 0.10], ["bandpass", 3600, 1.2, 0.035]], hum: [], am: 0.35 },
-    cafe: { noise: [["bandpass", 520, 1.6, 0.05], ["bandpass", 1100, 2.2, 0.025]], hum: [], am: 0.6 },
-    cinemaFan: { noise: [["bandpass", 900, 1.2, 0.05]], hum: [[110, 0.008]] },
-    cinemaRumble: { noise: [["lowpass", 110, 0.7, 0.16]], hum: [], am: 0.5 },
-    zenPad: { noise: [], hum: [[174.6, 0.03], [261.6, 0.02], [349.2, 0.012]], am: 0.3, music: true },
+    station: { noise: [["lowpass", 60, 0.7, 0.05]], hum: [[41, 0.006]] },                                   // distant hull rumble
+    corridor: { noise: [["lowpass", 320, 0.7, 0.05]], hum: [[248, 0.002]], am: 0.6, rate: 0.18 },              // air moving through ducts
+    "H-CMD": { noise: [["bandpass", 2200, 4, 0.008]], hum: [[60, 0.012], [120, 0.009], [180, 0.005], [7200, 0.0012]] }, // electrical, bright
+    "H-LAB": { noise: [["lowpass", 170, 0.7, 0.05], ["bandpass", 3500, 9, 0.004]], hum: [[90, 0.008]], am: 0.85, rate: 0.75 }, // pump pulse + instrument whine
+    "H-HAB": { noise: [["lowpass", 260, 0.7, 0.022]], hum: [], am: 0.3, rate: 0.05 },                         // soft, warm, no mains hum
+    L1: { noise: [["bandpass", 1800, 3, 0.006]], hum: [[60, 0.006]] },
+    L2: { noise: [["bandpass", 2400, 3, 0.006]], hum: [[75, 0.007], [9800, 0.0008]] },                       // displays
+    L3: { noise: [["lowpass", 140, 0.7, 0.025]], hum: [] },                                                    // large quiet chamber
+    L4: { noise: [["bandpass", 2600, 1.4, 0.022], ["bandpass", 900, 1.2, 0.01]], hum: [[120, 0.012]] },        // server fans
+    L6: { noise: [["lowpass", 110, 0.7, 0.012]], hum: [] },                                                    // archive: near silent
+    L7: { noise: [["bandpass", 1600, 3, 0.006]], hum: [[66, 0.006]] },
+    L9: { noise: [["lowpass", 120, 0.7, 0.07]], hum: [[45, 0.016], [90, 0.006]], am: 0.8, rate: 1.4 },         // machinery cycling
+    L10: { noise: [["bandpass", 2000, 3, 0.006]], hum: [[80, 0.008], [160, 0.004]] },
+    R1: { noise: [["lowpass", 180, 0.7, 0.006]], hum: [], am: 0.5, rate: 0.04 },                              // almost silent, slow breath of air
+    R2: { noise: [["lowpass", 160, 0.7, 0.012]], hum: [] },
+    R3: { noise: [["lowpass", 90, 0.7, 0.003]], hum: [] },
+    R4: { noise: [["lowpass", 300, 0.7, 0.012]], hum: [] },
+    fountain: { noise: [["lowpass", 650, 0.7, 0.03], ["bandpass", 260, 1.2, 0.02]], hum: [], am: 0.55, rate: 2.3 }, // basin water body (detail = bubbles and drops)
+    cafe: { noise: [["bandpass", 480, 1.8, 0.02]], hum: [], am: 0.7, rate: 0.9 },
+    cinemaFan: { noise: [["bandpass", 900, 2, 0.02]], hum: [[110, 0.004]] },
+    cinemaRumble: { noise: [["lowpass", 100, 0.7, 0.06]], hum: [], am: 0.5, rate: 0.07 },
+    zenPad: { noise: [], hum: [[174.6, 0.012], [261.6, 0.008], [349.2, 0.005]], am: 0.3, rate: 0.05, music: true },
   };
 
   // every Life event type is mapped explicitly: a resolver, or null (deliberately silent: doors and footsteps already cover it)
   const EVENT_MAP = {
     AGENT_ENTER_ROOM: null, AGENT_EXIT_ROOM: null, AGENT_START_ACTIVITY: null, AGENT_END_ACTIVITY: null, DECOMPRESSION_END: null, MEDITATION_END: null,
-    DOOR_OPEN: (e, d) => [{ cue: `door.open.${d.doorType(e.door)}`, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
-    DOOR_CLOSE: (e, d) => [{ cue: `door.close.${d.doorType(e.door)}`, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_OPEN: (e, d) => [{ cue: `door.travel.${d.doorType(e.door)}`, key: "door:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_OPENED: (e, d) => [{ cue: `door.stop.${d.doorType(e.door)}`, key: "doorstop:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_CLOSE: (e, d) => [{ cue: `door.travelback.${d.doorType(e.door)}`, key: "door:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
+    DOOR_CLOSED: (e, d) => [{ cue: `door.seal.${d.doorType(e.door)}`, key: "doorstop:" + e.door, at: d.doorAt(e.door), room: d.doorRoom(e.door) }],
     AGENT_START_WORK: (e, d) => (TECH.has(e.room) ? [{ cue: "console.wake", actor: e.actor, room: e.room }] : []),
     AGENT_STOP_WORK: (e, d) => (TECH.has(e.room) ? [{ cue: "console.sleep", actor: e.actor, room: e.room }] : []),
     AGENT_SIT: (e) => (e.actor === "DEC-009" ? [] : [{ cue: "seat.sit", actor: e.actor, room: e.room }].concat(/cafe_seat/.test(e.spot || "") ? [{ cue: "cafe.cup", actor: e.actor, room: e.room, delay: 0.5 }] : [])),
@@ -1882,7 +1924,7 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
     DOG_STOP_PLAY: (e) => [{ cue: "dog.tag", actor: e.actor, room: e.room }],
   };
 
-  const TICK = 100, MAX_PLAYS = 6, STEP_LEN = 11, DOG_STEP = 6;
+  const TICK = 100, MAX_PLAYS = 8, STEP_LEN = 11, DOG_STEP = 6;
 
   // ------------------------------------------------------------------ the director (pure)
   function createDirector(opt) {
@@ -1926,12 +1968,12 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
       const room = q.room || roomOf(at[0], at[1]);
       if (SILENT.has(room)) { stats.blocked.reserved++; return; }
       if (c.g === "DOG" && !dogRooms.has(room)) { stats.blocked.dog++; return; }
-      const gate = c.gate || 0; if (gate && lastAt[q.cue] !== undefined && t - lastAt[q.cue] < gate) return;
+      const gate = c.gate || 0, gk = q.key || q.cue; if (gate && lastAt[gk] !== undefined && t - lastAt[gk] < gate) return;
       const sp = spatial(listener, at[0], at[1]); if (!sp) return;
       if (listener.room === "R3" && room !== "R3") sp.gain *= 0.1; // sound isolation: little leaks into R3
       if (room === "R3" && listener.room !== "R3") sp.gain *= 0.1; // ... and little leaks out of it
       if (sp.gain < 0.01) return;
-      lastAt[q.cue] = t;
+      lastAt[gk] = t;
       const r = rngFor(seed, q.cue, n++);
       plays.push({ cue: q.cue, group: c.g, prio: c.prio, gain: c.vol * sp.gain * (0.9 + 0.2 * r()), pan: sp.pan, rate: 0.94 + 0.12 * r(), variant: Math.floor(r() * 3), delay: q.delay || 0, room, verb: VERB[room] !== undefined ? VERB[room] : 0.15 });
     }
@@ -1957,7 +1999,7 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
         for (const { a } of walkers) {
           const len = a.kind === "dog" ? DOG_STEP : STEP_LEN; const m = stepMark.get(a.id); if (m === undefined || a.stride < m) { stepMark.set(a.id, a.stride); continue; }
           if (a.stride - m < len) continue; stepMark.set(a.id, a.stride);
-          if (steps >= 3) continue; steps++;
+          if (steps >= 4) continue; steps++;
           const fl = FLOOR[a.room] || "metal";
           request(listener, { cue: a.kind === "dog" ? "dog.paw" : `step.${fl}`, at: [a.x, a.y], room: a.room }, plays);
         }
@@ -1968,9 +2010,17 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
           if (a.phase !== "dwell") continue;
           if (a.act === "GAMES" && billiards && r() < 0.012) request(listener, { cue: "billiards.click", at: [a.x, a.y], room: a.room }, plays);
           if (a.kind === "dog" && a.state === "DOG_DRINKING" && r() < 0.25) request(listener, { cue: "dog.lap", at: [a.x, a.y], room: a.room }, plays);
+          // presence of people actually there: cups at the café, the sofa, hands on a console while at the workstation
+          if (a.kind === "agent" && a.state === "SOCIAL" && /cafe_seat/.test(a.spot || "") && r() < 0.012) request(listener, { cue: "cafe.clink", key: "clink:" + a.id, at: [a.x, a.y], room: a.room }, plays);
+          if (a.kind === "agent" && a.state === "SOCIAL" && /sofa/.test(a.spot || "") && r() < 0.006) request(listener, { cue: "sofa.creak", key: "creak:" + a.id, at: [a.x, a.y], room: a.room }, plays);
+          if (a.kind === "agent" && a.atHome && TECH.has(a.room) && r() < 0.004) request(listener, { cue: "console.touch", key: "touch:" + a.id, at: [a.x, a.y], room: a.room }, plays);
         }
         if (t >= nextCreak) { nextCreak = t + 45000 + rngFor(seed, "creak", t)() * 75000; request(listener, { cue: "structure.creak", at: [listener.x + 80, listener.y - 60], room: "COR-N" }, plays); }
-        if (fountain && t >= nextDrop) { nextDrop = t + 700 + rngFor(seed, "drop", t)() * 2200; request(listener, { cue: "fountain.drop", at: fountain, room: "H-HAB" }, plays); }
+        // the fountain's detail: small irregular bubbles and drops at the basin, only while the listener is near it
+        if (fountain && Math.hypot(fountain[0] - listener.x, fountain[1] - listener.y) < hearing(listener.z) * 0.8) {
+          const rr = rngFor(seed, "water", Math.floor(t / TICK));
+          if (rr() < 0.55) request(listener, { cue: rr() < 0.6 ? "fountain.bubble" : "fountain.drop", at: [fountain[0] + (rr() - 0.5) * 18, fountain[1] + (rr() - 0.5) * 18], room: "H-HAB", delay: rr() * 0.09 }, plays);
+        }
         // 4 budget: at most MAX_PLAYS per tick, highest priority and loudest first
         plays.sort((p, q) => q.prio - p.prio || q.gain - p.gain);
         if (plays.length > MAX_PLAYS) stats.dropped += plays.length - MAX_PLAYS;
@@ -1978,15 +2028,15 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
         // 5 ambience targets from the listener position, then smoothed (no abrupt cuts)
         const R = hearing(listener.z); const target = {};
         const zoomTrim = clamp((listener.z - 0.4) / 1.2, 0.35, 1);
-        target.station = 1;
-        for (const s of shapes) {
-          if (SILENT.has(s.id)) continue;
-          const w = Math.pow(Math.max(0, 1 - s.dist(listener.x, listener.y) / (R * 0.6)), 2) * zoomTrim;
-          const key = /^COR-/.test(s.id) ? "corridor" : s.id; if (!BEDS[key]) continue;
-          target[key] = Math.max(target[key] || 0, w);
+        target.station = listener.room ? 0.5 : 1;
+        for (const sh of shapes) {
+          if (SILENT.has(sh.id)) continue;
+          const key = /^COR-/.test(sh.id) ? "corridor" : sh.id; if (!BEDS[key]) continue;
+          const w = sh.id === listener.room ? 1 : Math.pow(Math.max(0, 1 - sh.dist(listener.x, listener.y) / 30), 2) * 0.6;
+          target[key] = Math.max(target[key] || 0, w * zoomTrim);
         }
         const near = (p, rad) => (p ? Math.pow(Math.max(0, 1 - Math.hypot(p[0] - listener.x, p[1] - listener.y) / rad), 1.5) * zoomTrim : 0);
-        target.fountain = near(fountain, 150);
+        target.fountain = listener.room === "H-HAB" || !listener.room ? near(fountain, 120) : 0;
         const social = snap.filter((a) => a.kind === "agent" && a.room === "H-HAB" && a.state === "SOCIAL" && a.phase === "dwell").length;
         target.cafe = near(cafe, 170) * clamp(social / 4, 0, 1);
         const cin = life && life.cinema ? life.cinema : "EMPTY"; const r2 = target.R2 || 0;
@@ -2006,17 +2056,18 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
   function createEngine(opt = {}) {
     let ctx = null, master = null, meter = null, buses = {}, groups = {}, verbIn = null, noiseBuf = null; const loops = {}; let active = 0, created = 0;
     const vols = { ...CATEGORIES };
-    const VOICES = 14;
+    const VOICES = 24;
     function build() {
       const AC = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext); if (!AC) return false;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = vols.MASTER;
       const tame = ctx.createBiquadFilter(); tame.type = "highshelf"; tame.frequency.value = 5200; tame.gain.value = -8;
       const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -12; lim.knee.value = 8; lim.ratio.value = 10; lim.attack.value = 0.004; lim.release.value = 0.25;
-      master.connect(tame); tame.connect(lim); lim.connect(ctx.destination);
+      const makeup = ctx.createGain(); makeup.gain.value = 2.4; // events land around -10 dBFS, ambience stays far below (measured)
+      master.connect(makeup); makeup.connect(tame); tame.connect(lim); lim.connect(ctx.destination);
       meter = ctx.createAnalyser(); meter.fftSize = 2048; lim.connect(meter); // output meter (tests, diagnostics)
       for (const c of ["AMBIENCE", "EFFECTS", "MUSIC", "UI"]) { const g = ctx.createGain(); g.gain.value = vols[c]; g.connect(master); buses[c] = g; }
-      for (const [gname, trim] of Object.entries(GROUPS)) { const g = ctx.createGain(); g.gain.value = trim; g.connect(buses.EFFECTS); groups[gname] = g; }
+      for (const [gname, trim] of Object.entries(GROUPS)) { const g = ctx.createGain(); g.gain.value = trim; g.connect(gname === "WATER" ? buses.AMBIENCE : buses.EFFECTS); groups[gname] = g; }
       // seeded noise and a short synthetic room impulse (no Math.random: the same station sounds the same)
       const r = rngFor("stellar-noise");
       noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 2), ctx.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = r() * 2 - 1;
@@ -2028,7 +2079,7 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
       for (const [key, b] of Object.entries(BEDS)) {
         const out = ctx.createGain(); out.gain.value = 0; out.connect(b.music ? buses.MUSIC : buses.AMBIENCE);
         let tgt = out;
-        if (b.am) { const am = ctx.createGain(); am.gain.value = 1 - b.am * 0.5; const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07 + (fnv(key) % 100) / 900; const lg = ctx.createGain(); lg.gain.value = b.am * 0.5; lfo.connect(lg); lg.connect(am.gain); lfo.start(); am.connect(out); tgt = am; loops[key + ":lfo"] = lfo; }
+        if (b.am) { const am = ctx.createGain(); am.gain.value = 1 - b.am * 0.5; const lfo = ctx.createOscillator(); lfo.frequency.value = b.rate || 0.07 + (fnv(key) % 100) / 900; const lg = ctx.createGain(); lg.gain.value = b.am * 0.5; lfo.connect(lg); lg.connect(am.gain); lfo.start(); am.connect(out); tgt = am; loops[key + ":lfo"] = lfo; }
         const srcs = [];
         for (const [type, f, q, lvl] of b.noise) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = lvl; s.connect(fl); fl.connect(g); g.connect(tgt); s.start(0, (off = (off + 0.37) % 1.9)); srcs.push(s); }
         for (const [f, lvl] of b.hum) { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; const g = ctx.createGain(); g.gain.value = lvl; o.connect(g); g.connect(tgt); o.start(); srcs.push(o); }
@@ -2074,15 +2125,22 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
   // ------------------------------------------------------------------ cue recipes (original, procedural; nz = filtered noise, tn = tone)
   const RECIPES = {
     "ui.on": (nz, tn) => { tn({ f: 660, dur: 0.12, v: 0.12 }); tn({ f: 990, at: 0.06, dur: 0.16, v: 0.08 }); },
-    "door.open.standard": (nz, tn, k) => { nz({ type: "bandpass", f: 420, to: 1500, q: 2, dur: 0.55, v: 0.22, atk: 0.04 }); nz({ type: "highpass", f: 3000, q: 0.7, at: 0.05, dur: 0.35, v: 0.06 }); tn({ f: 92 + k * 6, dur: 0.12, v: 0.18, at: 0.52 }); },
-    "door.close.standard": (nz, tn, k) => { nz({ type: "bandpass", f: 1400, to: 380, q: 2, dur: 0.5, v: 0.2, atk: 0.03 }); tn({ f: 70 + k * 5, dur: 0.16, v: 0.24, at: 0.48 }); nz({ type: "lowpass", f: 260, dur: 0.12, v: 0.18, at: 0.48 }); },
-    "door.open.hub": (nz, tn, k) => { nz({ type: "bandpass", f: 260, to: 1000, q: 1.6, dur: 0.85, v: 0.24, atk: 0.06 }); nz({ type: "highpass", f: 2600, q: 0.7, at: 0.08, dur: 0.6, v: 0.07 }); tn({ f: 62 + k * 4, dur: 0.2, v: 0.22, at: 0.82 }); },
-    "door.close.hub": (nz, tn, k) => { nz({ type: "bandpass", f: 1000, to: 240, q: 1.6, dur: 0.8, v: 0.22, atk: 0.05 }); tn({ f: 52 + k * 4, dur: 0.24, v: 0.28, at: 0.78 }); nz({ type: "lowpass", f: 200, dur: 0.18, v: 0.2, at: 0.78 }); },
-    "door.open.restricted": (nz, tn, k) => { tn({ f: 1180, dur: 0.07, v: 0.07 }); tn({ f: 1580, at: 0.09, dur: 0.08, v: 0.06 }); nz({ type: "bandpass", f: 400, to: 1400, q: 2.2, at: 0.18, dur: 0.55, v: 0.22, atk: 0.04 }); tn({ f: 86 + k * 5, dur: 0.12, v: 0.2, at: 0.72 }); },
-    "door.close.restricted": (nz, tn, k) => { nz({ type: "bandpass", f: 1400, to: 360, q: 2.2, dur: 0.5, v: 0.2, atk: 0.03 }); tn({ f: 66 + k * 5, dur: 0.16, v: 0.26, at: 0.48 }); tn({ f: 980, at: 0.62, dur: 0.07, v: 0.05 }); },
-    "step.metal": (nz, tn, k) => { nz({ type: "bandpass", f: 1700 + k * 250, q: 3, dur: 0.05, v: 0.22, atk: 0.002 }); nz({ type: "lowpass", f: 220, dur: 0.06, v: 0.12, atk: 0.002 }); },
-    "step.wood": (nz, tn, k) => { nz({ type: "bandpass", f: 520 + k * 80, q: 2, dur: 0.06, v: 0.22, atk: 0.002 }); },
-    "step.soft": (nz, tn, k) => { nz({ type: "lowpass", f: 380 + k * 60, dur: 0.07, v: 0.16, atk: 0.006 }); },
+    // doors (timed to the 0.9 s Life travel): travel = release clunk + motor run rising; stop = soft end-stop thud;
+    // travelback = motor run falling; seal = lock clunk + seal hiss. Hub doors are heavier and lower; restricted adds an access chirp
+    ...Object.fromEntries([["standard", 1, 0], ["hub", 0.72, 0], ["restricted", 0.95, 1]].flatMap(([ty, p, chirp]) => [
+      [`door.travel.${ty}`, (nz, tn, k) => { if (chirp) { tn({ f: 1180, dur: 0.06, v: 0.05 }); tn({ f: 1580, at: 0.08, dur: 0.07, v: 0.045 }); } tn({ f: 70 * p, dur: 0.07, v: 0.16 }); nz({ type: "lowpass", f: 300 * p, dur: 0.06, v: 0.16 });
+        tn({ type: "sawtooth", f: 52 * p + k * 3, to: 78 * p, at: 0.05, dur: 0.86, v: 0.03, atk: 0.12 }); nz({ type: "bandpass", f: 520 * p, to: 1100 * p, q: 3, at: 0.05, dur: 0.86, v: 0.06, atk: 0.12 }); }],
+      [`door.stop.${ty}`, (nz, tn, k) => { tn({ f: 62 * p + k * 4, dur: 0.12, v: 0.18 }); nz({ type: "lowpass", f: 380 * p, dur: 0.1, v: 0.12 }); }],
+      [`door.travelback.${ty}`, (nz, tn, k) => { tn({ type: "sawtooth", f: 78 * p + k * 3, to: 52 * p, dur: 0.86, v: 0.03, atk: 0.1 }); nz({ type: "bandpass", f: 1100 * p, to: 520 * p, q: 3, dur: 0.86, v: 0.06, atk: 0.1 }); }],
+      [`door.seal.${ty}`, (nz, tn, k) => { tn({ f: 54 * p + k * 3, dur: 0.16, v: 0.24 }); nz({ type: "lowpass", f: 260 * p, dur: 0.12, v: 0.2 }); nz({ type: "highpass", f: 2600, at: 0.08, dur: 0.35, v: 0.035, atk: 0.03 });
+        if (chirp) tn({ f: 980, at: 0.3, dur: 0.06, v: 0.04 }); }]])),
+    // footsteps: heel + toe, a body thump and a material ring (metal deck rings, wood knocks, soft floors only thud)
+    "step.metal": (nz, tn, k) => { nz({ type: "lowpass", f: 180, dur: 0.05, v: 0.3, atk: 0.002 }); nz({ type: "bandpass", f: 2300 + k * 400, q: 6, dur: 0.06, v: 0.17, atk: 0.001 }); tn({ f: 960 + k * 140, dur: 0.05, v: 0.02 }); nz({ type: "bandpass", f: 1500 + k * 200, q: 3, at: 0.07, dur: 0.035, v: 0.06, atk: 0.002 }); },
+    "step.wood": (nz, tn, k) => { nz({ type: "lowpass", f: 220, dur: 0.06, v: 0.32, atk: 0.002 }); nz({ type: "bandpass", f: 650 + k * 90, q: 3, dur: 0.05, v: 0.2, atk: 0.002 }); nz({ type: "bandpass", f: 900 + k * 80, q: 2, at: 0.065, dur: 0.035, v: 0.06, atk: 0.002 }); },
+    "step.soft": (nz, tn, k) => { nz({ type: "lowpass", f: 200 + k * 30, dur: 0.08, v: 0.26, atk: 0.006 }); nz({ type: "lowpass", f: 500, at: 0.06, dur: 0.05, v: 0.05, atk: 0.004 }); },
+    "cafe.clink": (nz, tn, k) => { tn({ f: 2900 + k * 210, dur: 0.18, v: 0.04 }); tn({ f: 4350 + k * 260, dur: 0.1, v: 0.025 }); tn({ f: 2500 + k * 120, at: 0.11, dur: 0.12, v: 0.025 }); },
+    "sofa.creak": (nz, tn, k) => { nz({ type: "bandpass", f: 300 + k * 40, to: 240, q: 5, dur: 0.35, v: 0.09, atk: 0.05 }); },
+    "console.touch": (nz, tn, k) => { nz({ type: "bandpass", f: 3800, q: 4, dur: 0.018, v: 0.08, atk: 0.001 }); nz({ type: "bandpass", f: 3400, q: 4, at: 0.11 + k * 0.03, dur: 0.018, v: 0.06, atk: 0.001 }); tn({ f: 1760, at: 0.2, dur: 0.05, v: 0.012 }); },
     "seat.sit": (nz, tn, k) => { nz({ type: "lowpass", f: 420, dur: 0.18, v: 0.22, atk: 0.01 }); tn({ f: 150 - k * 10, to: 110, dur: 0.12, v: 0.06 }); },
     "seat.stand": (nz, tn, k) => { nz({ type: "bandpass", f: 900, to: 600, q: 1.2, dur: 0.22, v: 0.12, atk: 0.03 }); },
     "cafe.cup": (nz, tn, k) => { tn({ f: 2650 + k * 140, dur: 0.12, v: 0.05 }); tn({ f: 3980 + k * 160, dur: 0.08, v: 0.03 }); nz({ type: "highpass", f: 4000, dur: 0.02, v: 0.05 }); },
@@ -2096,7 +2154,9 @@ function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const row
     "cinema.lightsdown": (nz, tn) => { tn({ f: 72, dur: 0.15, v: 0.14 }); tn({ f: 392, to: 262, at: 0.1, dur: 1.2, v: 0.03, atk: 0.2 }); },
     "cinema.lightsup": (nz, tn) => { tn({ f: 72, dur: 0.15, v: 0.14 }); tn({ f: 262, to: 392, at: 0.1, dur: 1.2, v: 0.03, atk: 0.2 }); },
     "structure.creak": (nz, tn, k) => { nz({ type: "bandpass", f: 240 + k * 30, to: 170, q: 6, dur: 1.1, v: 0.12, atk: 0.2 }); tn({ f: 48, dur: 0.9, v: 0.05, atk: 0.2 }); },
-    "fountain.drop": (nz, tn, k) => { tn({ f: 1400 + k * 260, to: 900 + k * 120, dur: 0.06, v: 0.04 }); },
+    // water: a drop is a short falling plip with a splash tick; a bubble is the classic rising resonance of a small air pocket
+    "fountain.drop": (nz, tn, k) => { tn({ f: 1500 + k * 300, to: 700 + k * 100, dur: 0.05, v: 0.05, atk: 0.002 }); nz({ type: "bandpass", f: 2400 + k * 300, q: 2, dur: 0.025, v: 0.025, atk: 0.001 }); },
+    "fountain.bubble": (nz, tn, k) => { tn({ f: 420 + k * 180, to: 980 + k * 260, dur: 0.045, v: 0.06, atk: 0.003 }); },
     "zen.bowl": (nz, tn) => { tn({ f: 264, dur: 5.5, v: 0.06, atk: 0.01 }); tn({ f: 528, dur: 4.2, v: 0.03, atk: 0.01 }); tn({ f: 794, dur: 3, v: 0.012, atk: 0.01 }); },
     "quiet.seal": (nz, tn) => { tn({ f: 55, to: 45, dur: 0.6, v: 0.06, atk: 0.05 }); },
     "dog.paw": (nz, tn, k) => { nz({ type: "highpass", f: 4200 + k * 300, dur: 0.012, v: 0.12, atk: 0.001 }); nz({ type: "lowpass", f: 300, dur: 0.03, v: 0.06, atk: 0.002 }); },
@@ -2755,22 +2815,25 @@ function draw(){
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;hits=[];badges=[];
   const drawIt=(it)=>{const b=it.sb;if(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1)return;it.draw();if(it.hit)hits.push([b,it.hit,it]);if(it.kind==="agent")badges.push(it)};
   for(const it of scene.items)drawIt(it);
-  if(LIFE_ON){SCACHE={key,scene,ground,full:cacheCanvas(SCACHE&&SCACHE.full),hits:hits.slice(),badges:badges.slice()};return drawLifeFrame()}
+  if(LIFE_ON){SCACHE={key,scene,ground,full:cacheCanvas(SCACHE&&SCACHE.full),hits:hits.slice(),badges:badges.slice(),doorK:Object.fromEntries(scene.doors.map(i=>[i,doorOpenK(scene.items[i].doorId)]))};return drawLifeFrame()}
   drawOverlays()}
 function drawLifeFrame(){
   dirty=false;const z=cam.z;ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(SCACHE.full,0,0);hits=SCACHE.hits.slice();badges=SCACHE.badges.slice();
   const vx0=cam.cx-W/2/z,vy0=cam.cy-H/2/z,vx1=cam.cx+W/2/z,vy1=cam.cy+H/2/z;const ov=(a,b)=>!(a[2]<b[0]||b[2]<a[0]||a[3]<b[1]||b[3]<a[1]);
   const acts=[];for(const [ins,L] of lifeItems())for(const it of L){if(!ov(it.sb,[vx0,vy0,vx1,vy1]))continue;it.ins=ins;acts.push(it)}
-  let regs=acts.map(it=>[it.sb[0]-2,it.sb[1]-2,it.sb[2]+2,it.sb[3]+2]);
+  const doorRegs=[];for(const i of scene.doors){const it=scene.items[i];if(Math.abs(doorOpenK(it.doorId)-SCACHE.doorK[i])>0.001&&ov(it.sb,[vx0,vy0,vx1,vy1]))doorRegs.push([it.sb[0]-1,it.sb[1]-1,it.sb[2]+1,it.sb[3]+1])} // moving doors
+  const lowZ=z<1.3; // zoomed out: actors are a few pixels tall and are drawn over the frame afterwards (each clipped to its box)
+  let regs=(lowZ?[]:acts.map(it=>[it.sb[0]-2,it.sb[1]-2,it.sb[2]+2,it.sb[3]+2])).concat(doorRegs);
   for(let merged=true;merged;){merged=false;for(let i=0;i<regs.length&&!merged;i++)for(let j=i+1;j<regs.length;j++)if(ov(regs[i],regs[j])){const A=regs[i],B=regs[j];regs[i]=[Math.min(A[0],B[0]),Math.min(A[1],B[1]),Math.max(A[2],B[2]),Math.max(A[3],B[3])];regs.splice(j,1);merged=true;break}}
   const wt=()=>ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR),CS=48;
-  if(z<1.3){wt();for(const it of acts.sort((p,q)=>p.key-q.key)){const r=it.sb;ctx.save();ctx.beginPath();ctx.rect(r[0]-2,r[1]-2,r[2]-r[0]+4,r[3]-r[1]+4);ctx.clip();it.draw();ctx.restore()}regs=[]} // zoomed out: actors are a few pixels tall, drawn over the cached frame (each clipped to its box)
+  const inRegs=lowZ?[]:acts;
   for(const r of regs){ctx.save();wt();ctx.beginPath();ctx.rect(r[0],r[1],r[2]-r[0],r[3]-r[1]);ctx.clip();ctx.setTransform(1,0,0,1,0,0);
     {const dx0=Math.max(0,Math.floor(((r[0]-cam.cx)*z+W/2)*DPR)-1),dy0=Math.max(0,Math.floor(((r[1]-cam.cy)*z+H/2)*DPR)-1),dx1=Math.min(cv.width,Math.ceil(((r[2]-cam.cx)*z+W/2)*DPR)+1),dy1=Math.min(cv.height,Math.ceil(((r[3]-cam.cy)*z+H/2)*DPR)+1);
      if(dx1>dx0&&dy1>dy0)ctx.drawImage(SCACHE.ground,dx0,dy0,dx1-dx0,dy1-dy0,dx0,dy0,dx1-dx0,dy1-dy0)}wt();
     const cand=new Set();for(let gx=Math.floor(r[0]/CS);gx<=Math.floor(r[2]/CS);gx++)for(let gy=Math.floor(r[1]/CS);gy<=Math.floor(r[3]/CS);gy++)for(const i of scene.cells.get(gx+"|"+gy)||[])if(ov(scene.items[i].sb,r))cand.add(i);
-    const here=acts.filter(it=>ov(it.sb,r)).sort((p,q)=>p.ins-q.ins||p.key-q.key);let k=0;const flush=(i)=>{while(k<here.length&&here[k].ins<i){here[k].draw();k++}};
+    const here=inRegs.filter(it=>ov(it.sb,r)).sort((p,q)=>p.ins-q.ins||p.key-q.key);let k=0;const flush=(i)=>{while(k<here.length&&here[k].ins<i){here[k].draw();k++}};
     for(const i of [...cand].sort((p,q)=>p-q)){flush(i);scene.items[i].draw()}flush(Infinity);ctx.restore()}
+  if(lowZ){wt();for(const it of acts.slice().sort((p,q)=>p.key-q.key)){const r=it.sb;ctx.save();ctx.beginPath();ctx.rect(r[0]-2,r[1]-2,r[2]-r[0]+4,r[3]-r[1]+4);ctx.clip();it.draw();ctx.restore()}}
   for(const it of acts){if(it.hit)hits.push([it.sb,it.hit,it]);if(it.kind==="agent")badges.push(it)}
   drawOverlays()}
 function drawOverlays(){const z=cam.z;ctx.setTransform(z*DPR,0,0,z*DPR,(W/2-cam.cx*z)*DPR,(H/2-cam.cy*z)*DPR);
@@ -2903,6 +2966,11 @@ function lifeItems(){const out=new Map();if(!LIFE_ON||!life||!scene.cells)return
     if(!out.has(ins))out.set(ins,[]);out.get(ins).push(it)}
   for(const L of out.values())L.sort((p,q)=>p.key-q.key);return out}
 function setLife(on){LIFE_ON=on;if(on&&!life){lifeSetup();if(typeof soundAttach==="function")soundAttach()}$("#t-life").classList.toggle("on",on);$("#banner-life").textContent=on?"ambient life (cosmetic, seeded): idle agents and the resident dog":"agents at home anchors";buildScene();dirty=true}
+// doors are physical: the leaf is drawn at the Life door's opening fraction (0 shut .. 1 open). With Life off every door is
+// shut (nobody is passing); reserved doors are always shut. DOOR_OVERRIDE pins a door for the visual door test.
+const DOOR_OVERRIDE={};
+function doorOpenK(id){if(id in DOOR_OVERRIDE)return DOOR_OVERRIDE[id];if(!LIFE_ON||!life)return 0;const d=life.doors[id];return d?d.k:0}
+function setDoorOverride(id,k){if(k===null)delete DOOR_OVERRIDE[id];else DOOR_OVERRIDE[id]=k;SCACHE=null;dirty=true}
 // ---------------------------------------------------------------- SOUND LAYER (docs/STELLAR_SOUND_SYSTEM_V1.md)
 // Life emits events and knows nothing about audio; the Director (pure) listens on the Life bus and turns events and Life
 // state into sound requests and ambience levels; the Engine (Web Audio) synthesises them. Off until the user presses
@@ -2913,8 +2981,17 @@ function setSound(on){SOUND_ON=on;$("#t-sound").classList.toggle("on",on);$("#mi
   if(on){if(!sound)sound=StellarSound.createEngine();if(!director)director=StellarSound.createDirector({D,world:life?life.world:StellarLife.buildWorld(D),seed:new URLSearchParams(location.search).get("seed")||"stellar"});sound.enable();
     document.querySelectorAll("#mixer input").forEach(i=>{i.value=Math.round(sound.volume(i.dataset.cat)*100)})}
   else if(sound)sound.disable();soundLast=null;soundAttach()}
+// developer-only sound debug (?sounddebug=1): room, loudest beds, voices, recent cues, nearby doors, life activity
+const SOUND_DEBUG=new URLSearchParams(location.search).get("sounddebug")==="1";const sdRecent=[];let sdAt=0;
+function soundDebug(out,lf,w){if(!SOUND_DEBUG)return;for(const p of out.plays)sdRecent.unshift(`${p.cue} (${p.room||"?"}) ${p.gain.toFixed(2)}`);sdRecent.length=Math.min(sdRecent.length,8);
+  if(performance.now()-sdAt<250)return;sdAt=performance.now();const el=$("#sdebug");el.style.display="block";
+  const beds=Object.entries(out.beds).filter(([,v])=>v>0.01).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k} ${v.toFixed(2)}`).join("  ");
+  const doors=life?Object.entries(life.doors).map(([id,d])=>[id,d,Math.hypot(lifeDoorPos(id)[0]-w[0],lifeDoorPos(id)[1]-w[1])]).filter(x=>x[2]<200).sort((a,b)=>a[2]-b[2]).slice(0,3).map(([id,d])=>`${id} ${d.state} ${d.k.toFixed(2)}`).join("  "):"";
+  const acts={};for(const a of lf.snapshot)acts[a.state]=(acts[a.state]||0)+1;const lv=sound.level();
+  el.textContent=`SOUND DEBUG\nroom ${out.listenerRoom||"(between rooms)"}   zoom ${cam.z.toFixed(1)}\nbeds ${beds}\nvoices ${sound.active}   out rms ${lv.rms.toFixed(4)} peak ${lv.peak.toFixed(3)}\ndoors ${doors||"none near"}\nlife ${Object.entries(acts).map(([k,v])=>k.toLowerCase()+" "+v).join(", ")}\ncues\n  ${sdRecent.join("\n  ")}`}
+function lifeDoorPos(id){return life.world.doorPos[id]||[0,0]}
 function soundTick(t){if(!SOUND_ON||!sound||!director)return;if(soundLast===null){soundLast=t;return}soundAcc+=t-soundLast;soundLast=t;if(soundAcc<StellarSound.TICK)return;const dt=Math.min(soundAcc,1000);soundAcc=0;
-  const w=V.inv(cam.cx,cam.cy);const lf=life&&LIFE_ON?{snapshot:life.snapshot(),cinema:life.cinema}:{snapshot:[],cinema:"EMPTY"};sound.apply(director.tick(dt,{x:w[0],y:w[1],z:cam.z},lf))}
+  const w=V.inv(cam.cx,cam.cy);const lf=life&&LIFE_ON?{snapshot:life.snapshot(),cinema:life.cinema}:{snapshot:[],cinema:"EMPTY"};const out=director.tick(dt,{x:w[0],y:w[1],z:cam.z},lf);sound.apply(out);soundDebug(out,lf,w)}
 // ---------------------------------------------------------------- boot
 function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+"px";cv.style.height=H+"px";dirty=true}
 addEventListener("resize",resize);resize();
@@ -2933,7 +3010,7 @@ function loop(t){if(anim)anim(t);const sec=Math.floor(Date.now()/1000/30);if(sec
   if(LIFE_ON&&life&&!lifeFrozen&&!VOCAB_MODE){if(lifeLast!==null){life.step((t-lifeLast)*LIFE_SPEED);dirty=true}lifeLast=t}else lifeLast=null;
   soundTick(t);if(dirty)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems,sound:()=>sound,director:()=>director,setSound};
+window.__stellar={cam,focusRoom,setView,opt,scene:()=>scene,setDoorOverride,doorOpenK,life:()=>life,lifeOn:()=>LIFE_ON,setLife,lifeItems,sound:()=>sound,director:()=>director,setSound};
 </script>
 </body>
 </html>

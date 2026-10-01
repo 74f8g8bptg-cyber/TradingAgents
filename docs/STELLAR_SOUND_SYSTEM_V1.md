@@ -242,3 +242,121 @@ There are 3 alternates per cue, plus seeded ±6 % rate and ±10 % level. A close
 - A cinema content channel (MUSIC bus).
 - Day/night ambience variation.
 - Saved mixer settings.
+
+---
+
+## V1.1 corrective pass (after the owner's listening test)
+
+### Audit: actual causes
+
+| Observation | Cause found in the code |
+|---|---|
+| Doors look like holes | `SV.door.build` drew the existing door leaf **only for reserved doors** (`o.closed`); every working door was a frame around an empty opening. Life's door state was only a logical open/closed flag that the renderer never read. In a deep doorway (corridor and room frames merged, up to 28 units deep) a leaf at mid-depth would also be hidden by the lintel from the default camera |
+| Door sounds not noticeable | They fired on a logical request with no visible movement, at a low level (DOORS trim 0.5) |
+| Constant rain / noise | The fountain bed was two broadband noise bands (1.3 kHz and 3.6 kHz) with a 150-unit radius covering most of H-HAB. Every room bed was mostly broadband noise, and the ambience bus started at 0.6 |
+| Rooms barely differ | Beds were spectrally similar (low-passed noise at different cut-offs). Listener weighting blended neighbouring rooms over a wide radius (0.6 × hearing) |
+| Footsteps rarely audible | Step cues were about −34 dBFS before the room tone: cue level 0.18–0.35, AGENTS trim 0.38, recipe amplitude 0.22 |
+| Little human presence | Only enter / sit / stand events made sound, at low level. Nothing reflected people actually sitting together, playing or at their consoles |
+
+### Doors: real functional doors
+
+- **Construction:** the frame, lintel, columns and hazard markings are unchanged. The existing two-panel leaf now **slides**: each full-width panel moves sideways into its jamb pocket, clipped to the opening, with no squash and no fade.
+  - A single-frame door has one panel pair.
+  - A deep doorway has a pair at each frame face (a vestibule), so a shut door blocks the opening from every camera.
+- **States:** CLOSED → OPENING → OPEN → CLOSING → CLOSED. It is a state machine in the Life engine, not a second navigation system:
+  - **travel:** 0.9 s;
+  - **request:** an actor on a route through the door asks for it within 30 units;
+  - **hold:** the door stays open while anyone is within 14 units, and for 1.5 s after the last request;
+  - **reverse:** a request during CLOSING reverses it;
+  - **waiting:** walkers wait at a door that is less than 80 % open (never through a panel), with an 8 s safety limit.
+- **Every door:**
+  - H-CMD, H-LAB and H-HAB hub doors, L-room doors and the H-CMD ↔ H-HAB junction;
+  - R1–R4;
+  - restricted doors (L9, L10: same leaf, restricted frame);
+  - reserved doors (L5, L8, R5, R6): permanently closed panels.
+- **With Life off,** every door is shown closed.
+- **Rendering:** a moving door is repainted in its own clipped region on top of the cached static frame.
+- **Events:** `DOOR_OPEN` (travel starts), `DOOR_OPENED` (end stop), `DOOR_CLOSE` (travel back), `DOOR_CLOSED` (sealed). `DOOR_OPENED` and `DOOR_CLOSED` are new.
+
+### Door sound synchronisation
+
+Each door family has four cues, one per physical transition, gated per door (not per cue name):
+
+| Cue | Plays on | Sound |
+|---|---|---|
+| `door.travel.*` | `DOOR_OPEN` | Release clunk + motor run rising over 0.9 s |
+| `door.stop.*` | `DOOR_OPENED` | Soft end stop |
+| `door.travelback.*` | `DOOR_CLOSE` | Motor falling over 0.9 s |
+| `door.seal.*` | `DOOR_CLOSED` | Lock clunk + seal hiss |
+
+- **Families:** hub doors are pitched lower and heavier; restricted doors add an access chirp on opening and a confirm tick on sealing.
+- **Tested:**
+  - the cues follow the door in order (travel, stop, travelback, seal);
+  - the end stop sounds 0.8–1.1 s after travel begins;
+  - no door sound plays without a door transition.
+
+### Fountain
+
+- **Removed:** the broadband hiss.
+- **New sound:**
+  - a quiet basin "water body" (low-passed and band-limited around 260–650 Hz, with a 2.3 Hz slosh);
+  - small irregular bubbles (rising resonance) and drops (falling plip with a splash tick), on a WATER group under AMBIENCE, only while the listener is near the basin;
+  - a 120-unit radius, heard only from H-HAB or between rooms.
+
+### Ambience, rooms, presence
+
+- **Room beds** were redesigned to be structurally different, not just louder or quieter:
+
+  | Room | Character |
+  |---|---|
+  | H-CMD | Bright mains hum stack (60 / 120 / 180 Hz) and a faint electronic whine |
+  | H-LAB | Pump pulse (0.75 Hz) and a thin instrument whine |
+  | L4 | Server fans |
+  | L9 | Cycling machinery pulse |
+  | L3 | Large quiet chamber |
+  | L6 | Near silence |
+  | H-HAB | Warm, soft, no mains hum |
+  | R1 | Almost silent, with a slow breath of air |
+  | R3 | Practically silent |
+
+- **Room weighting:** the room you are in gets full weight. Neighbours fade within 30 units of their walls, so crossing a door changes the room (crossfaded over about 0.8 s).
+- **Ambience bus:** 0.5. The station base is now a distant hull rumble at half weight inside rooms.
+- **Footsteps:** a heel/toe body thump plus a material ring (the metal deck rings, wood knocks, soft floors only thud), a stronger AGENTS trim, and up to 4 steps per tick.
+- **Presence from real state:**
+  - cup clinks for agents actually sitting together at the café;
+  - sofa creaks in the lounge;
+  - an occasional console touch for agents at their own technical workstation;
+  - all gated per agent.
+- **No music was added.** The only music is the R1 pad while someone meditates.
+- **A +7.6 dB make-up gain** before the limiter, so events are clearly audible at normal volume.
+
+### Measured output (headless, default mixer)
+
+| Area | Ambience RMS (V1 → V1.1) |
+|---|---|
+| H-CMD | 0.032 → 0.020 |
+| L4 | 0.034 → 0.017 |
+| Corridor | 0.031 → 0.009 |
+| H-LAB | 0.028 → 0.009 |
+| Park (near fountain) | — → 0.008 |
+| H-HAB lounge | 0.024 → 0.0055 |
+| R4 | 0.019 → 0.0045 |
+| R2 | 0.019 → 0.0043 |
+| R1 | 0.020 → 0.0041 |
+| R3 | 0.0024 → 0.0006 |
+
+| Event at close range | Peak |
+|---|---|
+| Footstep | 0.10–0.12 (about 15 dB above the H-HAB ambience peaks) |
+| Café clink | 0.07 |
+| Door travel / seal | 0.24 / 0.35 |
+
+### Debug
+
+`?sounddebug=1` (developer only) shows:
+- the listener room;
+- the loudest beds;
+- the active voices and output level;
+- nearby door states;
+- Life activity counts;
+- the recent cues.

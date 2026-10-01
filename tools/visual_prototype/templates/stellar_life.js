@@ -26,12 +26,12 @@
 
   // ------------------------------------------------------------------ event hooks (the bridge to a future sound system)
   const EVENTS = ["AGENT_ENTER_ROOM", "AGENT_EXIT_ROOM", "AGENT_START_WORK", "AGENT_STOP_WORK", "AGENT_SIT", "AGENT_STAND",
-    "AGENT_START_REST", "AGENT_END_REST", "AGENT_START_ACTIVITY", "AGENT_END_ACTIVITY", "DOOR_OPEN", "DOOR_CLOSE",
+    "AGENT_START_REST", "AGENT_END_REST", "AGENT_START_ACTIVITY", "AGENT_END_ACTIVITY", "DOOR_OPEN", "DOOR_OPENED", "DOOR_CLOSE", "DOOR_CLOSED",
     "MEDITATION_START", "MEDITATION_END", "CINEMA_STATE", "CINEMA_START", "CINEMA_END", "DECOMPRESSION_START",
     "DECOMPRESSION_END", "DOG_ENTER_R4", "DOG_ENTER_HHAB", "DOG_START_PLAY", "DOG_STOP_PLAY"];
   // suggested future sound cue per event (no audio is played anywhere in V1; a sound layer subscribes to the bus)
   const SOUND_HOOKS = { AGENT_START_WORK: "workstation.wake", AGENT_STOP_WORK: "workstation.sleep", AGENT_SIT: "seat.creak",
-    AGENT_STAND: "seat.release", DOOR_OPEN: "door.open", DOOR_CLOSE: "door.close", MEDITATION_START: "zen.chime",
+    AGENT_STAND: "seat.release", DOOR_OPEN: "door.open", DOOR_OPENED: "door.endstop", DOOR_CLOSE: "door.close", DOOR_CLOSED: "door.seal", MEDITATION_START: "zen.chime",
     CINEMA_START: "cinema.start", CINEMA_END: "cinema.end", DECOMPRESSION_START: "quiet.enter", DOG_START_PLAY: "dog.play",
     DOG_STOP_PLAY: "dog.settle", DOG_ENTER_R4: "dog.pawsteps", DOG_ENTER_HHAB: "dog.pawsteps", AGENT_START_REST: "rest.pod" };
   function makeBus() {
@@ -418,19 +418,39 @@
       return startActivity(a, n, s, r);
     }
 
-    // doors: an actor within reach of a door on its route asks for it; the door opens at once and closes 1.5 s after the
-    // last user has gone. The door assembly itself is drawn exactly as before (the frozen visual baseline).
+    // doors: a physical state machine CLOSED -> OPENING -> OPEN -> CLOSING -> CLOSED with real travel (DOOR_MOVE ms). An actor
+    // within reach of a door on its route asks for it; the door holds open while anyone is in the passage and for DOOR_HOLD
+    // after the last request; a request during CLOSING reverses it. The renderer draws the leaf at fraction k (0 shut, 1 open)
+    // and the sound layer hears the four transitions: DOOR_OPEN (travel starts), DOOR_OPENED (end stop), DOOR_CLOSE, DOOR_CLOSED
+    const DOOR_MOVE = 900, DOOR_HOLD = 1500, DOOR_REACH = 30, DOOR_PASS = 14;
+    const doorOf = (d) => doors[d] || (doors[d] = { state: "CLOSED", k: 0, lastSeen: -1e9 });
     function stepDoors() {
-      const want = {};
+      const want = {}, pass = {};
       for (const a of actors) {
         if (a.phase !== "walk" || !a.route) continue;
         for (let i = Math.max(1, a.ri - 1); i < Math.min(a.route.length, a.ri + 3); i++) {
           const w = a.route[i], d = w.door || w.via; if (!d) continue;
-          const [dx, dy] = world.doorPos[d]; if (Math.hypot(a.x - dx, a.y - dy) < 26) { want[d] = want[d] || a.id; }
+          const [dx, dy] = world.doorPos[d]; const dd = Math.hypot(a.x - dx, a.y - dy);
+          if (dd < DOOR_REACH) want[d] = want[d] || a.id;
+          if (dd < DOOR_PASS) pass[d] = true;
         }
       }
-      for (const [d, by] of Object.entries(want)) { const s = doors[d] || (doors[d] = { open: false, lastSeen: 0 }); s.lastSeen = t; if (!s.open) { s.open = true; s.by = by; emit("DOOR_OPEN", { door: d, actor: by }); } }
-      for (const [d, s] of Object.entries(doors)) if (s.open && t - s.lastSeen > 1500) { s.open = false; emit("DOOR_CLOSE", { door: d }); }
+      for (const [d, by] of Object.entries(want)) { const s = doorOf(d); s.lastSeen = t; if (s.state === "CLOSED" || s.state === "CLOSING") { s.state = "OPENING"; s.by = by; emit("DOOR_OPEN", { door: d, actor: by, from: +s.k.toFixed(2) }); } }
+      const dk = STEP / DOOR_MOVE;
+      for (const [d, s] of Object.entries(doors)) {
+        if (s.state === "OPENING") { s.k = Math.min(1, s.k + dk); if (s.k >= 1) { s.state = "OPEN"; emit("DOOR_OPENED", { door: d }); } }
+        else if (s.state === "CLOSING") { s.k = Math.max(0, s.k - dk); if (s.k <= 0) { s.state = "CLOSED"; emit("DOOR_CLOSED", { door: d }); } }
+        else if (s.state === "OPEN" && t - s.lastSeen > DOOR_HOLD && !pass[d]) { s.state = "CLOSING"; emit("DOOR_CLOSE", { door: d }); }
+      }
+    }
+    // an actor waits at a door that is not yet open enough to pass (it never walks through a panel)
+    function blockedByDoor(a) {
+      for (let i = a.ri; i < Math.min(a.route.length, a.ri + 2); i++) {
+        const w = a.route[i], d = w.door || w.via; if (!d) continue;
+        const s = doors[d]; const [dx, dy] = world.doorPos[d];
+        if ((!s || s.k < 0.8) && Math.hypot(a.x - dx, a.y - dy) < 18) return true;
+      }
+      return false;
     }
 
     function stepActor(a, dt) {
@@ -439,6 +459,7 @@
         const speed = a.kind === "dog" ? (a.act === "DOG_PLAYING" ? 34 : 24) : 18; // units per second
         let left = speed * dt / 1000;
         if (t - a.walkStart > 150000) { teleport(a, a.spot); return; } // walk too long: fade (plan §1.6)
+        if (blockedByDoor(a)) { a.waitMs = (a.waitMs || 0) + dt; if (a.waitMs < 8000) return; } else a.waitMs = 0; // safety: never stuck forever
         while (left > 0 && a.ri < a.route.length) {
           const w = a.route[a.ri]; const dx = w.x - a.x, dy = w.y - a.y; const L = Math.hypot(dx, dy);
           if (L > 1e-6) { a.face = [dx / L, dy / L]; }
