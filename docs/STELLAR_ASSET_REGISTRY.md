@@ -64,7 +64,7 @@
 |---|---|---|---|---|
 | `CHR` | Characters (Character Registry) | 46 | 1 | 45 (3 FUTURE, 1 DEFERRED) |
 | `CON` | Consoles and workstations | 31 | 2 | 29 (2 FUTURE) |
-| `SCR` | Screen hardware | 12 | 1 | 11 |
+| `SCR` | Screen hardware | 13 | 1 | 12 |
 | `DOR` | Doors | 9 | 6 | 3 |
 | `COR` | Corridor modules | 9 | 6 | 3 |
 | `LFT` | Lifts | 5 | 5 | **0 (category retired)** |
@@ -75,13 +75,13 @@
 | `SRV` | Servers and conduits | 5 | 0 | 5 |
 | `WAL` | Walls and structure | 11 | 1 | 10 |
 | `FLR` | Floors | 11 | 1 | 10 |
-| `STO` | Storage | 6 | 0 | 6 |
+| `STO` | Storage | 7 | 0 | 7 |
 | `PLT` | Plants | 5 | 0 | 5 |
 | `SGN` | Signage | 8 | 2 | 6 |
 | `LEI` | Leisure furniture | 6 | 0 | 6 |
-| `EQP` | Hero equipment | 5 | 0 | 5 |
+| `EQP` | Hero equipment | 7 | 0 | 7 |
 | `PRP` | Hand-held and moving props | 8 | 0 | 8 |
-| **Total** | **19 prefixes (18 in use)** | **212** | **26** | **186** |
+| **Total** | **19 prefixes (18 in use)** | **216** | **26** | **190** |
 
 ---
 
@@ -125,8 +125,8 @@ Interaction: they occupy anchors. Navigation: dynamic bodies with traffic and se
 | `CON-027` | Reconciliation console | Reconciliation view | L4 | work anchor | blocks | Y | no | moved from the Execution Bay |
 | `CON-028` | Coaching console | Coach | R1 | work anchor | blocks | FUT | no | **new** |
 | `CON-029` | Risk outbox counter | Approved order pickup | L10 | pickup anchor (R: E1) | blocks | Y | no | **new** (replaces the airlock hand-off) |
-| `CON-030` | Perimeter console bank module (H-CMD calibration V1) | Bridge-style equipment band on the hub rim; **unassigned, dark glass, no data, no anchor** | `H-CMD` rim ring | none | blocks (1–3 rim tiles) | Y | yes | **new** |
-| `CON-031` | Secondary console (H-CMD calibration V2) | Unassigned bridge console with two monitors; **dark glass, no data, no anchor** | `H-CMD` back and south banks | none (unclaimed chairs) | blocks (2 × 1) | Y | yes | **new** |
+| `CON-030` | Perimeter console bank module (H-CMD calibration V1) | Bridge-style equipment band on the hub rim; **unassigned, dark glass, no data, no anchor** | `H-CMD` rim ring; `H-LAB` (H-LAB calibration V1) | none | blocks (1–3 rim tiles) | Y | yes | **new** |
+| `CON-031` | Secondary console (H-CMD calibration V2) | Unassigned bridge console with two monitors; **dark glass, no data, no anchor** | `H-CMD` back and south banks; `H-LAB` (H-LAB calibration V1) | none (unclaimed chairs) | blocks (2 × 1) | Y | yes | **new** |
 
 ### `SCR` — Screen hardware
 Display instances (`DSP-…`) are defined in the Screen Registry. Every screen is `wall` or mounted
@@ -146,6 +146,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SCR-010` | Clock ring | Session clock | L2 | wall | Y | no | kept |
 | `SCR-011` | Small wall panel / alert repeater | Alert repeaters, door status panel | corridors, `H-HAB`, L10 door | wall | Y | yes | kept |
 | `SCR-012` | Holographic table surface | Chart table, evidence stage | L2, L3 | none (on a table) | Y | yes | kept |
+| `SCR-013` | Screen-cluster column (one cast column, three dark screen heads; **no display identity, no data**) | Equipment groups | `H-LAB` feeds and macro groups (calibration V1) | blocks (1 × 1) | Y | no | **new** |
 
 ### `DOR` — Doors (21 instances: exactly the approved doors)
 
@@ -226,7 +227,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `DEC-005` | Hull rib trim | L9, L10, corridors | Y | reused |
 | `DEC-006` | Department emblem plaque (shape icons only) | room doors | Y | kept |
 | `DEC-007` | Holo globe (**decorative only**: no real data, no fake system status, no charts or metrics) | `H-CMD`, `H-LAB` centres | opt | **new** |
-| `DEC-008` | Wall equipment panel (vents, cable trays, junction boxes; **no data**) | `H-CMD` rim segments (calibration V1) | Y | **new** |
+| `DEC-008` | Wall equipment panel (vents, cable trays, junction boxes; **no data**) | `H-CMD` rim segments (calibration V1); `H-LAB` rim (H-LAB calibration V1) | Y | **new** |
 
 ### `SRV` — Servers and conduits
 
@@ -236,7 +237,7 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `SRV-002` | Journal archive rack | L4, L6 | blocks | Y | kept |
 | `SRV-003` | Data conduit trunk | **only inside non-walkable gap space**; must read as solid, never as a passage | solid | opt | re-scoped (was a vertical deck conduit) |
 | `SRV-004` | Overhead cable tray | ceilings | none | opt | kept |
-| `SRV-005` | Relay stack (decorative hardware tower; constant hardware lights, **never status or data**) | `H-CMD` operations clusters (calibration V2) perimeter racks between bank groups (calibration V5) and rack pairs in the equipment groups (calibration V5.1) | blocks (1 × 1) | Y | **new** |
+| `SRV-005` | Relay stack (decorative hardware tower; constant hardware lights, **never status or data**) | `H-CMD` operations clusters (calibration V2) perimeter racks between bank groups (calibration V5) and rack pairs in the equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (1 × 1) | Y | **new** |
 
 ### `WAL` — Walls and structure
 
@@ -267,8 +268,8 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `FLR-007` | Lift landing plate | — | — | — | **RETIRED** |
 | `FLR-008` | Launch-deck marking | L9 | walk-over | Y | kept |
 | `FLR-009` | Hazard-stripe border marking (amber / charcoal) | `H-CMD` dais edge (calibration V1) | walk-over | Y | **new** |
-| `FLR-010` | Floor vent grille (decal) | `H-CMD` walkway (calibration V1) | walk-over | Y | **new** |
-| `FLR-011` | Cable conduit (floor channel, decal) | `H-CMD` back bank to the dais (calibration V2) | walk-over | Y | **new** |
+| `FLR-010` | Floor vent grille (decal) | `H-CMD` walkway (calibration V1); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
+| `FLR-011` | Cable conduit (floor channel, decal) | `H-CMD` back bank to the dais (calibration V2); `H-LAB` (H-LAB calibration V1) | walk-over | Y | **new** |
 
 ### `STO` — Storage (kept)
 
@@ -278,8 +279,9 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `STO-002` | Crate stack | L4 | blocks | opt |
 | `STO-003` | Shelf / cue rack | `H-HAB` | blocks | Y |
 | `STO-004` | Crystal archive shelf | L6 | blocks | Y |
-| `STO-005` | Equipment bay cabinet (low, vented) | `H-CMD` operations clusters (calibration V2), perimeter rhythm and equipment groups (calibration V5.1) | blocks (2 × 1; 1 × 2 when side-facing) | Y |
-| `STO-006` | Service cabinet (1 × 1; hazard-marked door, vents) | `H-CMD` second row behind the rim bank (calibration V3), perimeter rhythm and the south command group (calibration V5.1) | blocks (1 × 1) | Y |
+| `STO-005` | Equipment bay cabinet (low, vented) | `H-CMD` operations clusters (calibration V2), perimeter rhythm and equipment groups (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (2 × 1; 1 × 2 when side-facing) | Y |
+| `STO-006` | Service cabinet (1 × 1; hazard-marked door, vents) | `H-CMD` second row behind the rim bank (calibration V3), perimeter rhythm and the south command group (calibration V5.1); `H-LAB` (H-LAB calibration V1) | blocks (1 × 1) | Y |
+| `STO-007` | Sample cart (open-shelf trolley on casters, sample vials, printout stacks; decorative) | `H-LAB` validation group (calibration V1) | blocks (1 × 1) | Y |
 
 ### `PLT` — Plants
 
@@ -324,6 +326,8 @@ on furniture; none blocks the floor except `SCR-006` and `SCR-007`.
 | `EQP-003` | Docking board frame | L9 | | Y | kept |
 | `EQP-004` | Recovery pod (**real cooldown**: countdown and vitals link) | `H-HAB` recovery zone | only from `agent.resting` | Y | room changed |
 | `EQP-005` | Lab dome ring (hero) | `H-LAB` | decorative | Y | re-scoped (was the observatory dome) |
+| `EQP-006` | Optics column (bolted sealed column with a constant lens light; decorative, **no data**) | `H-LAB` core, around the dome ring (calibration V1) | decorative | Y | **new** |
+| `EQP-007` | Specimen tank (glass tank on a stand with a pump housing; decorative, **no data**) | `H-LAB` validation group (calibration V1) | decorative | Y | **new** |
 
 ### `PRP` — Hand-held and moving props (appear only when their event exists)
 

@@ -472,6 +472,68 @@ SV.floor.hatchBand=(poly,w,h)=>{const inner=poly;const cx=poly.reduce((a,p)=>a+p
 // SV.small.lampBox (wall face units): a large recessed wall lamp box (bright warm-white panel in a bolted housing with a glow)
 SV.small.lampBox=(x,y,w,h)=>{ctx.fillStyle="rgba(255,226,180,.22)";ctx.fillRect(x-1.6,y-1.2,w+3.2,h+2.4);ctx.fillStyle="#1c1d20";ctx.fillRect(x-0.8,y-0.8,w+1.6,h+1.6);ctx.strokeStyle=CAL.out;ctx.lineWidth=0.3;ctx.strokeRect(x-0.8,y-0.8,w+1.6,h+1.6);
   const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,"#fff6e2");g.addColorStop(1,"#f0d6a8");ctx.fillStyle=g;ctx.fillRect(x,y,w,h);ctx.fillStyle="rgba(0,0,0,.18)";for(let k=x+1;k<x+w-0.4;k+=1.4)ctx.fillRect(k,y,0.25,h);dRivets(x-0.8,y-0.8,w+1.6,h+1.6,"#8a7448")};
+// ================================================================ LAB equipment (adapted from the reference lab props)
+// SCR-cluster: ONE cast column on a base plate, a crossbar, a wide status head on top and two lower heads hanging off the bar,
+// each a different surface kind (never three identical cells). Dark: no display identity, no data
+SV.screen.cluster=(fr,o={})=>{const sd=o.seed||0;const x=fr.cx,y=fr.cy;const F=fr.f,A=fr.a;
+  prismX(frameCham(fr,-4.6,4.6,-4,4,1),0,1.1,"#2a2c31","#1d1f23",{lw:0.35,mat:false});capTop(fr,-4.6,4.6,-4,4,1.1,sd);
+  prismX(frameCham(fr,-1.1,1.1,-1.6,0.6,0.4),1.1,17.5,CAL.gunHi,CAL.gun,{lw:0.4}); // column
+  const head=(s0,s1,h0,h1,kind,dd)=>{const r=frameCham(fr,s0,s1,dd-1.6,dd+0.2,0.4);prismX(r,h0,h1,"#45484f","#2a2c31",{lw:0.4,shadow:false});
+    const [a,b,n]=faces(fr,s0,s1,dd-1.6,dd+0.2).front;onFace(a,b,n,h0,h1,(W,H)=>{dScreenModule(1.4,1.2,W-2.8,H-2.6,false,null,kind);dIndicator(W-1.6,H-1,(sd+h0|0)%3===0)});
+    const bk=faces(fr,s0,s1,dd-1.6,dd+0.2).back;onFace(bk[0],bk[1],bk[2],h0,h1,(W,H)=>{dGrille(1,1,W-2,H-2);dRivets(0,0,W,H)})};
+  prismX(frameRect(fr,-5.4,5.4,-0.9,0.1),11.2,12.2,"#4a4d54",CAL.gunLo,{lw:0.35,shadow:false,mat:false}); // crossbar
+  const lower=()=>{head(-5.6,-0.4,6.2,11.2,"instrument",0.9);head(0.4,5.6,6.2,11.2,"status",0.9)};const top=()=>head(-5.2,5.2,17.5,24.5,o.kind||"info",0.6);
+  if(camAlong(F)>0){top();lower()}else{lower();top()}
+  cable3([x-A[0]*0.6-F[0]*0.4,y-A[1]*0.6-F[1]*0.4,12],[x-A[0]*0.6-F[0]*2.4,y-A[1]*0.6-F[1]*2.4,0.8],1.2,"#16171a",0.5)};
+// EQ-cart: a freestanding trolley (the reference sample cart): casters, four corner posts, two open shelves with a cross-brace,
+// a vial rack on top (the vials carry the colour), printout stacks on the lower shelf (matte, no glow)
+SV.eq.cart=(fr,o={})=>{const hL=fr.L/2||3.6,hD=fr.D/2||3,sd=o.seed||0;const posts=[[-hL,-hD],[hL-0.8,-hD],[-hL,hD-0.8],[hL-0.8,hD-0.8]];
+  for(const [s,d] of posts){const p=[fr.cx+fr.a[0]*(s+0.4)+fr.f[0]*(d+0.4),fr.cy+fr.a[1]*(s+0.4)+fr.f[1]*(d+0.4)];ell(p[0],p[1],0.7,0.4,"#141518")}
+  const shelf=(h)=>{prismX(frameRect(fr,-hL,hL,-hD,hD),h,h+0.6,"#4a4d54","#33363c",{lw:0.35,shadow:false,mat:false})};
+  const far=posts.filter(([s,d])=>camAlong([fr.a[0]*s+fr.f[0]*d,fr.a[1]*s+fr.f[1]*d])<=0),near=posts.filter(p=>!far.includes(p));
+  for(const [s,d] of far)prismX(frameRect(fr,s,s+0.8,d,d+0.8),0.8,10.4,CAL.gunHi,"#4a4d54",{lw:0.3,mat:false,shadow:false});
+  shelf(1.2);onTop(fr,-hL+0.6,hL-0.6,-hD+0.6,hD-0.6,1.82,(W,Dd)=>{for(let k=0;k<3;k++){ctx.fillStyle=k%2?"#d8d2c2":"#c9c2b0";ctx.fillRect(0.6+k*0.4,0.6+k*0.3,W*0.45,Dd*0.6);ctx.strokeStyle="rgba(0,0,0,.3)";ctx.lineWidth=0.12;ctx.strokeRect(0.6+k*0.4,0.6+k*0.3,W*0.45,Dd*0.6)}
+    ctx.fillStyle="#c9a24a";ctx.fillRect(W*0.58,Dd*0.3,W*0.32,Dd*0.5)});
+  shelf(5.4);shelf(9.8);onTop(fr,-hL+0.5,hL-0.5,-hD+0.5,hD-0.5,10.42,(W,Dd)=>{dRecess(0.3,0.3,W-0.6,Dd-0.6,"#1d1f23");const C=["#7fd0e0","#e0b25a","#7fe0a8","#c86a5a","#9fb8e8"];
+    for(let i=0;i<5;i++)for(let j=0;j<2;j++){ctx.fillStyle="#0e0f11";ctx.beginPath();ctx.arc(1+i*(W-2)/4,Dd*0.3+j*Dd*0.4,0.55,0,TAU);ctx.fill();ctx.fillStyle=C[(i+j+sd)%5];ctx.beginPath();ctx.arc(1+i*(W-2)/4,Dd*0.3+j*Dd*0.4,0.38,0,TAU);ctx.fill()}});
+  for(const [s,d] of near)prismX(frameRect(fr,s,s+0.8,d,d+0.8),0.8,10.4,CAL.gunHi,"#4a4d54",{lw:0.3,mat:false,shadow:false});
+  const [a,b]=faces(fr,-hL,hL,-hD,hD).front;onFace(a,b,fr.f,5.4,9.8,(W,H)=>{ctx.strokeStyle="#4a4d54";ctx.lineWidth=0.35;ctx.beginPath();ctx.moveTo(0.4,0.3);ctx.lineTo(W-0.4,H-0.3);ctx.moveTo(W-0.4,0.3);ctx.lineTo(0.4,H-0.3);ctx.stroke()})}; // cross-brace
+// EQ-optics: a bolted sealed optics column: flared foot on a bolt ring, a cylindrical body lit warm on one flank and cool on the
+// other, a ribbed collar, a lens housing whose lens is the ONLY light, and a cap. Decorative: the lens is constant
+SV.eq.optics=(x,y,o={})=>{const H=o.h||22;cyl(x,y,3.6,0,0.8,"#2a2c31","#1d1f23",{n:12});ell(x,y,3.2,0.82,null,"#8a7448",0.35);cyl(x,y,2.6,0.8,2.4,"#45484f",CAL.gun,{n:12});
+  cyl(x,y,1.9,2.4,H-5,null,CAL.gun,{n:14});const a=V.P(x-1.9*V.kx,y,2.4),b=V.P(x-1.9*V.kx,y,H-5);line3([x-1.6,y,2.6],[x-1.6,y,H-5.2],"rgba(255,224,176,.35)",0.5);line3([x+1.6,y,2.6],[x+1.6,y,H-5.2],"rgba(127,180,216,.3)",0.5);
+  for(const h of [6,10,14])cyl(x,y,2.15,h,h+0.7,"#4a4d54","#3a3d43",{n:14});cyl(x,y,2.5,H-5,H-1.5,"#45484f","#2c2f35",{n:14});
+  const lp=V.P(x,y+2.4*0.6,H-3.3);ctx.fillStyle="rgba(120,230,250,.25)";ctx.beginPath();ctx.ellipse(lp[0],lp[1],2.4,1.8,0,0,TAU);ctx.fill();ctx.fillStyle="#0e2a32";ctx.beginPath();ctx.ellipse(lp[0],lp[1],1.4,1.1,0,0,TAU);ctx.fill();ctx.fillStyle="#9ff0ff";ctx.beginPath();ctx.ellipse(lp[0]-0.2,lp[1]-0.2,0.6,0.45,0,0,TAU);ctx.fill();
+  cyl(x,y,1.6,H-1.5,H,"#575a61","#3a3d43",{n:12})};
+// EQ-tank: a glass specimen tank on a low stand: feet, a stand with a hatch and slot lamp, a pump housing on one end, curved glass
+// with a lit surface line and caustic lines in the water, a rim lamp. Decorative, no data
+SV.eq.tank=(fr,o={})=>{const hL=fr.L/2,hD=fr.D/2,sd=o.seed||0;feet(fr,-hL,hL,-hD,hD,0.9);prismX(frameCham(fr,-hL,hL,-hD,hD,0.6),0.9,5.4,CAL.gunHi,CAL.gun);
+  {const [a,b]=faces(fr,-hL,hL,-hD,hD).front;onFace(a,b,fr.f,0.9,5.4,(W,H)=>{dHatch(1,0.6,W*0.4,H-1.2);dSlotLamp(W*0.6,H*0.45,W*0.25);dWear(W,H,sd)})}
+  const pump=frameCham(fr,hL-4.6,hL-0.4,-hD+0.6,hD-0.6,0.5);const g=frameRect(fr,-hL+0.6,hL-5.2,-hD+0.8,hD-0.8);
+  const water=()=>{const top=13;ctx.fillStyle="rgba(40,120,120,.42)";for(const [p,q,n] of Object.values(faces(fr,-hL+0.6,hL-5.2,-hD+0.8,hD-0.8))){if(n[0]*V.cam[0]+n[1]*V.cam[1]<=0)continue;
+      const pts=[V.P(p[0],p[1],5.4),V.P(q[0],q[1],5.4),V.P(q[0],q[1],top),V.P(p[0],p[1],top)];ctx.beginPath();pts.forEach((s,i)=>i?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1]));ctx.closePath();ctx.fill()}
+    ctx.fillStyle="rgba(70,170,165,.5)";ctx.fill(poly2(g,top));ctx.strokeStyle="rgba(190,250,240,.75)";ctx.lineWidth=0.4;ctx.stroke(poly2(g,top));
+    for(let k=0;k<4;k++){const t=(k+1)/5;line3([g[0][0]+(g[1][0]-g[0][0])*t,g[0][1]+(g[1][1]-g[0][1])*t,top-1.5-k],[g[3][0]+(g[2][0]-g[3][0])*t,g[3][1]+(g[2][1]-g[3][1])*t,top-1-k*0.6],"rgba(190,250,240,.22)",0.35)}
+    for(const pp of g)line3([pp[0],pp[1],5.4],[pp[0],pp[1],14.4],"rgba(220,240,245,.5)",0.4);ctx.strokeStyle="rgba(220,240,245,.55)";ctx.lineWidth=0.4;ctx.stroke(poly2(g,14.4))};
+  const pumpDraw=()=>{prismX(pump,5.4,12,"#45484f",CAL.gun,{lw:0.4,shadow:false});const [a,b]=faces(fr,hL-4.6,hL-0.4,-hD+0.6,hD-0.6).front;onFace(a,b,fr.f,5.4,12,(W,H)=>{dGrille(0.8,0.8,W-1.6,H*0.4);dKnob(W/2,H*0.7,0.6);dAmber(0.8,H-1.2,1,0.45)});capTop(fr,hL-4.6,hL-0.4,-hD+0.6,hD-0.6,12,sd)};
+  if(camAlong(fr.a)>0){water();pumpDraw()}else{pumpDraw();water()}
+  prismX(frameRect(fr,-hL+0.4,hL-5,-hD+0.6,hD-0.6),14.4,15,"#4a4d54",CAL.gunLo,{lw:0.3,shadow:false,mat:false})};
+// EQ-dome (EQP-005, hero): a stepped circular plinth, a ring of 12 instrument segments (vents, lamp pips, brass caps), an inner well
+// lit cool, a slim core column and a glass dome with a highlight; the holo globe inside is decorative (DEC-007, no data)
+SV.eq.dome=(cx,cy,R)=>{cyl(cx,cy,R+2,0,0.8,"#2a2c31","#1d1f23",{n:32});ell(cx,cy,R+1.4,0.82,null,"#8a7448",0.4);cyl(cx,cy,R,0.8,2,"#3a3d43",CAL.gun,{n:32});
+  const N=12,ring=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];const segs=[];for(let k=0;k<N;k++){const a0=k*TAU/N,a1=(k+1)*TAU/N;segs.push({k,a0,a1,d:V.depth(...ring(R,(a0+a1)/2))})}segs.sort((p,q)=>p.d-q.d);
+  ell(cx,cy,R-3.6,2.05,"#0b1a20");const sp=V.P(cx,cy,2.1);const gg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],V.kx*(R-3.6));gg.addColorStop(0,"rgba(120,230,250,.5)");gg.addColorStop(1,"rgba(20,90,110,.15)");ctx.fillStyle=gg;ctx.beginPath();ctx.ellipse(sp[0],sp[1],V.kx*(R-3.6),V.ky*(R-3.6),0,0,TAU);ctx.fill();
+  const back=segs.filter(s=>Math.sin((s.a0+s.a1)/2)*V.cam[1]+Math.cos((s.a0+s.a1)/2)*V.cam[0]<0),front=segs.filter(s=>!back.includes(s));
+  const seg=({k,a0,a1})=>{const q=[ring(R,a0),ring(R,a1),ring(R-3.4,a1),ring(R-3.4,a0)];const n=[Math.cos((a0+a1)/2),Math.sin((a0+a1)/2)];prismX(q,2,6.2,k%2?"#575a61":"#4a4d54",k%2?CAL.gun:"#3a3d43",{lw:0.4,shadow:false});
+    onFace(q[0],q[1],n,2,6.2,(W,H)=>{dVents(W*0.12,0.7,W*0.32,H-1.4,3);dLampPips(W*0.62,0.9,2,1.3);ctx.fillStyle=CAL.brass;ctx.fillRect(0,0,0.5,H);dWear(W,H,k)});const cp=V.P(...ring(R-1.7,a0),6.25);ctx.fillStyle=CAL.brassHi;ctx.fillRect(cp[0]-0.6,cp[1]-0.35,1.2,0.7)};
+  for(const s of back)seg(s);cyl(cx,cy,1.2,2,13,"#575a61","#3a3d43",{n:10});
+  const gc=V.P(cx,cy,16);ctx.save();ctx.globalAlpha=0.6;ctx.strokeStyle="#8fdcf0";ctx.lineWidth=0.3;ctx.beginPath();ctx.arc(gc[0],gc[1],4,0,TAU);ctx.stroke();ctx.beginPath();ctx.ellipse(gc[0],gc[1],4,1.3,0,0,TAU);ctx.stroke();ctx.beginPath();ctx.ellipse(gc[0],gc[1],1.6,4,0,0,TAU);ctx.stroke();ctx.restore();
+  const dc=V.P(cx,cy,6.2);ctx.save();ctx.fillStyle="rgba(170,225,240,.1)";ctx.strokeStyle="rgba(200,240,250,.45)";ctx.lineWidth=0.4;ctx.beginPath();ctx.ellipse(dc[0],dc[1],V.kx*(R-3.6),V.ky*(R-3.6),0,Math.PI,TAU);
+  ctx.ellipse(dc[0],dc[1]-(R-3.6)*0.9,V.kx*(R-3.6),(R-3.6)*0.9+0.001,0,0,Math.PI,true);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle="rgba(255,255,255,.18)";ctx.beginPath();ctx.ellipse(dc[0]-(R-3.6)*0.35,dc[1]-(R-3.6)*0.55,(R-3.6)*0.18,(R-3.6)*0.32,-0.5,0,TAU);ctx.fill();ctx.restore();
+  for(const s of front)seg(s)};
+// EQ-projector (SCR-006 column): a bolted base, a chamfered column with a service hatch and lamp pips, an emitter head (constant)
+SV.eq.projector=(fr,o={})=>{plinth(fr,-4.2,4.2,-4.2,4.2,0.8);prismX(frameCham(fr,-3,3,-3,3,0.8),0.8,12,CAL.gunHi,CAL.gun);for(const k of ["front","e1","e2","back"]){const [a,b,n]=faces(fr,-3,3,-3,3)[k];onFace(a,b,n,0.8,12,(W,H)=>{dHatch(0.8,H*0.45,W-1.6,H*0.4);dLampPips(W/2-0.3,1.2,3,1.3);dWear(W,H,k.length)})}
+  cyl(fr.cx,fr.cy,2.6,12,13.6,"#575a61","#3a3d43",{n:12});const p=V.P(fr.cx,fr.cy,13.7);ctx.fillStyle="rgba(120,230,250,.6)";ctx.beginPath();ctx.ellipse(p[0],p[1],1.8*V.kx,1.8*V.ky,0,0,TAU);ctx.fill()};
 // ================================================================ VOCABULARY CATALOGUE (?vocab=1): every family on a plain deck, for review and reuse
 const SV_CATALOGUE=[
   {name:"WS-standard",w:40,d:14,draw:(fr)=>SV.ws.build({...fr,L:35,D:12},{variant:"standard",seed:1,lit:true})},
@@ -498,6 +560,11 @@ const SV_CATALOGUE=[
   {name:"DOOR-C restricted",w:38,d:16,draw:(fr)=>SV.door.build({...fr,L:22},"restricted",{plate:"RESTRICTED"})},
   {name:"DOOR closed (reserved)",w:34,d:14,draw:(fr)=>SV.door.build({...fr,L:22},"standard",{closed:true,plate:"RESERVED"})},
   {name:"FLR big grate + hatched band",w:40,d:30,draw:(fr)=>{const k=4;const q=[[fr.cx-17+k,fr.cy-13],[fr.cx+17-k,fr.cy-13],[fr.cx+17,fr.cy-13+k],[fr.cx+17,fr.cy+13-k],[fr.cx+17-k,fr.cy+13],[fr.cx-17+k,fr.cy+13],[fr.cx-17,fr.cy+13-k],[fr.cx-17,fr.cy-13+k]];SV.floor.hatchBand(q,2,0.02);SV.floor.bigGrate(fr.cx-12,fr.cy-12,24,true)}},
+  {name:"SCR-cluster",w:16,d:12,draw:(fr)=>SV.screen.cluster({...fr,L:8,D:8},{seed:1})},
+  {name:"EQ-cart",w:12,d:12,draw:(fr)=>SV.eq.cart({...fr,L:7.2,D:6})},
+  {name:"EQ-optics",w:12,d:12,draw:(fr)=>SV.eq.optics(fr.cx,fr.cy)},
+  {name:"EQ-tank",w:28,d:12,draw:(fr)=>SV.eq.tank({...fr,L:22,D:8})},
+  {name:"EQ-dome (hero)",w:40,d:40,draw:(fr)=>SV.eq.dome(fr.cx,fr.cy,16)},
   {name:"instrument pod + service box",w:20,d:12,draw:(fr)=>{SV.small.serviceBox(fr,-9,-3.5,-3.5,3.5,{seed:1});SV.small.instrumentPod(fr,1,6.5,-3.5,3.5,{seed:2})}}];
 function drawVocabCatalogue(){const rowW=210,gap=12,x0=-rowW/2,y0=-120;const rows=[];let cur=[],w=0;
   for(const s of SV_CATALOGUE){if(cur.length&&w+s.w>rowW){rows.push(cur);cur=[];w=0}cur.push(s);w+=s.w+gap}if(cur.length)rows.push(cur);

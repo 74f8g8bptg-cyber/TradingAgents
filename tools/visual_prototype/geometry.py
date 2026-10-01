@@ -734,6 +734,216 @@ def build_geometry():
     A_("H-LAB", "lab.handoff_n", (lc + 5, lr - 9))
     A_("H-LAB", "lab.visitor_1", (lc + 4, lr + 5))
     A_("H-LAB", "lab.visitor_2", (lc + 5, lr + 5))
+    # ---- H-LAB calibration (Stellar Visual Vocabulary; docs/STELLAR_HLAB_CALIBRATION_V1.md). Approved H-LAB items
+    # above are unchanged. One composition pass: a lab perimeter rhythm, and equipment GROUPS around each function zone
+    # (feeds west, macro north, validation south, core centre). Kept clear: the east walkway between the two doors, the
+    # door approaches and the FUTURE_RESEARCH experiment-bench zone (south-west, not rendered). No anchors are added
+    lx, ly, _lr = HUBS["H-LAB"]
+    lcc, lcr = int(lx // T), int(ly // T)
+    lab_used = {t for f in furn for t in f["tiles"]} | {a["tile"] for a in anchors}
+    lab_doors = []
+    for did in ("DR-N-LAB", "DR-S-LAB"):
+        lt = [t for ch in door_info[did]["lanes"] for t in ch]
+        lab_doors.append(
+            (sum(cen(t[0]) for t in lt) / len(lt), sum(cen(t[1]) for t in lt) / len(lt))
+        )
+    door_ang = sorted(math.atan2(y - ly, x - lx) for x, y in lab_doors)
+    lab_keep = set()
+    for t, n in region.items():
+        if n != "H-LAB":
+            continue
+        x, y = cen(t[0]), cen(t[1])
+        ang = math.atan2(y - ly, x - lx)
+        d = math.hypot(x - lx, y - ly)
+        if door_ang[0] - 0.2 <= ang <= door_ang[1] + 0.2 and d > 9 * T:
+            lab_keep.add(t)  # lab.walkway (east arc between the doors)
+        if x < lx - 2 * T and y > ly + 4 * T and d < 13.2 * T and x > lx - 11 * T:
+            lab_keep.add(t)  # lab.experiment_bench (FUTURE_RESEARCH): left clear
+        if min(math.hypot(x - dx, y - dy) for dx, dy in lab_doors) < 4.5 * T:
+            lab_keep.add(t)  # door approaches
+
+    def lab_reachable(extra):
+        blocked_ = {t for f in furn if f["kind"] == "block" for t in f["tiles"]} | set(extra)
+        open_ = {t for t, n in region.items() if n == "H-LAB" and t not in blocked_}
+        start = next(iter(open_))
+        seen, todo = {start}, [start]
+        while todo:
+            c0, r0 = todo.pop()
+            for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                u = (c0 + dc, r0 + dr)
+                if u in open_ and u not in seen:
+                    seen.add(u)
+                    todo.append(u)
+        return len(seen) == len(open_)
+
+    def lab_place(asset, tiles, label, kind="block", tall=False):
+        if any(region.get(t) != "H-LAB" or t in lab_used or t in lab_keep for t in tiles):
+            return False
+        if kind == "block" and not lab_reachable(tiles):
+            return False
+        F("H-LAB", asset, tiles, label, kind=kind, tall=tall)
+        lab_used.update(tiles)
+        return True
+
+    # perimeter rhythm: wide / double / single console modules, racks, equipment bays, service cabinets, gaps; lockers
+    # close each run
+    lring = []
+    for t, n in region.items():
+        if n != "H-LAB" or t in lab_keep:
+            continue
+        if all(
+            region.get((t[0] + dc, t[1] + dr)) == "H-LAB"
+            for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))
+        ):
+            continue
+        lring.append(t)
+    lring.sort(key=lambda t: math.atan2(cen(t[1]) - ly, cen(t[0]) - lx))
+    lruns, cur = [], []
+    for t in lring:
+        if cur and max(abs(t[0] - cur[-1][0]), abs(t[1] - cur[-1][1])) > 1:
+            lruns.append(cur)
+            cur = []
+        cur.append(t)
+    if cur:
+        if lruns and max(abs(cur[-1][0] - lruns[0][0][0]), abs(cur[-1][1] - lruns[0][0][1])) <= 1:
+            lruns[0] = cur + lruns[0]
+        else:
+            lruns.append(cur)
+    lab_rhythm = (2, "R", 3, "B", 1, "G", 2, "S", 3, "R", "B")
+    lab_gaps = []
+    for run in lruns:
+        body = run[1:-1] if len(run) > 4 else run
+        for e in (run[0], run[-1]) if len(run) > 4 else ():
+            lab_place("STO-001", [e], "STO-001 lab perimeter locker", tall=True)
+        i = k = 0
+        while i < len(body):
+            step = lab_rhythm[k % len(lab_rhythm)]
+            k += 1
+            if step == "G":
+                lab_gaps.append(body[i])
+                i += 1
+            elif step == "R":
+                lab_place(
+                    "SRV-005", [body[i]], f"SRV-005 lab perimeter rack {len(furn)}", tall=True
+                )
+                i += 1
+            elif step == "S":
+                lab_place("STO-006", [body[i]], f"STO-006 lab perimeter cabinet {len(furn)}")
+                i += 1
+            elif step == "B":
+                if i + 1 < len(body) and lab_place(
+                    "STO-005", body[i : i + 2], f"STO-005 lab perimeter bay {len(furn)}"
+                ):
+                    i += 2
+                else:
+                    i += 1
+            else:
+                seg = body[i : i + step]
+                if not lab_place("CON-030", seg, f"CON-030 lab perimeter bank {len(furn)}"):
+                    for t in seg:
+                        lab_place("CON-030", [t], f"CON-030 lab perimeter bank {len(furn)}")
+                i += step
+    # seats at the lab work anchors (feeds, validation bench, driver board)
+    for a in [a for a in anchors if a["room"] == "H-LAB" and a.get("serves")]:
+        F("H-LAB", "SEA-002", [a["tile"]], f"SEA-002 chair {a['name'].split('.')[1]}", kind="seat")
+    lab_groups = []
+    fx = sorted({t[0] for f in furn if f["asset"] == "CON-006" for t in f["tiles"]})
+    for c in fx:  # feeds: screen-cluster columns in the gaps of each console column, rack pairs capping the ends
+        rows = sorted(
+            t[1] for f in furn if f["asset"] == "CON-006" for t in f["tiles"] if t[0] == c
+        )
+        for r in range(rows[0], rows[-1] + 1):
+            if r not in rows:
+                lab_place("SCR-013", [(c, r)], f"SCR-013 feed screen cluster {len(furn)}")
+        for r in (rows[0] - 1, rows[-1] + 1):
+            lab_place("SRV-005", [(c, r)], f"SRV-005 feed rack {len(furn)}", tall=True)
+        lab_groups.append((c, rows[0] - 1))
+    dbx = sorted(t[0] for f in furn if f["asset"] == "CON-008" for t in f["tiles"])
+    dby = next(t[1] for f in furn if f["asset"] == "CON-008" for t in f["tiles"])
+    for c in (dbx[0] - 1, dbx[-1] + 1):  # macro: screen clusters flanking the driver board
+        lab_place("SCR-013", [(c, dby)], f"SCR-013 macro screen cluster {len(furn)}")
+    if lab_place(
+        "CON-031", [(dbx[0] - 5, dby + 2), (dbx[0] - 4, dby + 2)], "CON-031 macro desk west"
+    ):
+        for dc in (0, 1):
+            lab_place(
+                "SEA-002", [(dbx[0] - 5 + dc, dby + 3)], "SEA-002 chair macro desk", kind="seat"
+            )
+    for t in ((dbx[-1] + 4, dby + 1), (dbx[-1] + 5, dby + 1)):
+        lab_place("SRV-005", [t], f"SRV-005 macro rack {len(furn)}", tall=True)
+    lab_place("STO-005", [(dbx[-1] + 4, dby + 2), (dbx[-1] + 5, dby + 2)], "STO-005 macro bay")
+    lab_groups += [(dbx[0] - 5, dby + 2), (dbx[-1] + 5, dby + 1)]
+    bx = sorted(t[0] for f in furn if f["asset"] == "CON-007" for t in f["tiles"])
+    byy = next(t[1] for f in furn if f["asset"] == "CON-007" for t in f["tiles"])
+    for c in (
+        bx[0] - 1,
+        bx[-1] + 1,
+    ):  # validation: sample carts flanking the bench, specimen tanks beside it
+        lab_place("STO-007", [(c, byy)], f"STO-007 sample cart {len(furn)}")
+    lab_place("EQP-007", [(bx[-1] + 3, byy - 1), (bx[-1] + 4, byy - 1)], "EQP-007 specimen tank 1")
+    lab_place("EQP-007", [(bx[-1] + 3, byy - 3), (bx[-1] + 4, byy - 3)], "EQP-007 specimen tank 2")
+    lab_groups.append((bx[-1] + 4, byy - 1))
+    dome = [t for f in furn if f["asset"] == "EQP-005" for t in f["tiles"]]
+    dx0, dx1 = min(t[0] for t in dome), max(t[0] for t in dome)
+    dy0, dy1 = min(t[1] for t in dome), max(t[1] for t in dome)
+    for t in ((dx0 - 2, dy0 - 2), (dx1 + 2, dy0 - 2), (dx0 - 2, dy1 + 2), (dx1 + 2, dy1 + 2)):
+        lab_place("EQP-006", [t], f"EQP-006 optics column {len(furn)}", tall=True)
+    # east analysis island (facing the core) and a north-east analysis group, so the room's east half is worked space too
+    for i, rows in enumerate(((lcr - 2, lcr - 1), (lcr + 1, lcr + 2)), 1):
+        if lab_place("CON-031", [(lcc + 7, r) for r in rows], f"CON-031 lab analysis {i}"):
+            for r in rows:
+                lab_place("SEA-002", [(lcc + 6, r)], f"SEA-002 chair lab analysis {i}", kind="seat")
+    lab_place("SCR-013", [(lcc + 7, lcr)], f"SCR-013 analysis screen cluster {len(furn)}")
+    lab_place("STO-006", [(lcc + 2, lcr - 7)], f"STO-006 lab analysis cabinet {len(furn)}")
+    if lab_place("CON-031", [(lcc + 3, lcr - 7), (lcc + 4, lcr - 7)], "CON-031 lab analysis 3"):
+        for dc in (0, 1):
+            lab_place(
+                "SEA-002", [(lcc + 3 + dc, lcr - 6)], "SEA-002 chair lab analysis 3", kind="seat"
+            )
+    lab_place("SRV-005", [(lcc + 5, lcr - 7)], f"SRV-005 analysis rack {len(furn)}", tall=True)
+    lab_groups += [(lcc + 7, lcr), (lcc + 4, lcr - 7)]
+    # deck: conduits from each group and each perimeter gap outward; paired floor grates; vents
+    lab_block = {t for f in furn if f["kind"] != "floor" for t in f["tiles"]}
+    lab_cond = []
+    for t0 in lab_groups + lab_gaps:
+        L = math.hypot(cen(t0[0]) - lx, cen(t0[1]) - ly) or 1
+        for k in range(1, 9):
+            t = (
+                round(t0[0] + (cen(t0[0]) - lx) / L * k),
+                round(t0[1] + (cen(t0[1]) - ly) / L * k),
+            )
+            if t0 in lab_gaps:
+                t = t0
+            if region.get(t) != "H-LAB" or t in lab_block or t in lab_keep:
+                break
+            if t not in lab_cond:
+                lab_cond.append(t)
+            if t0 in lab_gaps:
+                break
+    if lab_cond:
+        F("H-LAB", "FLR-011", lab_cond, "FLR-011 lab cable conduit", kind="floor")
+    lab_mark = set(lab_cond) | lab_block | {a["tile"] for a in anchors}
+    lab_big = []
+    lab_picked = []
+    for dc in range(-13, 13):
+        for dr in range(-13, -1):
+            a_ = [(lcc + dc + i, lcr + dr + j) for i in (0, 1) for j in (0, 1)]
+            b_ = [(lcc + dc + i, lcr - dr - 1 + j) for i in (0, 1) for j in (0, 1)]
+            if not all(
+                region.get(t) == "H-LAB"
+                and t not in lab_mark
+                and t not in lab_keep
+                and 4 < math.hypot(t[0] + 0.5 - lx / T, t[1] + 0.5 - ly / T) < 13
+                for t in a_ + b_
+            ):
+                continue
+            ang = math.atan2(dr, dc)
+            if all(abs(math.atan2(math.sin(ang - q), math.cos(ang - q))) > 0.9 for q in lab_picked):
+                lab_picked.append(ang)
+                lab_big += a_ + b_
+                lab_mark.update(a_ + b_)
+    if lab_big:
+        F("H-LAB", "FLR-010", lab_big, "FLR-010 large floor grates (paired)", kind="floor")
     # H-HAB (circle, 30 tiles across)
     hc, hr = math.floor(1377 / T), math.floor(692 / T)
     F("H-HAB", "PLT-005", absrect(hc - 1, hr - 1, 3, 3), "PLT-005 central tree", tall=True)

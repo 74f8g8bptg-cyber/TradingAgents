@@ -14,6 +14,7 @@ const cases = [
   ["station_iso_left", "?view=iso&focus=Station"],
   ["station_plan", "?view=plan&focus=Station"],
   ["H-CMD_oblique", "?view=obl&focus=H-CMD"],
+  ["H-LAB_oblique", "?view=obl&focus=H-LAB"],
   ["vocabulary", "?vocab=1"],
   ["vocabulary_oblique", "?vocab=1&view=obl"],
   ["L2", "?focus=L2"],
